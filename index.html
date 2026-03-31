@@ -738,6 +738,7 @@ async function loadStops(){
     renderAll();
     hideLoading();
     updateBar();
+	  checkProblemes();
     
   }catch(e){
     showErr('Impossible de charger les données.<br>Vérifie que les politiques RLS sont activées dans Supabase.<br><br><small>'+e.message+'</small>');
@@ -765,8 +766,9 @@ async function dbDel(id){
 }
 
 // ── MARQUEURS ──────────────────────────────────────────
-function mkIcon(done){
-  const c=done?'#4ade80':'#c8e63c',s=done?14:18;
+function mkIcon(done,hasProb){
+  const c=hasProb?'#fb923c':(done?'#4ade80':'#c8e63c');
+  const s=done&&!hasProb?14:18;
   return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${c};border:2px solid rgba(0,0,0,.5);transform:rotate(45deg);box-shadow:0 2px 6px rgba(0,0,0,.6)"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]});
 }
 
@@ -776,7 +778,7 @@ function renderAll(){
   stops.forEach((s,i)=>{
     if(!s.lat) return;
   if(routeActive!==null && s.route_id!==routeActive) return;
-   const m=L.marker([s.lat,s.lon],{icon:mkIcon(s.fait)}).addTo(map);
+  const m=L.marker([s.lat,s.lon],{icon:mkIcon(s.fait,s._probleme)}).addTo(map);
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });
@@ -987,7 +989,28 @@ async function envoyerProbleme(){
   closeCard();
   await loadStops();
 }
-function openAdmin(){
+async function checkProblemes(){
+  const{data}=await db.from('problemes').select('id').eq('lu',false);
+  const nb=(data||[]).length;
+  const btn=document.getElementById('bb-admin');
+  if(!btn)return;
+  const badge=btn.querySelector('.prob-badge');
+  if(nb>0){
+    if(!badge){
+      const b=document.createElement('div');
+      b.className='prob-badge';
+      b.textContent=nb;
+      b.style='position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;';
+      btn.style.position='relative';
+      btn.appendChild(b);
+    } else {
+      badge.textContent=nb;
+    }
+  } else if(badge){
+    badge.remove();
+  }
+}
+	function openAdmin(){
   if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}
   document.getElementById('admin-overlay').classList.add('open');
   loadPendingUsers();

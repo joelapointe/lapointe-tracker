@@ -1070,7 +1070,6 @@ async function marquerLu(id){
 }
 async function loadPendingUsers(){
   const body=document.getElementById('admin-body');
-  body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;">Chargement…</div>';
   body.innerHTML='';
   await loadProblemes();
   
@@ -1087,10 +1086,12 @@ async function loadPendingUsers(){
     .order('created_at');
 
   if(error||!data||data.length===0){
-    body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;font-size:14px;">✔ Aucun compte en attente.</div>';
+    const empty=document.createElement('div');
+    empty.style='padding:16px;text-align:center;color:#6b7a8d;font-size:13px;';
+    empty.textContent='✔ Aucun compte en attente.';
+    body.appendChild(empty);
     return;
   }
-
   document.getElementById('admin-sub').textContent=data.length+' compte'+(data.length>1?'s':'')+' en attente';
 
   body.innerHTML='';

@@ -686,6 +686,7 @@ function initApp(){
       }
       geocodeReverse(lat,lon,addrEl);
 		if(currentUser) envoyerPosition(lat,lon);
+		verifierProximite(lat,lon);
     },()=>{dotEl.className='err';lblEl.textContent='Erreur';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
   }
 
@@ -774,8 +775,8 @@ async function dbDel(id){
 }
 
 // ── MARQUEURS ──────────────────────────────────────────
-function mkIcon(done,hasProb){
-  const c=hasProb?'#fb923c':(done?'#4ade80':'#c8e63c');
+function mkIcon(done,hasProb,onSite){
+  const c=hasProb?'#fb923c':(done?'#4ade80':(onSite?'#60a5fa':'#c8e63c'));
   const s=done&&!hasProb?14:18;
   return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${c};border:2px solid rgba(0,0,0,.5);transform:rotate(45deg);box-shadow:0 2px 6px rgba(0,0,0,.6)"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]});
 }
@@ -786,7 +787,7 @@ function renderAll(){
   stops.forEach((s,i)=>{
     if(!s.lat) return;
   if(routeActive!==null && s.route_id!==routeActive) return;
-  const m=L.marker([s.lat,s.lon],{icon:mkIcon(s.fait,s._probleme)}).addTo(map);
+  const m=L.marker([s.lat,s.lon],{icon:mkIcon(s.fait,s._probleme,s._onSite)}).addTo(map);
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });
@@ -1293,7 +1294,62 @@ async function chargerPositions(){
   });
 }
 
-function demarrerTracking(){
+let onSiteTimers={};
+
+function verifierProximite(lat,lon){
+  if(!currentUser||currentUser.role==='admin')return;
+  const RAYON=30; // mètres
+  const TEMPS=5*60*1000; // 5 minutes
+
+  stops.forEach((s,i)=>{
+    if(!s.lat||s.fait)return;
+    const dist=getDistance(lat,lon,s.lat,s.lon);
+
+    if(dist<=RAYON){
+      // L'employé est sur place
+      if(!s._onSite){
+        s._onSite=true;
+        renderAll();
+        toast('📍 Sur place : '+s.adresse);
+      }
+      // Démarrer timer si pas déjà démarré
+      if(!onSiteTimers[s.id]){
+        onSiteTimers[s.id]=setTimeout(async()=>{
+          // Vérifier encore que l'employé est toujours là
+          if(s._onSite&&!s.fait){
+            await dbDone(s.id);
+            s.fait=true;
+            s._onSite=false;
+            delete onSiteTimers[s.id];
+            renderAll();
+            toast('✔ Auto-complété : '+s.adresse);
+          }
+        },TEMPS);
+      }
+    } else {
+      // L'employé est parti
+      if(s._onSite){
+        s._onSite=false;
+        renderAll();
+      }
+      if(onSiteTimers[s.id]){
+        clearTimeout(onSiteTimers[s.id]);
+        delete onSiteTimers[s.id];
+      }
+    }
+  });
+}
+
+function getDistance(lat1,lon1,lat2,lon2){
+  const R=6371000;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+	function demarrerTracking(){
   if(posInterval)clearInterval(posInterval);
   // Envoyer position toutes les 10 secondes
   posInterval=setInterval(()=>{

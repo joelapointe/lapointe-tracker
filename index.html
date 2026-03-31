@@ -342,6 +342,11 @@
 </div>
 <div id="addr-row">📍 <span id="addr-txt">Recherche…</span></div>
 <div id="sync">⟳ Sync…</div>
+	<div id="placement-banner">
+  <span id="placement-txt">📍 Clique 4 points pour définir la zone</span>
+  <span id="placement-count">0/4</span>
+  <button onclick="annulerPlacement()">✕ Annuler</button>
+</div>
 
 <div id="controls">
   <button class="ctrl on"  id="btn-sat" onclick="setLayer('sat')">🛰</button>
@@ -466,7 +471,13 @@
     <h2>＋ Nouveau stop</h2>
     <div class="f"><label>Opérateur</label><input id="f-op" type="text" placeholder="ex: Joé"/></div>
     <div class="f"><label>Zone / Route</label><input id="f-zone" type="text" placeholder="ex: Zone 12 R2"/></div>
-    <div class="f"><label>Adresse du client</label><input id="f-addr" type="text" placeholder="ex: 245 Rue de Laubier, Shawinigan"/></div>
+    <div class="f">
+  <button type="button" id="btn-placer-carte" onclick="activerPlacement()" style="width:100%;padding:10px;background:#252d3a;border:1px solid #c8e63c;border-radius:8px;color:#c8e63c;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">
+    📍 Placer sur la carte
+  </button>
+  <div id="placement-status" style="font-size:11px;color:#6b7a8d;margin-top:4px;text-align:center;"></div>
+</div>
+	  <div class="f"><label>Adresse du client</label><input id="f-addr" type="text" placeholder="ex: 245 Rue de Laubier, Shawinigan"/></div>
     <div class="f"><label>Nom du client (optionnel)</label><input id="f-client" type="text" placeholder="ex: Famille Tremblay"/></div>
     <div class="f">
       <label>Type de service</label>

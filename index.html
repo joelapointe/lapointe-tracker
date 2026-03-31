@@ -1012,7 +1012,8 @@ async function checkProblemes(){
 }
 	function openAdmin(){
   if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}
-  document.getElementById('admin-overlay').classList.add('open');
+ document.getElementById('admin-overlay').classList.add('open');
+  document.getElementById('admin-sub').textContent='Problèmes & comptes en attente';
   loadPendingUsers();
 }
 
@@ -1064,7 +1065,7 @@ async function loadProblemes(){
 async function marquerLu(id){
   await db.from('problemes').update({lu:true}).eq('id',id);
   toast('✔ Problème marqué comme lu');
-  loadPendingUsers();
+  openAdmin();
   checkProblemes();
 }
 async function loadPendingUsers(){
@@ -1072,6 +1073,12 @@ async function loadPendingUsers(){
   body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;">Chargement…</div>';
   body.innerHTML='';
   await loadProblemes();
+  
+  // Séparateur comptes en attente
+  const sep=document.createElement('div');
+  sep.style='padding:10px 16px 4px;font-size:10px;color:#6b7a8d;text-transform:uppercase;letter-spacing:.8px;font-weight:700;border-top:1px solid #252d3a;margin-top:8px;';
+  sep.textContent='👤 Comptes en attente';
+  body.appendChild(sep);
 
   const{data,error}=await db.from('utilisateurs')
     .select('*')

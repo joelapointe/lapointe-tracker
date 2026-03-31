@@ -387,7 +387,8 @@
     </div>
     <div id="routes-body"></div>
     <div id="routes-footer">
-      <button class="lf-btn fermer" onclick="closeRoutes()">FERMER</button>
+      <button class="lf-btn" id="btn-nouvelle-passe" onclick="nouvellePasse()" style="background:#60a5fa;color:#111;display:none;">🔄 Nouvelle passe</button>
+		<button class="lf-btn fermer" onclick="closeRoutes()">FERMER</button>
       <button class="lf-btn nouveau" id="btn-nouvelle-route" onclick="openNouvelleRoute()">＋ ROUTE</button>
     </div>
   </div>
@@ -833,7 +834,26 @@ function openRoutes(){
   renderRoutes();
   document.getElementById('routes-overlay').classList.add('open');
 }
-
+async function nouvellePasse(){
+  const route=routes.find(r=>r.id===routeActive);
+  const nom=route?route.nom:'cette route';
+  if(!confirm('Remettre tous les stops de "'+nom+'" en non-complétés ?'))return;
+  const stopsRoute=stops.filter(s=>s.route_id===routeActive);
+  if(!stopsRoute.length){toast('Aucun stop sur cette route');return;}
+  showSync(true);
+  for(const s of stopsRoute){
+    await db.from('stops').update({fait:false}).eq('id',s.id);
+    s.fait=false;
+  }
+  // Supprimer les problèmes de ces stops aussi
+  for(const s of stopsRoute){
+    await db.from('problemes').delete().eq('stop_id',s.id);
+  }
+  showSync(false);
+  renderAll();
+  closeRoutes();
+  toast('🔄 Nouvelle passe lancée !');
+}
 function closeRoutes(){
   document.getElementById('routes-overlay').classList.remove('open');
 }
@@ -887,6 +907,7 @@ function renderRoutes(){
 
   // Bouton nouvelle route visible seulement admin
   document.getElementById('btn-nouvelle-route').style.display=isAdmin?'flex':'none';
+	document.getElementById('btn-nouvelle-passe').style.display=routeActive?'flex':'none';
 }
 
 function openNouvelleRoute(){

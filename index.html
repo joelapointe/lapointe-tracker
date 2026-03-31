@@ -456,7 +456,7 @@
     <div id="liste-body"></div>
     <div id="liste-footer">
       <button class="lf-btn fermer" onclick="closeListe()">FERMER</button>
-      <button class="lf-btn nouveau" onclick="closeListe();openModal()">＋ NOUVEAU</button>
+      <button class="lf-btn nouveau" id="btn-nouveau-liste" onclick="closeListe();openModal()">＋ NOUVEAU</button>
     </div>
   </div>
 </div>
@@ -624,6 +624,7 @@ function applyRole(){
   badge.className=isAdmin?'admin':'employe';
   document.getElementById('op-name').textContent=currentUser?currentUser.nom:operator||'—';
   document.getElementById('bb-add').style.display=isAdmin?'flex':'none';
+	document.getElementById('btn-nouveau-liste').style.display=isAdmin?'flex':'none';
   document.getElementById('btn-del').style.display=isAdmin?'flex':'none';
   document.getElementById('bb-admin').style.display=isAdmin?'flex':'none';
 }

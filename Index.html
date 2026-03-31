@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <title>Lapointe Tracker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#111418;--surface:#1a1f26;--border:#2a3140;
+      --accent:#c8e63c;--green:#4ade80;--red:#ef4444;
+      --text:#f0f4f8;--muted:#7a8899;
+    }
+    html,body{height:100%;overflow:hidden;background:var(--bg);}
+    body{font-family:'Barlow',sans-serif;display:flex;flex-direction:column;}
+
+    /* LOADING */
+    #loading{
+      position:fixed;inset:0;background:var(--bg);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      z-index:9999;gap:20px;
+    }
+    #loading .logo{font-family:'Barlow Condensed',sans-serif;font-size:34px;font-weight:800;color:var(--text);}
+    #loading .logo em{color:var(--accent);font-style:normal;}
+    .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    #load-status{font-size:13px;color:var(--muted);text-align:center;padding:0 32px;}
+    #loading.gone{display:none;}
+
+    /* ERREUR */
+    #err-screen{
+      display:none;position:fixed;inset:0;background:var(--bg);
+      flex-direction:column;align-items:center;justify-content:center;
+      z-index:9999;gap:14px;padding:28px;text-align:center;
+    }
+    #err-screen.show{display:flex;}
+    #err-screen h2{color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:26px;}
+    #err-screen p{color:var(--muted);font-size:13px;line-height:1.6;word-break:break-word;}
+    #err-screen button{padding:12px 28px;background:var(--accent);border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:'Barlow Condensed',sans-serif;cursor:pointer;color:#111;}
+
+    /* MAP */
+    #map{flex:1;position:relative;z-index:1;}
+    .leaflet-container{background:#1a2030;}
+    .leaflet-control-zoom{display:none;}
+
+    /* TOPBAR */
+    #topbar{
+      position:absolute;top:0;left:0;right:0;z-index:900;
+      background:linear-gradient(to bottom,rgba(17,20,24,.95) 65%,transparent);
+      padding:10px 14px 24px;
+      display:flex;align-items:center;justify-content:space-between;
+      pointer-events:none;
+    }
+    #logo{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--text);}
+    #logo em{color:var(--accent);font-style:normal;}
+    #gps-pill{
+      display:flex;align-items:center;gap:6px;
+      background:rgba(26,31,38,.92);border:1px solid var(--border);
+      border-radius:20px;padding:5px 11px;font-size:12px;color:var(--muted);
+      pointer-events:all;
+    }
+    #gps-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .4s;}
+    #gps-dot.on{background:var(--green);animation:blink 2s infinite;}
+    #gps-dot.err{background:var(--red);}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+    #addr-row{
+      position:absolute;top:52px;left:14px;right:14px;z-index:900;
+      font-size:12px;color:var(--text);pointer-events:none;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+    /* CONTROLS */
+    #controls{position:absolute;top:80px;right:12px;z-index:800;display:flex;flex-direction:column;gap:8px;}
+    .ctrl{
+      width:44px;height:44px;border-radius:10px;
+      background:var(--surface);border:1px solid var(--border);
+      color:var(--text);font-size:18px;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;transition:.15s;box-shadow:0 2px 8px rgba(0,0,0,.4);
+    }
+    .ctrl:active{transform:scale(.9);}
+    .ctrl.on{background:var(--accent);color:#111;border-color:var(--accent);}
+
+    /* BOTTOMBAR */
+    #bottombar{
+      position:fixed;
+      bottom:0;left:0;right:0;z-index:900;
+      background:var(--surface);border-top:2px solid var(--accent);
+      display:flex;align-items:stretch;height:68px;
+    }
+    .bb{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 14px;border-right:1px solid var(--border);gap:2px;}
+    .bb:last-child{border-right:none;}
+    .bbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
+    .bbv{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:var(--text);white-space:nowrap;}
+    #bb-op{flex:0 0 auto;flex-direction:row;gap:8px;padding:0 16px;}
+    #op-dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);flex-shrink:0;}
+    #op-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:var(--text);}
+    #bb-zone{flex:1;}
+    #bb-prog{flex:0 0 auto;padding:0 14px;}
+    #prog-bg{width:72px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+    #prog-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .5s;}
+    #bb-add{
+      flex:0 0 68px;background:var(--accent);border:none;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      font-size:26px;color:#111;cursor:pointer;gap:1px;transition:filter .15s;
+    }
+    #bb-add:active{filter:brightness(.85);}
+    #bb-add-lbl{font-size:9px;font-weight:700;color:#111;letter-spacing:.5px;}
+#liste-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
+#liste-overlay.open{display:flex;}
+#liste-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:78vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}
+#liste-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 12px;border-bottom:2px solid #c8e63c;flex-shrink:0;}
+#liste-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#f0f4f8;}
+#liste-sub{font-size:11px;color:#6b7a8d;margin-top:2px;}
+#liste-x{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#liste-body{overflow-y:auto;flex:1;padding:4px 0 8px;}
+.ci{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid rgba(37,45,58,.8);cursor:pointer;gap:12px;transition:background .15s;}
+.ci:active{background:rgba(200,230,60,.06);}
+.ci.ci-done{opacity:.55;}
+.ci-num{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:#6b7a8d;width:20px;text-align:center;flex-shrink:0;}
+.ci-diamond{width:12px;height:12px;transform:rotate(45deg);flex-shrink:0;}
+.ci-diamond.todo{background:#c8e63c;}
+.ci-diamond.done{background:#4ade80;}
+.ci-info{flex:1;min-width:0;}
+.ci-addr{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#f0f4f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ci-addr.done{color:#6b7a8d;text-decoration:line-through;}
+.ci-svc{font-size:11px;color:#6b7a8d;margin-top:1px;}
+.ci-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+.ci-badge.todo{background:rgba(200,230,60,.12);color:#c8e63c;}
+.ci-badge.done{background:rgba(74,222,128,.10);color:#4ade80;}
+#liste-footer{padding:12px 16px 24px;border-top:1px solid #252d3a;display:flex;gap:8px;flex-shrink:0;}
+.lf-btn{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
+.lf-btn.fermer{background:#252d3a;color:#6b7a8d;}
+.lf-btn.nouveau{background:#c8e63c;color:#111;}
+    /* STOP CARD */
+    #stop-card{
+      position:absolute;bottom:72px;left:0;right:0;z-index:950;
+      background:rgba(17,20,24,.97);border-top:1px solid var(--border);
+      padding:14px 16px 12px;
+      transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+      pointer-events:none;
+    }
+    #stop-card.open{transform:translateY(0);pointer-events:all;}
+    #sc-head{display:flex;align-items:flex-start;justify-content:space-between;}
+    #sc-addr{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--accent);line-height:1.1;}
+    #sc-svc{font-size:14px;color:var(--text);margin-top:2px;}
+    #sc-cli{font-size:12px;color:var(--muted);margin-top:1px;}
+    #sc-x{background:var(--border);border:none;border-radius:6px;color:var(--text);font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+    #sc-acts{display:flex;gap:8px;margin-top:12px;}
+    .scb{flex:1;padding:10px;border-radius:8px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;}
+    .scb:active{transform:scale(.97);}
+    .scb.done{background:var(--green);color:#0a1a10;}
+    .scb.done2{background:#1e3a1a;color:var(--green);cursor:default;}
+    .scb.skip{background:var(--border);color:var(--muted);}
+    .scb.del{background:#3a1a1a;color:var(--red);flex:0 0 44px;font-size:18px;}
+
+    /* MODAL */
+    #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}
+    #overlay.open{display:flex;}
+    #modal{background:var(--surface);border:1px solid var(--border);border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:sup .25s ease;}
+    @keyframes sup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    #modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--accent);margin-bottom:14px;}
+    .f{margin-bottom:12px;}
+    .f label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.7px;}
+    .f input,.f select{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Barlow',sans-serif;outline:none;}
+    .f input:focus,.f select:focus{border-color:var(--accent);}
+    #geo-st{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px;text-align:center;}
+    #geo-st.ok{color:var(--green);}
+    #geo-st.err{color:var(--red);}
+    #mbts{display:flex;gap:8px;margin-top:16px;}
+    .mb{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;cursor:pointer;}
+    .mb.p{background:var(--accent);color:#111;}
+    .mb.s{background:var(--border);color:var(--muted);}
+
+    /* TOAST */
+    #toast{
+      position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--surface);border:1px solid var(--border);border-radius:10px;
+      padding:10px 18px;font-size:13px;color:var(--text);z-index:3000;
+      opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;
+    }
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+    #sync{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);z-index:900;pointer-events:none;opacity:0;transition:opacity .3s;}
+    #sync.show{opacity:1;}
+#login-screen{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:8000;padding:28px;}
+#login-screen.show{display:flex;}
+#login-logo{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--text);margin-bottom:6px;}
+#login-logo em{color:var(--accent);font-style:normal;}
+#login-sub{font-size:13px;color:var(--muted);margin-bottom:32px;}
+#login-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px 20px;width:100%;max-width:360px;}
+#login-box h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--accent);margin-bottom:16px;}
+.lf{margin-bottom:14px;}
+.lf label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.7px;}
+.lf input{width:100%;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:16px;font-family:'Barlow',sans-serif;outline:none;}
+.lf input:focus{border-color:var(--accent);}
+#login-err{font-size:12px;color:var(--red);margin-bottom:12px;min-height:16px;text-align:center;}
+#login-btn{width:100%;padding:14px;background:var(--accent);border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:#111;cursor:pointer;}
+#role-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:900;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;cursor:pointer;}
+#role-badge.admin{background:rgba(200,230,60,.15);color:var(--accent);border:1px solid rgba(200,230,60,.3);}
+#role-badge.employe{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
+#signup-screen{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:8000;padding:28px;}
+#signup-screen.show{display:flex;}
+#pending-screen{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:8000;padding:28px;}
+#pending-screen.show{display:flex;}
+#signup-err{font-size:12px;color:#ef4444;margin-bottom:12px;min-height:16px;text-align:center;}
+#signup-btn{width:100%;padding:14px;background:#c8e63c;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:#111;cursor:pointer;}
+#admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
+#admin-overlay.open{display:flex;}
+#admin-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:78vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}
+#admin-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 12px;border-bottom:2px solid #c8e63c;flex-shrink:0;}
+#admin-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#f0f4f8;}
+#admin-sub{font-size:11px;color:#6b7a8d;margin-top:2px;}
+#admin-x{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#admin-body{overflow-y:auto;flex:1;padding:8px 0;}
+#admin-footer{padding:12px 16px 24px;border-top:1px solid #252d3a;display:flex;gap:8px;flex-shrink:0;}
+#routes-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
+#routes-overlay.open{display:flex;}
+#routes-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:78vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}
+#routes-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 12px;border-bottom:2px solid #c8e63c;flex-shrink:0;}
+#routes-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#f0f4f8;}
+#routes-sub{font-size:11px;color:#6b7a8d;margin-top:2px;}
+#routes-x{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:18px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#routes-body{overflow-y:auto;flex:1;padding:8px 0;}
+#routes-footer{padding:12px 16px 24px;border-top:1px solid #252d3a;display:flex;gap:8px;flex-shrink:0;}
+#nouvelle-route-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}
+#nouvelle-route-overlay.open{display:flex;}
+#nouvelle-route-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
+#nouvelle-route-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
+.route-item{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(37,45,58,.8);cursor:pointer;gap:12px;transition:background .15s;}
+.route-item:active{background:rgba(200,230,60,.06);}
+.route-item.active{background:rgba(200,230,60,.08);border-left:3px solid #c8e63c;}
+.route-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;}
+.route-nom{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#f0f4f8;flex:1;}
+.route-count{font-size:11px;color:#6b7a8d;}
+.route-del{background:none;border:none;color:#6b7a8d;font-size:16px;cursor:pointer;padding:4px 8px;}
+#prob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2500;align-items:flex-end;}
+#prob-overlay.open{display:flex;}
+#prob-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
+#prob-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#fb923c;margin-bottom:6px;}
+.scb.prob{background:rgba(251,146,60,.15);color:#fb923c;border:1px solid rgba(251,146,60,.3);}
+#bb-admin{flex:0 0 60px;background:#1a1f26;border:none;border-top:2px solid #c8e63c;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:20px;color:#c8e63c;cursor:pointer;gap:1px;border-left:1px solid #252d3a;}
+.user-item{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(37,45,58,.8);gap:12px;}
+.user-info{flex:1;}
+.user-nom{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#f0f4f8;}
+.user-tel{font-size:11px;color:#6b7a8d;margin-top:1px;}
+.user-approve{padding:8px 16px;background:#c8e63c;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#111;cursor:pointer;}
+.user-refuse{padding:8px 16px;background:#3a1a1a;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#ef4444;cursor:pointer;margin-left:8px;}
+ /* BOTTOM BAR */
+#bottombar{position:absolute;bottom:0;left:0;right:0;z-index:900;background:#161c24;border-top:2px solid #c8e63c;display:flex;align-items:stretch;height:72px;}
+.bb{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px;border-right:1px solid #252d3a;gap:2px;}
+.bbl{font-size:9px;color:#6b7a8d;text-transform:uppercase;letter-spacing:.9px;}
+.bbv{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:#f0f4f8;white-space:nowrap;}
+#bb-op{flex:0 0 auto;flex-direction:row;gap:9px;padding:0 14px;}
+#op-dot{width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 7px #4ade80;flex-shrink:0;}
+#op-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#f0f4f8;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#bb-zone{flex:1;}
+#bb-prog{flex:0 0 auto;padding:0 14px;cursor:pointer;}
+#prog-bg{width:68px;height:5px;background:#252d3a;border-radius:3px;overflow:hidden;margin-top:3px;}
+#prog-fill{height:100%;background:#c8e63c;border-radius:3px;transition:width .5s;}
+#bb-add{flex:0 0 68px;background:#c8e63c;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:26px;color:#111;cursor:pointer;}
+#bb-add-lbl{font-size:9px;font-weight:700;color:#111;letter-spacing:.5px;} </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="logo">LAPOINTE <em>TRACKER</em></div>
+  <div class="spinner"></div>
+  <div id="load-status">Initialisation…</div>
+</div>
+
+<!-- ERREUR -->
+<div id="err-screen">
+  <h2>⚠️ Erreur</h2>
+  <p id="err-msg">—</p>
+  <button onclick="location.reload()">🔄 Réessayer</button>
+</div>
+
+<!-- APP -->
+<div id="login-screen">
+  <div id="login-logo">LAPOINTE <em>TRACKER</em></div>
+  <div id="login-sub">Entrez vos informations pour continuer</div>
+  <div id="login-box">
+    <h2>🔐 Connexion</h2>
+    <div class="lf">
+      <label>Numéro de téléphone</label>
+      <input id="l-tel" type="tel" placeholder="8191234567" inputmode="numeric"/>
+    </div>
+    <div class="lf">
+      <label>PIN (4 chiffres)</label>
+      <input id="l-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/>
+    </div>
+    <div id="login-err"></div>
+    <button id="login-btn" onclick="doLogin()">Connexion →</button>
+	<div style="text-align:center;margin-top:14px;">
+  <span style="font-size:13px;color:#6b7a8d;cursor:pointer;" onclick="showSignup()">Créer un compte →</span>
+</div>
+  </div>
+</div>
+<div id="signup-screen">
+  <div id="login-logo">LAPOINTE <em>TRACKER</em></div>
+  <div id="login-sub">Créer un nouveau compte</div>
+  <div id="login-box">
+    <h2>👤 Inscription</h2>
+    <div class="lf">
+      <label>Ton prénom</label>
+      <input id="s-nom" type="text" placeholder="ex: Marie"/>
+    </div>
+    <div class="lf">
+      <label>Numéro de téléphone</label>
+      <input id="s-tel" type="tel" placeholder="8191234567" inputmode="numeric"/>
+    </div>
+    <div class="lf">
+      <label>PIN (4 chiffres)</label>
+      <input id="s-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/>
+    </div>
+    <div id="signup-err"></div>
+    <button id="signup-btn" onclick="doSignup()">Créer mon compte →</button>
+    <div style="text-align:center;margin-top:14px;">
+      <span style="font-size:13px;color:#6b7a8d;cursor:pointer;" onclick="showLogin()">← Retour à la connexion</span>
+    </div>
+  </div>
+</div>
+
+<div id="pending-screen">
+  <div id="login-logo">LAPOINTE <em>TRACKER</em></div>
+  <div id="login-box" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:16px;">⏳</div>
+    <h2 style="color:#fb923c;margin-bottom:10px;">Compte en attente</h2>
+    <p style="color:#6b7a8d;font-size:14px;line-height:1.6;">Ton compte a été créé.<br>L'administrateur doit l'approuver avant que tu puisses accéder à l'app.</p>
+    <button onclick="doLogout()" style="margin-top:20px;width:100%;padding:12px;background:#252d3a;border:none;border-radius:10px;color:#6b7a8d;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Se déconnecter</button>
+  </div>
+</div>
+<div id="role-badge" onclick="doLogout()"></div>
+<div id="map"></div>
+<div id="topbar">
+  <div id="logo">LAPOINTE <em>TRACKER</em></div>
+  <div id="gps-pill"><div id="gps-dot"></div><span id="gps-lbl">GPS</span></div>
+</div>
+<div id="addr-row">📍 <span id="addr-txt">Recherche…</span></div>
+<div id="sync">⟳ Sync…</div>
+
+<div id="controls">
+  <button class="ctrl on"  id="btn-sat" onclick="setLayer('sat')">🛰</button>
+  <button class="ctrl"     id="btn-map" onclick="setLayer('map')">🗺</button>
+  <button class="ctrl" onclick="centerUser()" style="margin-top:8px">◎</button>
+</div>
+
+<div id="stop-card">
+  <div id="sc-head">
+    <div><div id="sc-addr">—</div><div id="sc-svc">—</div><div id="sc-cli"></div></div>
+    <button id="sc-x" onclick="closeCard()">✕</button>
+  </div>
+  <div id="sc-acts">
+    <button class="scb done" id="btn-cmp" onclick="completeStop()">✔ Complété</button>
+    <button class="scb skip" onclick="closeCard()">Passer</button>
+	<button class="scb prob" onclick="openProbleme()">⚠ Problème</button>
+    <button id="btn-del" class="scb del" onclick="deleteStop()">🗑</button>
+  </div>
+</div>
+
+<div id="bottombar">
+  <div class="bb" id="bb-op"><div id="op-dot"></div><div id="op-name">—</div></div>
+  <div class="bb" id="bb-zone" onclick="openRoutes()" style="cursor:pointer">
+  <div class="bb" id="bb-prog" onclick="openListe()">
+    <div class="bbl"><span id="prog-txt">0/0</span></div>
+    <div id="prog-bg"><div id="prog-fill" style="width:0%"></div></div>
+    <div class="bbv" id="prog-pct" style="font-size:14px;margin-top:2px">0%</div>
+  </div>
+  <button id="bb-admin" onclick="openAdmin()"><span>⚙</span><span style="font-size:9px;font-weight:700;letter-spacing:.5px;">ADMIN</span></button>
+  <button id="bb-add" onclick="openModal()"><span>＋</span><span id="bb-add-lbl">STOP</span></button>
+</div>
+<div id="routes-overlay" onclick="bgClickRoutes(event)">
+  <div id="routes-panel">
+    <div id="routes-header">
+      <div>
+        <div id="routes-title">🗺 Routes</div>
+        <div id="routes-sub">Sélectionne ou gère les routes</div>
+      </div>
+      <button id="routes-x" onclick="closeRoutes()">✕</button>
+    </div>
+    <div id="routes-body"></div>
+    <div id="routes-footer">
+      <button class="lf-btn fermer" onclick="closeRoutes()">FERMER</button>
+      <button class="lf-btn nouveau" id="btn-nouvelle-route" onclick="openNouvelleRoute()">＋ ROUTE</button>
+    </div>
+  </div>
+</div>
+
+<div id="nouvelle-route-overlay" onclick="bgClickNR(event)">
+  <div id="nouvelle-route-modal">
+    <h2>＋ Nouvelle route</h2>
+    <div class="f">
+      <label>Nom de la route</label>
+      <input id="nr-nom" type="text" placeholder="ex: Zone 12 R2"/>
+    </div>
+    <div class="f">
+      <label>Couleur</label>
+      <select id="nr-couleur">
+        <option value="#c8e63c">🟡 Jaune (défaut)</option>
+        <option value="#4ade80">🟢 Vert</option>
+        <option value="#60a5fa">🔵 Bleu</option>
+        <option value="#f87171">🔴 Rouge</option>
+        <option value="#fb923c">🟠 Orange</option>
+      </select>
+    </div>
+    <div id="nr-btns" style="display:flex;gap:8px;margin-top:16px;">
+      <button class="mb s" onclick="closeNouvelleRoute()">Annuler</button>
+      <button class="mb p" onclick="sauvegarderRoute()">Créer</button>
+    </div>
+  </div>
+</div>
+<div id="prob-overlay" onclick="bgClickProb(event)">
+  <div id="prob-modal">
+    <h2>⚠ Signaler un problème</h2>
+    <p id="prob-addr-lbl" style="font-size:13px;color:#6b7a8d;margin-bottom:14px;">—</p>
+    <textarea id="prob-note" placeholder="Décrivez le problème (ex: entrée bloquée, client absent…)" style="width:100%;padding:12px;background:#0f1318;border:1px solid #252d3a;border-radius:8px;color:#f0f4f8;font-size:15px;font-family:'Barlow',sans-serif;outline:none;resize:none;min-height:100px;"></textarea>
+    <div id="prob-btns" style="display:flex;gap:8px;margin-top:14px;">
+      <button class="mb s" onclick="closeProbleme()">Annuler</button>
+      <button class="mb p" style="background:#fb923c;color:#111;" onclick="envoyerProbleme()">Envoyer</button>
+    </div>
+  </div>
+</div>
+<div id="admin-overlay" onclick="bgClickAdmin(event)">
+  <div id="admin-panel">
+    <div id="admin-header">
+      <div>
+        <div id="admin-title">👑 Panneau Admin</div>
+        <div id="admin-sub">Comptes en attente d'approbation</div>
+      </div>
+      <button id="admin-x" onclick="closeAdmin()">✕</button>
+    </div>
+    <div id="admin-body">
+      <div style="padding:32px;text-align:center;color:#6b7a8d;">Chargement…</div>
+    </div>
+    <div id="admin-footer">
+      <button class="lf-btn fermer" onclick="closeAdmin()">FERMER</button>
+    </div>
+  </div>
+</div>
+<div id="liste-overlay" onclick="bgClickListe(event)">
+  <div id="liste-panel">
+    <div id="liste-header">
+      <div>
+        <div id="liste-title">Liste des contrats</div>
+        <div id="liste-sub"></div>
+      </div>
+      <button id="liste-x" onclick="closeListe()">✕</button>
+    </div>
+    <div id="liste-body"></div>
+    <div id="liste-footer">
+      <button class="lf-btn fermer" onclick="closeListe()">FERMER</button>
+      <button class="lf-btn nouveau" onclick="closeListe();openModal()">＋ NOUVEAU</button>
+    </div>
+  </div>
+</div>
+<div id="overlay" onclick="bgClick(event)">
+  <div id="modal">
+    <h2>＋ Nouveau stop</h2>
+    <div class="f"><label>Opérateur</label><input id="f-op" type="text" placeholder="ex: Joé"/></div>
+    <div class="f"><label>Zone / Route</label><input id="f-zone" type="text" placeholder="ex: Zone 12 R2"/></div>
+    <div class="f"><label>Adresse du client</label><input id="f-addr" type="text" placeholder="ex: 245 Rue de Laubier, Shawinigan"/></div>
+    <div class="f"><label>Nom du client (optionnel)</label><input id="f-client" type="text" placeholder="ex: Famille Tremblay"/></div>
+    <div class="f">
+      <label>Type de service</label>
+      <select id="f-svc">
+        <option>Déneigement mécanique</option>
+        <option>Déneigement manuel</option>
+        <option>Épandage de sel</option>
+        <option>Entretien paysager</option>
+        <option>Autre</option>
+      </select>
+    </div>
+    <div id="geo-st"></div>
+    <div id="mbts">
+      <button class="mb s" onclick="closeModal()">Annuler</button>
+      <button class="mb p" onclick="addStop()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Chargement séquentiel des scripts ──────────────────
+function loadScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src; s.onload=res; s.onerror=()=>rej(new Error('Impossible de charger: '+src));
+    document.head.appendChild(s);
+  });
+}
+
+setStatus('Chargement de la carte…');
+
+Promise.all([
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'),
+  loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'),
+]).then(()=>{
+  setStatus('Connexion à la base de données…');
+  initApp();
+}).catch(e=>{
+  showErr('Impossible de charger les librairies.<br>Vérifie ta connexion internet.<br><br><small>'+e.message+'</small>');
+});
+
+function setStatus(t){ document.getElementById('load-status').textContent=t; }
+
+function showErr(msg){
+  document.getElementById('loading').classList.add('gone');
+  document.getElementById('err-msg').innerHTML=msg;
+  document.getElementById('err-screen').classList.add('show');
+}
+
+function hideLoading(){ document.getElementById('loading').classList.add('gone'); }
+
+// ── APP ────────────────────────────────────────────────
+const SUPA_URL='https://uxoxdauzcxjsefuoruwt.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV4b3hkYXV6Y3hqc2VmdW9ydXd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MDgxOTksImV4cCI6MjA5MDQ4NDE5OX0.wkCtoY3_273C-XWx9c2hP2PIWOC1c1I_3sFjG9cN55A';
+
+let db, map, stops=[], activeIdx=null, mkrs={};
+let currentUser=null;
+let operator=localStorage.getItem('lp_op')||'';
+let zone=localStorage.getItem('lp_zone')||'';
+let lastPos=null;
+function showLoginScreen(){
+  document.getElementById('login-screen').classList.add('show');
+  document.getElementById('signup-screen').classList.remove('show');
+  document.getElementById('pending-screen').classList.remove('show');
+}
+
+function showSignup(){
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('signup-screen').classList.add('show');
+  document.getElementById('pending-screen').classList.remove('show');
+}
+
+function showPending(){
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('signup-screen').classList.remove('show');
+  document.getElementById('pending-screen').classList.add('show');
+}
+
+function showLogin(){
+  document.getElementById('signup-screen').classList.remove('show');
+  document.getElementById('pending-screen').classList.remove('show');
+  document.getElementById('login-screen').classList.add('show');
+}
+
+async function doSignup(){
+  const nom=document.getElementById('s-nom').value.trim();
+  const tel=document.getElementById('s-tel').value.trim().replace(/\D/g,'');
+  const pin=document.getElementById('s-pin').value.trim();
+  const errEl=document.getElementById('signup-err');
+  errEl.textContent='';
+
+  if(!nom||!tel||!pin){errEl.textContent='Remplis tous les champs.';return;}
+  if(pin.length!==4){errEl.textContent='Le PIN doit être 4 chiffres.';return;}
+  if(tel.length<10){errEl.textContent='Numéro de téléphone invalide.';return;}
+
+  document.getElementById('signup-btn').textContent='Création…';
+
+  // Vérifier si le numéro existe déjà
+  const{data:exist}=await db.from('utilisateurs').select('id').eq('telephone',tel).single();
+  if(exist){
+    document.getElementById('signup-btn').textContent='Créer mon compte →';
+    errEl.textContent='Ce numéro est déjà utilisé.';
+    return;
+  }
+
+  const{data,error}=await db.from('utilisateurs')
+    .insert([{nom,telephone:tel,pin,role:'employe',approuve:false}])
+    .select().single();
+
+  document.getElementById('signup-btn').textContent='Créer mon compte →';
+
+  if(error){errEl.textContent='Erreur: '+error.message;return;}
+
+  currentUser=data;
+  localStorage.setItem('lp_user',JSON.stringify(data));
+  showPending();
+}
+function doLogout(){
+  if(!confirm('Se déconnecter ?'))return;
+  currentUser=null;
+  localStorage.removeItem('lp_user');
+  location.reload();
+}
+
+async function doLogin(){
+  const tel=document.getElementById('l-tel').value.trim().replace(/\D/g,'');
+  const pin=document.getElementById('l-pin').value.trim();
+  const errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!tel||!pin){errEl.textContent='Remplis tous les champs.';return;}
+  document.getElementById('login-btn').textContent='Vérification…';
+  const{data,error}=await db.from('utilisateurs').select('*').eq('telephone',tel).eq('pin',pin).single();
+  document.getElementById('login-btn').textContent='Connexion →';
+  if(error||!data){errEl.textContent='Numéro ou PIN incorrect.';return;}
+  currentUser=data;
+  localStorage.setItem('lp_user',JSON.stringify(data));
+ document.getElementById('login-screen').classList.remove('show');
+  if(!data.approuve){
+    currentUser=data;
+    localStorage.setItem('lp_user',JSON.stringify(data));
+    showPending();
+    return;
+  }
+  applyRole();
+  loadStops();
+ 
+}
+
+function applyRole(){
+  if(!currentUser)return;
+  const isAdmin=currentUser.role==='admin';
+  const badge=document.getElementById('role-badge');
+  badge.textContent=(isAdmin?'👑 ':'')+currentUser.nom+' · Déconnexion';
+  badge.className=isAdmin?'admin':'employe';
+  document.getElementById('op-name').textContent=currentUser?currentUser.nom:operator||'—';
+  document.getElementById('bb-add').style.display=isAdmin?'flex':'none';
+  document.getElementById('btn-del').style.display=isAdmin?'flex':'none';
+  document.getElementById('bb-admin').style.display=isAdmin?'flex':'none';
+}
+function initApp(){
+  try{
+    db = supabase.createClient(SUPA_URL, SUPA_KEY);
+  } catch(e){
+    showErr('Erreur Supabase: '+e.message); return;
+  }
+
+  // Carte
+  try{
+    map = L.map('map',{center:[46.55,-72.75],zoom:14,zoomControl:false});
+  } catch(e){
+    showErr('Erreur carte: '+e.message); return;
+  }
+
+  const layers={
+    sat: L.layerGroup([
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20}),
+      L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,opacity:.9}),
+    ]),
+    map: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20}),
+  };
+  let curL='sat';
+  layers.sat.addTo(map);
+
+  window.setLayer=function(t){
+    if(t===curL) return;
+    ['sat','map'].forEach(k=>{try{map.removeLayer(layers[k]);}catch(e){}});
+    layers[t].addTo(map);
+    curL=t;
+    document.getElementById('btn-sat').classList.toggle('on',t==='sat');
+    document.getElementById('btn-map').classList.toggle('on',t==='map');
+  };
+
+  // GPS
+  const dotEl=document.getElementById('gps-dot');
+  const lblEl=document.getElementById('gps-lbl');
+  const addrEl=document.getElementById('addr-txt');
+
+  if(navigator.geolocation){
+    navigator.geolocation.watchPosition(pos=>{
+      const{latitude:lat,longitude:lon,accuracy}=pos.coords;
+      lastPos=[lat,lon];
+      dotEl.className='on';
+      lblEl.textContent=`±${Math.round(accuracy)}m`;
+      const icon=L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:#4ade80;border:3px solid #fff;box-shadow:0 0 8px #4ade80"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
+      if(!window._uMk){
+        window._uMk=L.marker([lat,lon],{icon,zIndexOffset:1000}).addTo(map);
+        window._uCk=L.circle([lat,lon],{radius:accuracy,color:'#4ade80',fillColor:'#4ade80',fillOpacity:.08,weight:1}).addTo(map);
+        map.setView([lat,lon],15);
+      } else {
+        window._uMk.setLatLng([lat,lon]);
+        window._uCk.setLatLng([lat,lon]).setRadius(accuracy);
+      }
+      geocodeReverse(lat,lon,addrEl);
+    },()=>{dotEl.className='err';lblEl.textContent='Erreur';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
+  }
+
+  window.centerUser=function(){if(lastPos) map.flyTo(lastPos,16,{duration:.8});};
+
+  // Temps réel
+  db.channel('stops-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'stops'},()=>loadStops())
+    .subscribe();
+
+  const saved=localStorage.getItem('lp_user');
+  if(saved){
+    try{
+      currentUser=JSON.parse(saved);
+      hideLoading();
+      applyRole();
+      loadStops();
+    }catch(e){
+      hideLoading();
+      showLoginScreen();
+    }
+  } else {
+    hideLoading();
+    showLoginScreen();
+  }
+}
+
+// ── GEOCODE ────────────────────────────────────────────
+let _lgeo=null,_gT=null;
+function geocodeReverse(lat,lon,el){
+  if(_lgeo&&Math.abs(lat-_lgeo[0])<0.0001&&Math.abs(lon-_lgeo[1])<0.0001) return;
+  clearTimeout(_gT);
+  _gT=setTimeout(async()=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,{headers:{'Accept-Language':'fr'}});
+      const d=await r.json();
+      const a=d.address||{};
+      const p=[a.house_number?`${a.house_number} ${a.road||''}`:a.road||'',a.city||a.town||a.village||a.suburb||''].filter(Boolean);
+      el.textContent=p.join(', ')||d.display_name;
+      _lgeo=[lat,lon];
+    }catch(e){}
+  },1500);
+}
+
+// ── SUPABASE CRUD ──────────────────────────────────────
+async function loadStops(){
+  setStatus('Chargement des stops…');
+  try{
+    const{data,error}=await db.from('stops').select('*').order('ordre');
+    if(error) throw error;
+  stops=data||[];
+    await loadRoutes();
+    renderAll();
+    hideLoading();
+    updateBar();
+    
+  }catch(e){
+    showErr('Impossible de charger les données.<br>Vérifie que les politiques RLS sont activées dans Supabase.<br><br><small>'+e.message+'</small>');
+  }
+}
+
+async function dbSave(s){
+  showSync(true);
+  const{data,error}=await db.from('stops').insert([s]).select().single();
+  showSync(false);
+  if(error){toast('❌ '+error.message);return null;}
+  return data;
+}
+
+async function dbDone(id){
+  showSync(true);
+  await db.from('stops').update({fait:true}).eq('id',id);
+  showSync(false);
+}
+
+async function dbDel(id){
+  showSync(true);
+  await db.from('stops').delete().eq('id',id);
+  showSync(false);
+}
+
+// ── MARQUEURS ──────────────────────────────────────────
+function mkIcon(done){
+  const c=done?'#4ade80':'#c8e63c',s=done?14:18;
+  return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${c};border:2px solid rgba(0,0,0,.5);transform:rotate(45deg);box-shadow:0 2px 6px rgba(0,0,0,.6)"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]});
+}
+
+function renderAll(){
+  Object.values(mkrs).forEach(m=>map.removeLayer(m));
+  Object.keys(mkrs).forEach(k=>delete mkrs[k]);
+  stops.forEach((s,i)=>{
+    if(!s.lat) return;
+    if(routeActive!==null
+    const m=L.marker([s.lat,s.lon],{icon:mkIcon(s.fait)}).addTo(map);
+    m.on('click',()=>openCard(i));
+    mkrs[i]=m;
+  });
+  updateBar();
+}
+
+function updateBar(){
+  const tot=stops.length,done=stops.filter(s=>s.fait).length,pct=tot?Math.round(done/tot*100):0;
+  document.getElementById('op-name').textContent=currentUser?currentUser.nom:operator||'—';
+ document.getElementById('zone-val').textContent=zone||'Toutes les routes';
+  document.getElementById('prog-txt').textContent=`${done}/${tot}`;
+  document.getElementById('prog-pct').textContent=`${pct}%`;
+  document.getElementById('prog-fill').style.width=pct+'%';
+}
+
+// ── STOP CARD ──────────────────────────────────────────
+function openCard(i){
+  const s=stops[i];if(!s)return;
+  activeIdx=i;
+  document.getElementById('sc-addr').textContent=s.adresse;
+  document.getElementById('sc-svc').textContent=s.service||'';
+  document.getElementById('sc-cli').textContent=s.client||'';
+  const b=document.getElementById('btn-cmp');
+  b.textContent=s.fait?'✔ Déjà complété':'✔ Complété';
+  b.className=s.fait?'scb done2':'scb done';
+  document.getElementById('stop-card').classList.add('open');
+  map.flyTo([s.lat,s.lon],17,{duration:.7});
+}
+
+function closeCard(){document.getElementById('stop-card').classList.remove('open');activeIdx=null;}
+
+async function completeStop(){
+  if(activeIdx===null)return;
+  const s=stops[activeIdx];if(s.fait)return;
+  await dbDone(s.id);s.fait=true;renderAll();closeCard();toast('✔ Stop complété !');
+}
+
+async function deleteStop(){
+  if(activeIdx===null)return;
+  const s=stops[activeIdx];
+  if(!confirm(`Supprimer "${s.adresse}" ?`))return;
+  await dbDel(s.id);stops.splice(activeIdx,1);renderAll();closeCard();toast('🗑 Supprimé');
+}
+
+// ── MODAL ──────────────────────────────────────────────
+let routes=[];
+let routeActive=null;
+
+async function loadRoutes(){
+  const{data}=await db.from('routes').select('*').order('created_at');
+  routes=data||[];
+}
+
+function openRoutes(){
+  renderRoutes();
+  document.getElementById('routes-overlay').classList.add('open');
+}
+
+function closeRoutes(){
+  document.getElementById('routes-overlay').classList.remove('open');
+}
+
+function bgClickRoutes(e){
+  if(e.target===document.getElementById('routes-overlay'))closeRoutes();
+}
+
+function renderRoutes(){
+  const body=document.getElementById('routes-body');
+  const isAdmin=currentUser&&currentUser.role==='admin';
+  body.innerHTML='';
+
+  // Option "Toutes les routes"
+  const all=document.createElement('div');
+  all.className='route-item'+(routeActive===null?' active':'');
+  all.onclick=()=>{routeActive=null;zone='Toutes les routes';localStorage.setItem('lp_zone','');updateBar();renderAll();closeRoutes();};
+  all.innerHTML=
+    '<div class="route-dot" style="background:#c8e63c"></div>'+
+    '<div class="route-nom">Toutes les routes</div>'+
+    '<div class="route-count">'+stops.length+' stops</div>';
+  body.appendChild(all);
+
+  if(routes.length===0){
+    const empty=document.createElement('div');
+    empty.style='padding:20px 16px;color:#6b7a8d;font-size:13px;';
+    empty.textContent='Aucune route créée.';
+    body.appendChild(empty);
+    return;
+  }
+
+  routes.forEach(r=>{
+    const count=stops.filter(s=>s.route_id===r.id).length;
+    const div=document.createElement('div');
+    div.className='route-item'+(routeActive===r.id?' active':'');
+    div.onclick=()=>{
+      routeActive=r.id;
+      zone=r.nom;
+      localStorage.setItem('lp_zone',r.nom);
+      updateBar();
+      renderAll();
+      closeRoutes();
+    };
+    div.innerHTML=
+      '<div class="route-dot" style="background:'+r.couleur+'"></div>'+
+      '<div class="route-nom">'+r.nom+'</div>'+
+      '<div class="route-count">'+count+' stops</div>'+
+      (isAdmin?'<button class="route-del" onclick="supprimerRoute(event,\''+r.id+'\')">🗑</button>':'');
+    body.appendChild(div);
+  });
+
+  // Bouton nouvelle route visible seulement admin
+  document.getElementById('btn-nouvelle-route').style.display=isAdmin?'flex':'none';
+}
+
+function openNouvelleRoute(){
+  document.getElementById('nouvelle-route-overlay').classList.add('open');
+  document.getElementById('nr-nom').value='';
+}
+
+function closeNouvelleRoute(){
+  document.getElementById('nouvelle-route-overlay').classList.remove('open');
+}
+
+function bgClickNR(e){
+  if(e.target===document.getElementById('nouvelle-route-overlay'))closeNouvelleRoute();
+}
+
+async function sauvegarderRoute(){
+  const nom=document.getElementById('nr-nom').value.trim();
+  const couleur=document.getElementById('nr-couleur').value;
+  if(!nom){toast('⚠ Entre un nom de route');return;}
+  showSync(true);
+  const{data,error}=await db.from('routes').insert([{nom,couleur}]).select().single();
+  showSync(false);
+  if(error){toast('❌ '+error.message);return;}
+  routes.push(data);
+  toast('✔ Route créée !');
+  closeNouvelleRoute();
+  renderRoutes();
+}
+
+async function supprimerRoute(e,id){
+  e.stopPropagation();
+  if(!confirm('Supprimer cette route ?'))return;
+  await db.from('routes').delete().eq('id',id);
+  routes=routes.filter(r=>r.id!==id);
+  if(routeActive===id){routeActive=null;zone='Toutes les routes';}
+  renderRoutes();
+  renderAll();
+  toast('🗑 Route supprimée');
+  }
+function openProbleme(){
+  if(activeIdx===null)return;
+  const s=stops[activeIdx];
+  document.getElementById('prob-addr-lbl').textContent=s.adresse;
+  document.getElementById('prob-note').value='';
+  document.getElementById('prob-overlay').classList.add('open');
+}
+
+function closeProbleme(){
+  document.getElementById('prob-overlay').classList.remove('open');
+}
+
+function bgClickProb(e){
+  if(e.target===document.getElementById('prob-overlay'))closeProbleme();
+}
+
+async function envoyerProbleme(){
+  if(activeIdx===null)return;
+  const s=stops[activeIdx];
+  const note=document.getElementById('prob-note').value.trim();
+  if(!note){toast('⚠ Écris une note');return;}
+
+  showSync(true);
+  // Supprimer ancien problème si existant
+  await db.from('problemes').delete().eq('stop_id',s.id);
+  const{error}=await db.from('problemes').insert([{
+    stop_id:s.id,
+    utilisateur_id:currentUser.id,
+    note:note,
+    lu:false
+  }]);
+  showSync(false);
+
+  if(error){toast('❌ '+error.message);return;}
+
+  toast('⚠ Problème signalé !');
+  closeProbleme();
+  closeCard();
+  await loadStops();
+}
+function openAdmin(){
+  if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}
+  document.getElementById('admin-overlay').classList.add('open');
+  loadPendingUsers();
+}
+
+function closeAdmin(){
+  document.getElementById('admin-overlay').classList.remove('open');
+}
+
+function bgClickAdmin(e){
+  if(e.target===document.getElementById('admin-overlay'))closeAdmin();
+}
+
+async function loadPendingUsers(){
+  const body=document.getElementById('admin-body');
+  body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;">Chargement…</div>';
+
+  const{data,error}=await db.from('utilisateurs')
+    .select('*')
+    .eq('approuve',false)
+    .eq('role','employe')
+    .order('created_at');
+
+  if(error||!data||data.length===0){
+    body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;font-size:14px;">✔ Aucun compte en attente.</div>';
+    return;
+  }
+
+  document.getElementById('admin-sub').textContent=data.length+' compte'+(data.length>1?'s':'')+' en attente';
+
+  body.innerHTML='';
+  data.forEach(u=>{
+    const div=document.createElement('div');
+    div.className='user-item';
+    div.id='user-'+u.id;
+    div.innerHTML=
+      '<div class="user-info">'+
+        '<div class="user-nom">'+u.nom+'</div>'+
+        '<div class="user-tel">📞 '+u.telephone+'</div>'+
+      '</div>'+
+      '<button class="user-refuse" onclick="refuseUser(\''+u.id+'\')">Refuser</button>'+
+      '<button class="user-approve" onclick="approveUser(\''+u.id+'\')">Approuver</button>';
+    body.appendChild(div);
+  });
+}
+
+async function approveUser(id){
+  const{error}=await db.from('utilisateurs').update({approuve:true}).eq('id',id);
+  if(error){toast('❌ Erreur: '+error.message);return;}
+  document.getElementById('user-'+id).remove();
+  toast('✔ Compte approuvé !');
+  const body=document.getElementById('admin-body');
+  if(!body.querySelector('.user-item')){
+    body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;font-size:14px;">✔ Aucun compte en attente.</div>';
+    document.getElementById('admin-sub').textContent='Aucun compte en attente';
+  }
+}
+
+async function refuseUser(id){
+  if(!confirm('Supprimer ce compte ?'))return;
+  await db.from('utilisateurs').delete().eq('id',id);
+  document.getElementById('user-'+id).remove();
+  toast('🗑 Compte supprimé');
+  const body=document.getElementById('admin-body');
+  if(!body.querySelector('.user-item')){
+    body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;font-size:14px;">✔ Aucun compte en attente.</div>';
+  }
+}
+function openListe(){
+  renderListe();
+  document.getElementById('liste-overlay').classList.add('open');
+}
+function closeListe(){
+  document.getElementById('liste-overlay').classList.remove('open');
+}
+function bgClickListe(e){
+  if(e.target===document.getElementById('liste-overlay'))closeListe();
+}
+function renderListe(){
+  const todo=stops.filter(s=>!s.fait);
+  const done=stops.filter(s=>s.fait);
+  const tot=stops.length;
+  const nb=todo.length;
+  document.getElementById('liste-sub').textContent=
+    tot===0?'Aucun stop pour cette route':
+    nb===0?'✔ Tous les stops sont complétés !':
+    nb+' restant'+(nb>1?'s':'')+' · '+done.length+' complété'+(done.length>1?'s':'');
+  const body=document.getElementById('liste-body');
+  body.innerHTML='';
+  if(tot===0){
+    body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;font-size:14px;">Aucun stop.<br>Clique ＋ pour commencer.</div>';
+    return;
+  }
+  const sorted=[...todo,...done];
+  sorted.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='ci'+(s.fait?' ci-done':'');
+    const idx=stops.indexOf(s);
+    div.onclick=()=>{closeListe();openCard(idx);};
+    div.innerHTML=
+      '<div class="ci-num">'+(i+1)+'</div>'+
+      '<div class="ci-diamond '+(s.fait?'done':'todo')+'"></div>'+
+      '<div class="ci-info">'+
+        '<div class="ci-addr '+(s.fait?'done':'')+'">'+s.adresse+'</div>'+
+        '<div class="ci-svc">'+(s.service||'')+(s.client?' · '+s.client:'')+'</div>'+
+      '</div>'+
+      '<div class="ci-badge '+(s.fait?'done':'todo')+'">'+(s.fait?'✔ FAIT':'À FAIRE')+'</div>';
+    body.appendChild(div);
+  });
+}
+function openModal(){
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('geo-st').textContent='';
+  document.getElementById('geo-st').className='';
+  document.getElementById('f-op').value=operator;
+  document.getElementById('f-zone').value=zone;
+  document.getElementById('f-addr').value='';
+  document.getElementById('f-client').value='';
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function bgClick(e){if(e.target===document.getElementById('overlay'))closeModal();}
+
+async function addStop(){
+  const addr=document.getElementById('f-addr').value.trim();
+  const client=document.getElementById('f-client').value.trim();
+  const service=document.getElementById('f-svc').value;
+  const op=document.getElementById('f-op').value.trim();
+  const z=document.getElementById('f-zone').value.trim();
+  if(!addr){toast('⚠ Entrez une adresse');return;}
+  if(op){operator=op;localStorage.setItem('lp_op',op);}
+  if(z){zone=z;localStorage.setItem('lp_zone',z);}
+  const st=document.getElementById('geo-st');
+  st.className='';st.textContent='⏳ Géocodage…';
+  try{
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1`,{headers:{'Accept-Language':'fr'}});
+    const d=await r.json();
+    if(!d.length){st.className='err';st.textContent='❌ Adresse introuvable';return;}
+  const ns={adresse:addr,client:client||null,service,lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),fait:false,ordre:stops.length,route_id:routeActive||null};
+    st.className='ok';st.textContent='✔ Sauvegarde…';
+    const saved=await dbSave(ns);
+    if(!saved)return;
+    stops.push(saved);renderAll();
+    map.flyTo([saved.lat,saved.lon],17,{duration:.8});
+    toast('📍 Stop ajouté !');
+    setTimeout(closeModal,500);
+  }catch(e){st.className='err';st.textContent='❌ Erreur réseau';}
+}
+
+// ── HELPERS ────────────────────────────────────────────
+function showSync(on){document.getElementById('sync').classList.toggle('show',on);}
+let _tT;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(_tT);_tT=setTimeout(()=>el.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>

@@ -736,8 +736,13 @@ async function loadStops(){
   try{
     const{data,error}=await db.from('stops').select('*').order('ordre');
     if(error) throw error;
-  stops=data||[];
+ stops=data||[];
     await loadRoutes();
+    // Charger les problèmes pour chaque stop
+    const{data:probs}=await db.from('problemes').select('*').eq('lu',false);
+    const probMap={};
+    (probs||[]).forEach(p=>{probMap[p.stop_id]=p;});
+    stops=stops.map(s=>({...s,_probleme:probMap[s.id]||null}));
     renderAll();
     hideLoading();
     updateBar();

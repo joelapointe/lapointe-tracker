@@ -1299,7 +1299,7 @@ let onSiteTimers={};
 function verifierProximite(lat,lon){
   if(!currentUser||currentUser.role==='admin')return;
   const RAYON=30; // mètres
-  const TEMPS=5*60*1000; // 5 minutes
+  const TEMPS=30*1000; // 30 secondes
 
   stops.forEach((s,i)=>{
     if(!s.lat||s.fait)return;

@@ -236,7 +236,19 @@
 .route-nom{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#f0f4f8;flex:1;}
 .route-count{font-size:11px;color:#6b7a8d;}
 .route-del{background:none;border:none;color:#6b7a8d;font-size:16px;cursor:pointer;padding:4px 8px;}
-#prob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2500;align-items:flex-end;}
+#placement-banner{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:1000;
+  background:rgba(200,230,60,.95);
+  padding:12px 16px;
+  display:none;
+  align-items:center;justify-content:space-between;
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#111;
+}
+#placement-banner.active{display:flex;}
+#placement-txt{font-size:15px;}
+#placement-count{font-size:20px;font-weight:800;}
+#placement-banner button{background:#111;border:none;border-radius:6px;color:#c8e63c;font-size:13px;font-weight:700;padding:6px 12px;cursor:pointer;font-family:'Barlow Condensed',sans-serif;}
+	  #prob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2500;align-items:flex-end;}
 #prob-overlay.open{display:flex;}
 #prob-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
 #prob-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#fb923c;margin-bottom:6px;}

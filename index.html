@@ -774,7 +774,7 @@ function renderAll(){
   stops.forEach((s,i)=>{
     if(!s.lat) return;
   if(routeActive!==null && s.route_id!==routeActive) return;
-    const m=L.marker([s.lat,s.lon],
+   const m=L.marker([s.lat,s.lon],{icon:mkIcon(s.fait)}).addTo(map);
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });

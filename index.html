@@ -814,7 +814,15 @@ function renderAll(){
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });
-  updateBar();
+  // Dessiner les zones polygonales
+  stops.forEach(s=>{
+    if(!s.zone_points||!Array.isArray(s.zone_points))return;
+    const c=s._probleme?'#fb923c':(s.fait?'#4ade80':'#c8e63c');
+    L.polygon(s.zone_points,{
+      color:c,fillColor:c,fillOpacity:.15,weight:2
+    }).addTo(map);
+  });
+	updateBar();
 }
 
 function updateBar(){
@@ -1233,7 +1241,10 @@ async function addStop(){
     const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1`,{headers:{'Accept-Language':'fr'}});
     const d=await r.json();
     if(!d.length){st.className='err';st.textContent='❌ Adresse introuvable';return;}
-  const ns={adresse:addr,client:client||null,service,lat:parseFloat(d[0].lat),lon:parseFloat(d[0].lon),fait:false,ordre:stops.length,route_id:routeActive||null};
+  const lat=window._zoneLat||parseFloat(d[0].lat);
+const lon=window._zoneLon||parseFloat(d[0].lon);
+const ns={adresse:addr,client:client||null,service,lat,lon,fait:false,ordre:stops.length,route_id:routeActive||null,zone_points:window._zonePoints||null};
+window._zonePoints=null;window._zoneLat=null;window._zoneLon=null;
     st.className='ok';st.textContent='✔ Sauvegarde…';
     const saved=await dbSave(ns);
     if(!saved)return;
@@ -1363,7 +1374,94 @@ function verifierProximite(lat,lon){
   });
 }
 
-function getDistance(lat1,lon1,lat2,lon2){
+// ── MODE PLACEMENT ───────────────────────────────────────
+let modeplacement=false;
+let pointsPlacement=[];
+let polygonTemp=null;
+let marqueurPoints=[];
+
+function activerPlacement(){
+  modeplace=true;
+  pointsPlacement=[];
+  marqueurPoints=[];
+  if(polygonTemp){map.removeLayer(polygonTemp);polygonTemp=null;}
+  closeModal();
+  document.getElementById('placement-banner').classList.add('active');
+  document.getElementById('placement-count').textContent='0/4';
+  map.getContainer().style.cursor='crosshair';
+  map.on('click',onMapClick);
+}
+
+function annulerPlacement(){
+  modeplace=false;
+  pointsPlacement=[];
+  marqueurPoints.forEach(m=>map.removeLayer(m));
+  marqueurPoints=[];
+  if(polygonTemp){map.removeLayer(polygonTemp);polygonTemp=null;}
+  document.getElementById('placement-banner').classList.remove('active');
+  map.getContainer().style.cursor='';
+  map.off('click',onMapClick);
+}
+
+function onMapClick(e){
+  if(!modeplace)return;
+  const{lat,lng}=e.latlng;
+  pointsPlacement.push([lat,lng]);
+
+  // Marqueur point
+  const mk=L.circleMarker([lat,lng],{
+    radius:6,color:'#c8e63c',fillColor:'#c8e63c',fillOpacity:1,weight:2
+  }).addTo(map);
+  marqueurPoints.push(mk);
+
+  document.getElementById('placement-count').textContent=pointsPlacement.length+'/4';
+
+  // Dessiner polygone temporaire
+  if(polygonTemp)map.removeLayer(polygonTemp);
+  if(pointsPlacement.length>=3){
+    polygonTemp=L.polygon(pointsPlacement,{
+      color:'#c8e63c',fillColor:'#c8e63c',fillOpacity:.2,weight:2,dashArray:'6'
+    }).addTo(map);
+  }
+
+  if(pointsPlacement.length===4){
+    // Zone définie — calculer centre et ouvrir formulaire
+    const centerLat=pointsPlacement.reduce((s,p)=>s+p[0],0)/4;
+    const centerLon=pointsPlacement.reduce((s,p)=>s+p[1],0)/4;
+
+    map.getContainer().style.cursor='';
+    map.off('click',onMapClick);
+    document.getElementById('placement-banner').classList.remove('active');
+    modeplace=false;
+
+    // Géocodage inverse du centre
+    document.getElementById('placement-status').textContent='⏳ Recherche adresse…';
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${centerLat}&lon=${centerLon}&format=json`,
+      {headers:{'Accept-Language':'fr'}})
+      .then(r=>r.json())
+      .then(d=>{
+        const a=d.address||{};
+        const parts=[
+          a.house_number?`${a.house_number} ${a.road||''}`:a.road||'',
+          a.city||a.town||a.village||a.suburb||''
+        ].filter(Boolean);
+        const adresse=parts.join(', ')||d.display_name;
+        document.getElementById('f-addr').value=adresse;
+        document.getElementById('placement-status').textContent='✔ '+adresse;
+      })
+      .catch(()=>{
+        document.getElementById('placement-status').textContent='⚠ Adresse non trouvée';
+      });
+
+    // Stocker les points pour sauvegarde
+    window._zonePoints=pointsPlacement;
+    window._zoneLat=centerLat;
+    window._zoneLon=centerLon;
+
+    openModal();
+  }
+}
+	function getDistance(lat1,lon1,lat2,lon2){
   const R=6371000;
   const dLat=(lat2-lat1)*Math.PI/180;
   const dLon=(lon2-lon1)*Math.PI/180;

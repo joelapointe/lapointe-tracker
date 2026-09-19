@@ -87,10 +87,10 @@ function onMapClick(e){
     openModal();
   }
 }
-	function naviguerVersStop(){
+	async function naviguerVersStop(){
   if(activeIdx===null)return;
   const s=stops[activeIdx];
-  if(!s.lat)return;
+  if(!s||!s.lat)return;
 
   // Ouvre un choix entre Google Maps et Waze
   const adresse=encodeURIComponent(s.adresse);
@@ -101,6 +101,8 @@ function onMapClick(e){
   const waze=`https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
 
   // Détecte si Waze est disponible sinon Google Maps
-  const choix=confirm('Naviguer avec :\n\nOK = Google Maps\nAnnuler = Waze');
+  // Boîte de l'application : la fenêtre native confirm() est refusée d'office par certains navigateurs intégrés
+  // (elle répondait « non » sans rien afficher : Waze s'ouvrait toujours). « Google Maps » = oui, « Waze » = non.
+  const choix=await confirmer('Naviguer avec…',s.adresse,'Google Maps','Waze');
   window.open(choix?gmaps:waze,'_blank');
 }

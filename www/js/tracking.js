@@ -73,51 +73,10 @@ async function chargerPositions(){
   });
 }
 
-let onSiteTimers={};
-
-function verifierProximite(lat,lon){
-  if(!currentUser||currentUser.role==='admin')return;
-  const RAYON=30; // mètres
-  const TEMPS=30*1000; // 30 secondes
-
-  stops.forEach((s,i)=>{
-    if(!s.lat||s.fait)return;
-    const dist=getDistance(lat,lon,s.lat,s.lon);
-
-    if(dist<=RAYON){
-      // L'employé est sur place
-      if(!s._onSite){
-        s._onSite=true;
-        renderAll();
-        toast('📍 Sur place : '+s.adresse);
-      }
-      // Démarrer timer si pas déjà démarré
-      if(!onSiteTimers[s.id]){
-        onSiteTimers[s.id]=setTimeout(async()=>{
-          // Vérifier encore que l'employé est toujours là
-          if(s._onSite&&!s.fait){
-            await dbDone(s.id);
-            s.fait=true;
-            s._onSite=false;
-            delete onSiteTimers[s.id];
-            renderAll();
-            toast('✔ Auto-complété : '+s.adresse);
-          }
-        },TEMPS);
-      }
-    } else {
-      // L'employé est parti
-      if(s._onSite){
-        s._onSite=false;
-        renderAll();
-      }
-      if(onSiteTimers[s.id]){
-        clearTimeout(onSiteTimers[s.id]);
-        delete onSiteTimers[s.id];
-      }
-    }
-  });
-}
+// Détection « client en cours » par le GPS : l'ancienne version complétait l'arrêt toute seule en écrivant dans
+// stops.fait (colonne retirée à l'étape 13). Elle sera remplacée à l'étape 13c (zone d'une autre couleur pendant que
+// le camion est sur place, sans compléter l'arrêt). Jamais appelée tant que ANCIEN_SUIVI_ACTIF est faux.
+function verifierProximite(lat,lon){}
 	function getDistance(lat1,lon1,lat2,lon2){
   const R=6371000;
   const dLat=(lat2-lat1)*Math.PI/180;

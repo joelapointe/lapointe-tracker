@@ -13,26 +13,8 @@ function openRoutes(){
   renderRoutes();
   document.getElementById('routes-overlay').classList.add('open');
 }
-async function nouvellePasse(){
-  const route=routes.find(r=>r.id===routeActive);
-  const nom=route?route.nom:'cette route';
-  if(!confirm('Remettre tous les stops de "'+nom+'" en non-complétés ?'))return;
-  const stopsRoute=stops.filter(s=>s.route_id===routeActive);
-  if(!stopsRoute.length){toast('Aucun stop sur cette route');return;}
-  showSync(true);
-  for(const s of stopsRoute){
-    await db.from('stops').update({fait:false}).eq('id',s.id);
-    s.fait=false;
-  }
-  // Supprimer les problèmes de ces stops aussi
-  for(const s of stopsRoute){
-    await db.from('problemes').delete().eq('stop_id',s.id);
-  }
-  showSync(false);
-  renderAll();
-  closeRoutes();
-  toast('🔄 Nouvelle passe lancée !');
-}
+// (Le bouton « Nouvelle passe » qui remettait tout à zéro ET effaçait les problèmes est retiré à l'étape 13 :
+//  une passe est maintenant un enregistrement distinct qu'on « débute » sans rien effacer — écran à l'étape 14.)
 function closeRoutes(){
   document.getElementById('routes-overlay').classList.remove('open');
 }
@@ -66,6 +48,7 @@ function renderRoutes(){
 
   routes.forEach(r=>{
     const count=stops.filter(s=>s.route_id===r.id).length;
+    const nbTours=tours.filter(t=>t.route_id===r.id).length;   // passes en cours sur cette route (une par tâche)
     const div=document.createElement('div');
     div.className='route-item'+(routeActive===r.id?' active':'');
     div.onclick=()=>{
@@ -79,7 +62,7 @@ function renderRoutes(){
     div.innerHTML=
       '<div class="route-dot" style="background:'+couleurSure(r.couleur)+'"></div>'+
       '<div class="route-nom">'+esc(r.nom)+'</div>'+
-      '<div class="route-count">'+count+' stops</div>';
+      '<div class="route-count">'+count+' stops'+(nbTours?' · '+nbTours+' passe'+(nbTours>1?'s':'')+' en cours':'')+'</div>';
     if(isAdmin){
       const del=document.createElement('button');
       del.className='route-del';
@@ -92,7 +75,6 @@ function renderRoutes(){
 
   // Bouton nouvelle route visible seulement admin
   document.getElementById('btn-nouvelle-route').style.display=isAdmin?'flex':'none';
-	document.getElementById('btn-nouvelle-passe').style.display=routeActive?'flex':'none';
 }
 
 function openNouvelleRoute(){
@@ -124,8 +106,11 @@ async function sauvegarderRoute(){
 
 async function supprimerRoute(e,id){
   e.stopPropagation();
-  if(!confirm('Supprimer cette route ?'))return;
-  await db.from('routes').delete().eq('id',id);
+  // Boîte de l'application (la fenêtre native confirm() est refusée d'office par certains navigateurs intégrés)
+  const route=routes.find(r=>r.id===id);
+  if(!(await confirmer('Supprimer cette route ?',route?route.nom:'','Supprimer','Annuler')))return;
+  const{error}=await db.from('routes').delete().eq('id',id);
+  if(error){toast('❌ Impossible : cette route a des arrêts ou un historique');return;}   // la base refuse (jamais de perte d'historique)
   routes=routes.filter(r=>r.id!==id);
   if(routeActive===id){routeActive=null;zone='Toutes les routes';}
   renderRoutes();

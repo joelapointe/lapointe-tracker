@@ -298,3 +298,8 @@
 #compte-admin{display:none;font-size:13px;color:var(--muted);line-height:1.5;text-align:center;margin-bottom:14px;}
 .confirm-btn.compte-ok{background:var(--accent);color:#111;width:100%;margin-bottom:10px;}
 #compte-boite .confirm-btn{width:100%;}
+
+/* Étape 13 : ligne « Passe n° … » de la fiche d'un arrêt, et bouton grisé quand le geste n'est pas permis */
+#sc-tour{font-size:12px;color:#9aa8ba;margin-top:3px;}
+.scb:disabled{opacity:.6;cursor:default;}
+.scb:disabled:active{transform:none;}

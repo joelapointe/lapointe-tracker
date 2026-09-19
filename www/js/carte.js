@@ -64,8 +64,13 @@ function initApp(){
   window.centerUser=function(){if(lastPos) map.flyTo(lastPos,16,{duration:.8});};
 
   // Temps réel
+  // Les arrêts qui changent : on relit tout. Les passes et les arrêts complétés qui changent (sur n'importe quel téléphone) :
+  // on relit seulement les tours (une seule fois même si plusieurs changements arrivent d'un coup). Chacun ne reçoit
+  // que ce que les règles d'accès lui permettent de voir.
   db.channel('stops-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'stops'},()=>loadStops())
+    .on('postgres_changes',{event:'*',schema:'public',table:'passes'},()=>planifierRechargementTours())
+    .on('postgres_changes',{event:'*',schema:'public',table:'passe_arrets'},()=>planifierRechargementTours())
     .subscribe();
 
   // Session : reprise de celle déjà ouverte sur ce téléphone (Supabase Auth), sinon écran de connexion

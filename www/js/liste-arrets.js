@@ -11,14 +11,16 @@ function bgClickListe(e){
   if(e.target===document.getElementById('liste-overlay'))closeListe();
 }
 function renderListe(){
-  const todo=stops.filter(s=>!s.fait);
-  const done=stops.filter(s=>s.fait);
-  const tot=stops.length;
+  // Ce qui est affiché : une route, ou toutes les routes ensemble ; « fait » vient du tour en cours (tours.js)
+  const vus=arretsVisibles();
+  const todo=vus.filter(s=>!estFait(s));
+  const done=vus.filter(s=>estFait(s));
+  const tot=vus.length;
   const nb=todo.length;
   document.getElementById('liste-sub').textContent=
     tot===0?'Aucun stop pour cette route':
     nb===0?'✔ Tous les stops sont complétés !':
-    nb+' restant'+(nb>1?'s':'')+' · '+done.length+' complété'+(done.length>1?'s':'');
+    nb+' restant'+(nb>1?'s':'')+' · '+done.length+' complété'+(done.length>1?'s':'')+(progression().aucune?' · aucune passe en cours':'');
   const body=document.getElementById('liste-body');
   body.innerHTML='';
   if(tot===0){
@@ -28,17 +30,19 @@ function renderListe(){
   const sorted=[...todo,...done];
   sorted.forEach((s,i)=>{
     const div=document.createElement('div');
-    div.className='ci'+(s.fait?' ci-done':'');
+    const fait=estFait(s);
+    div.className='ci'+(fait?' ci-done':'');
     const idx=stops.indexOf(s);
     div.onclick=()=>{closeListe();openCard(idx);};
+    const route=routeActive===null?routes.find(r=>r.id===s.route_id):null;   // « toutes les routes » : on nomme la route de chaque arrêt
     div.innerHTML=
       '<div class="ci-num">'+(i+1)+'</div>'+
-      '<div class="ci-diamond '+(s.fait?'done':'todo')+'"></div>'+
+      '<div class="ci-diamond '+(fait?'done':'todo')+'"></div>'+
       '<div class="ci-info">'+
-        '<div class="ci-addr '+(s.fait?'done':'')+'">'+esc(s.adresse)+'</div>'+
-        '<div class="ci-svc">'+esc(s.service||'')+(s.client?' · '+esc(s.client):'')+'</div>'+
+        '<div class="ci-addr '+(fait?'done':'')+'">'+esc(s.adresse)+'</div>'+
+        '<div class="ci-svc">'+(route?esc(route.nom)+' · ':'')+esc(s.service||'')+(s.client?' · '+esc(s.client):'')+'</div>'+
       '</div>'+
-      '<div class="ci-badge '+(s.fait?'done':'todo')+'">'+(s.fait?'✔ FAIT':'À FAIRE')+'</div>';
+      '<div class="ci-badge '+(fait?'done':'todo')+'">'+(fait?'✔ FAIT':'À FAIRE')+'</div>';
     body.appendChild(div);
   });
 }
@@ -71,7 +75,7 @@ async function addStop(){
     if(!d.length){st.className='err';st.textContent='❌ Adresse introuvable';return;}
   const lat=window._zoneLat||parseFloat(d[0].lat);
 const lon=window._zoneLon||parseFloat(d[0].lon);
-const ns={adresse:addr,client:client||null,service,lat,lon,fait:false,ordre:stops.length,route_id:routeActive||null,zone_points:window._zonePoints||null};
+const ns={adresse:addr,client:client||null,service,lat,lon,ordre:stops.length,route_id:routeActive||null,zone_points:window._zonePoints||null};
 window._zonePoints=null;window._zoneLat=null;window._zoneLon=null;
     st.className='ok';st.textContent='✔ Sauvegarde…';
     const saved=await dbSave(ns);

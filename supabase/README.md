@@ -21,7 +21,8 @@ Chacun se termine par une requête « vérification » dont le résultat est à 
 | `07-etape11-profil-sans-telephone.sql` | Corrige le déclencheur de l'étape 6 : un compte sans téléphone ni rôle admin ne reçoit plus de profil (sans ça, créer le compte de Joé dans le tableau de bord échoue) | exécuté et vérifié |
 | `08-etape11-donner-role-admin.sql` | Donne le rôle administrateur au compte de Joé (une ligne à modifier : le courriel). Refuse un 2e administrateur | exécuté et vérifié (courriel de Joé mis dans une copie locale, jamais dans le dépôt) |
 | `09-etape11-profil-employe-par-le-serveur.sql` | Le serveur crée lui-même le profil d'un employé (corrige un défaut trouvé lors des essais réels : Supabase Auth écrit nom et téléphone APRÈS la création du compte) | **exécuté et vérifié (19 septembre 2026)** ; essais réels 80/80 |
-| `10-nettoyage-comptes-zztest.sql` | Supprime les comptes d'essai « ZZTEST » (nom ET numéro 819 555 019x) et tout ce qu'ils ont produit, ainsi que les véhicules « ZZTEST » devenus inutiles ; refuse si des données de vrais comptes sont mêlées. À réexécuter après chaque série d'essais réels | 1re version exécutée et vérifiée ; la version avec les véhicules d'essai n'a **pas encore été exécutée** |
+| `10-nettoyage-comptes-zztest.sql` | Supprime les comptes d'essai « ZZTEST » (nom ET numéro 819 555 019x) et tout ce qu'ils ont produit, ainsi que les véhicules « ZZTEST » devenus inutiles ; refuse si des données de vrais comptes sont mêlées. À réexécuter après chaque série d'essais réels | version avec véhicules et journal exécutée le 19 septembre 2026 (une trace de journal orpheline est restée : fichier 11) ; la version qui retrouve aussi les traces de lignes déjà supprimées n'a **pas encore été exécutée** |
+| `11-nettoyage-une-trace-de-journal.sql` | Supprime UNE trace précise du journal des corrections (annulation de transfert des essais réels du 19 sept.), seulement si tout ce qu'elle décrit a disparu | **écrit et testé, PAS encore exécuté** |
 
 Le prochain fichier sera créé à l'étape 12 ou plus tard, au besoin.
 
@@ -34,7 +35,7 @@ Le prochain fichier sera créé à l'étape 12 ou plus tard, au besoin.
 ## Les tests (aucun contact avec ta vraie base)
 
 Les tests exécutent les fichiers SQL sur un PostgreSQL local simulé (PGlite), avec de faux rôles
-(visiteur, employé, employé désactivé, administrateur). **650 tests** au 19 septembre 2026.
+(visiteur, employé, employé désactivé, administrateur). **659 tests** au 19 septembre 2026.
 
 ```
 cd supabase/tests
@@ -43,7 +44,7 @@ npm test
 ```
 
 - `prepare.mjs` reproduit l'ancienne base (avant l'étape 6) puis exécute les fichiers demandés.
-- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (210, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08). `reel-etape-11.mjs` (comptes et accès, 80 essais) et `reel-etape-11b.mjs` (comportement : quarts, passes, équipage, transferts, export de paie ; option `--cron` pour la vraie tâche automatique) : essais sur la VRAIE base (demandent le mot de passe de Joé, masqué), hors de `npm test`. Après chaque série : exécuter `10-nettoyage-comptes-zztest.sql`. `test-nettoyage.mjs` (28, fichier 10 : véhicules d'essai et journal des corrections compris).
+- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (210, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08). `reel-etape-11.mjs` (comptes et accès, 80 essais) et `reel-etape-11b.mjs` (comportement : quarts, passes, équipage, transferts, export de paie ; option `--cron` pour la vraie tâche automatique) : essais sur la VRAIE base (demandent le mot de passe de Joé, masqué), hors de `npm test`. Après chaque série : exécuter `10-nettoyage-comptes-zztest.sql`. `test-nettoyage.mjs` (37, fichiers 10 et 11 : véhicules d'essai et journal des corrections compris).
 
 **Règle de travail :** tout nouveau SQL est d'abord écrit avec ses tests, exécuté sur ce banc d'essai, et
 seulement ensuite donné à Joé. Limites : la simulation n'a pas `pg_cron` ni le vrai Supabase Auth ; le

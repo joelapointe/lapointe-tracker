@@ -77,7 +77,11 @@ begin
   delete from public.journal_modifications where auteur_id = any (v_ids)
      or (table_cible = 'quarts' and ligne_id = any (v_quarts))
      or (table_cible = 'equipage_periodes' and ligne_id = any (v_periodes))
-     or (table_cible = 'passes' and ligne_id = any (v_passes));
+     or (table_cible = 'passes' and ligne_id = any (v_passes))
+     -- Traces de lignes DÉJÀ supprimées (ex. un transfert annulé par l'administrateur) : on les retrouve par leur contenu
+     or (avant ->> 'utilisateur_id') = any (v_ids::text[]) or (apres ->> 'utilisateur_id') = any (v_ids::text[])
+     or (avant ->> 'chauffeur_id')   = any (v_ids::text[]) or (apres ->> 'chauffeur_id')   = any (v_ids::text[])
+     or (avant ->> 'passe_id')       = any (v_passes::text[]) or (apres ->> 'passe_id')     = any (v_passes::text[]);
   delete from public.passes             where id = any (v_passes);
   -- Véhicules d'essai (nom « ZZTEST… ») : supprimés seulement si plus AUCUNE passe ni position ne s'en sert
   delete from public.equipes e          where e.nom like 'ZZTEST%'

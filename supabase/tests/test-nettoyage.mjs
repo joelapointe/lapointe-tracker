@@ -45,6 +45,7 @@ const alpha = await emp('ZZTEST Alpha', '8195550191');    // sans historique
 const beta = await emp('ZZTEST Beta', '8195550192');      // un quart
 const gamma = await emp('ZZTEST Gamma', '8195550193');    // chauffeur, avec tout
 const delta = await emp('ZZTEST Delta', '8195550194');    // passager de Gamma
+const zeta = await emp('ZZTEST Zeta', '8195550197');      // 2e chauffeur d'essai : Delta est transféré chez lui, puis l'administrateur ANNULE le transfert (la ligne d'équipage est supprimée)
 const fauxNom = await emp('ZZTEST Faux', '8195550777');   // nom d'essai MAIS numéro non fictif : ne doit pas être touché
 const fauxTel = await emp('Vraie Personne', '8195550195'); // numéro fictif MAIS pas de nom ZZTEST : ne doit pas être touchée
 const orphelin = await compte('8195550199@tel.entretienlapointe.ca', { provider: 'email' });   // reste d'un essai raté : compte de connexion sans profil
@@ -86,6 +87,14 @@ const passeG = uuid();
 await fn(gamma, `debuter_passe($1::uuid,$2::uuid,$3::uuid,'[]'::jsonb,$4::timestamptz,46.5::float8,-72.7::float8,null::real)`, [passeG, nord, camA, at(60)]);
 await fn(gamma, `completer_arret($1::uuid,$2::uuid,$3::timestamptz,'manuel',46.5::float8,-72.7::float8)`, [passeG, stops[0], at(50)]);
 await fn(gamma, `equipage_ajouter($1::uuid,$2::uuid,$3::uuid,$4::timestamptz,null,null,null,false)`, [uuid(), passeG, delta, at(40)]);
+const passeZ = uuid();
+await fn(zeta, `debuter_passe($1::uuid,$2::uuid,$3::uuid,'[]'::jsonb,$4::timestamptz,46.6::float8,-72.8::float8,null::real)`, [passeZ, nord, camLibre, at(35)]);
+await fn(zeta, `equipage_ajouter($1::uuid,$2::uuid,$3::uuid,$4::timestamptz,null,null,null,true)`, [uuid(), passeZ, delta, at(30)]);   // transfert de la passe de Gamma vers celle de Zeta
+const transfert = (await sup(`select transfert_id from equipage_periodes where utilisateur_id = $1 and transfert_id is not null limit 1`, [delta]))[0].transfert_id;
+await fn(joe, `admin_annuler_transfert($1::uuid)`, [transfert]);   // SUPPRIME la période d'entrée chez Zeta : journalisé, et la ligne n'existera plus au moment du nettoyage
+// Une trace du journal qui concerne un VRAI employé (Marc) : doit rester
+await sup(`insert into journal_modifications(auteur_id, table_cible, ligne_id, action, avant) values ($1, 'equipage_periodes', $2, 'DELETE', $3::jsonb)`,
+  [joe, uuid(), JSON.stringify({ utilisateur_id: marc, passe_id: passeMarc })]);
 await fn(gamma, `envoyer_position($1::uuid, 46.51::float8, -72.71::float8, 5::real, $2::timestamptz)`, [passeG, at(1)]);
 await sup(`insert into problemes(stop_id, passe_id, utilisateur_id, note) values ($1, $2, $3, 'chien')`, [stops[1], passeG, delta]);
 await sup(`insert into problemes(stop_id, utilisateur_id, note) values ($1, $2, 'barrière')`, [stops[2], gamma]);   // problème sans passe
@@ -93,9 +102,11 @@ await sup(`insert into problemes(stop_id, utilisateur_id, note) values ($1, $2, 
 const avant = await photo();
 log('=== AVANT LE NETTOYAGE ===');
 eq('les comptes d\'essai ont bien de l\'historique (quarts, passes, arrêts, équipage, problèmes, positions)',
-  [avant.quarts >= 4, avant.passes, avant.passe_arrets >= 1, avant.periodes >= 2, avant.problemes, avant.positions >= 1], [true, 3, true, true, 2, true]);
+  [avant.quarts >= 4, avant.passes, avant.passe_arrets >= 1, avant.periodes >= 2, avant.problemes, avant.positions >= 1], [true, 4, true, true, 2, true]);
 eq('les corrections de l\'administrateur ont été journalisées automatiquement (une sur un quart d\'essai, une sur le quart d\'un vrai employé)',
   [await nb('journal_modifications', `ligne_id = '${quartBeta}'`) >= 1, await nb('journal_modifications', `ligne_id = '${quartMarc}'`) >= 1], [true, true]);
+eq('une correction de l\'administrateur a SUPPRIMÉ une ligne d\'équipage d\'essai (Delta) : sa trace existe, mais la ligne, elle, n\'existe plus',
+  [await nb('journal_modifications', `action = 'DELETE' and avant ->> 'utilisateur_id' = '${delta}'`) >= 1, await nb('equipage_periodes', `utilisateur_id = '${delta}' and passe_id = '${passeZ}'`)], [true, 0]);
 eq('… et un compte de connexion orphelin existe', (await sup('select count(*)::int n from auth.users where id = $1', [orphelin]))[0].n, 1);
 
 // ----- Le garde-fou : données mélangées -----
@@ -124,6 +135,8 @@ eq('tout ce que les comptes d\'essai avaient produit a disparu : passe de Gamma,
 eq('le quart de Beta est supprimé (il ne reste que celui de Marc)', await nb('quarts'), 1);
 eq('la trace des corrections de l\'administrateur sur le quart de Beta est supprimée avec lui, mais celle du quart de Marc (vrai employé) reste',
   [await nb('journal_modifications', `ligne_id = '${quartBeta}'`), await nb('journal_modifications', `ligne_id = '${quartMarc}'`) >= 1], [0, true]);
+eq('la trace de la ligne d\'équipage SUPPRIMÉE (qui n\'existait plus au moment du nettoyage) est supprimée aussi ; la trace concernant un vrai employé reste',
+  [await nb('journal_modifications', `avant ->> 'utilisateur_id' = '${delta}'`), await nb('journal_modifications', `avant ->> 'utilisateur_id' = '${marc}'`)], [0, 2]);   // Marc : la trace de la validation de son quart + celle ajoutée à la main
 eq('… la vérification annonce les corrections restantes', verif.corrections_journalisees, apres.corrections);
 
 log('\n=== CE QUI NE DOIT PAS ÊTRE TOUCHÉ ===');
@@ -137,7 +150,7 @@ eq('arrêts et routes de test : intacts', [apres.stops, apres.routes], [avant.st
 eq('véhicules : « ZZTEST Camion A » (passe d\'essai) et « ZZTEST Camion Libre » (inutilisé) supprimés ; le VRAI « Camion B » et « ZZTEST Camion Piège » (utilisé par une vraie passe de Marc) conservés',
   (await sup('select nom from public.equipes order by nom')).map((e) => e.nom), ['Camion B', 'ZZTEST Camion Piège']);
 eq('… la vérification annonce 1 véhicule d\'essai restant (le piège) sur 2 véhicules', [verif.vehicules_zztest_restants, verif.vehicules], [1, 2]);
-eq('les 2 chiffres de comptes : profils avant − 4 ; comptes de connexion avant − 5 (4 comptes + 1 orphelin)', [avant.auth - apres.auth, avant.comptes_auth - apres.comptes_auth], [4, 5]);
+eq('profils supprimés : 5 (Alpha, Beta, Gamma, Delta, Zeta) ; comptes de connexion supprimés : 6 (ces 5 + l\'orphelin)', [avant.auth - apres.auth, avant.comptes_auth - apres.comptes_auth], [5, 6]);
 
 log('\n=== RÉ-EXÉCUTION ===');
 const v2 = await nettoyer();
@@ -150,5 +163,38 @@ await db2.query(`insert into auth.users(email, raw_app_meta_data) values ('joe@e
 const r2 = await db2.exec(NETTOYAGE);
 eq('sur une base sans aucun compte d\'essai : aucun effet, aucune erreur', [r2[r2.length - 1].rows[0].verification.comptes_zztest_restants, r2[r2.length - 1].rows[0].verification.administrateurs], [0, 1]);
 
+// ----- Fichier 11 : suppression ciblée d'UNE trace du journal -----
+log('\n=== FICHIER 11 : une trace précise du journal ===');
+{
+  const SQL11 = fs.readFileSync(SQL_DIR + '11-nettoyage-une-trace-de-journal.sql', 'utf8');
+  const ID_REEL = '7cea81e6-8098-459c-af41-b5bfcc3e9290';
+  const cible = uuid(), autre = uuid();
+  const pour = (id) => SQL11.replaceAll(ID_REEL, id);
+  const q2 = async (sql, p) => (await db2.query(sql, p)).rows;
+  const joe2 = (await q2(`select id from public.utilisateurs limit 1`))[0].id;
+  const trace = (id, table, action, avant) => q2(`insert into public.journal_modifications(id, table_cible, ligne_id, action, avant) values ($1, $2, gen_random_uuid(), $3, $4::jsonb)`, [id, table, action, JSON.stringify(avant)]);
+  const compte11 = async () => Number((await q2(`select count(*)::int n from public.journal_modifications`))[0].n);
+  vrai11('le fichier 11 vise exactement l\'identifiant de la trace restante (2 occurrences : suppression et vérification)', SQL11.split(ID_REEL).length === 3);
+  await trace(autre, 'quarts', 'UPDATE', { utilisateur_id: joe2 });          // une autre trace, sans rapport : ne doit JAMAIS bouger
+
+  await trace(cible, 'equipage_periodes', 'DELETE', { utilisateur_id: joe2, passe_id: uuid() });   // décrit un employé qui EXISTE encore
+  await echoue('trace qui décrit un employé existant : REFUSÉ', () => db2.exec(pour(cible)), 'refuse');
+  eq('… rien n\'a été supprimé', await compte11(), 2);
+  await q2(`delete from public.journal_modifications where id = $1`, [cible]);
+
+  await trace(cible, 'quarts', 'DELETE', { utilisateur_id: uuid(), passe_id: uuid() });           // mauvaise table
+  await echoue('trace d\'une autre table que l\'équipage : REFUSÉ', () => db2.exec(pour(cible)), 'refuse');
+  await q2(`delete from public.journal_modifications where id = $1`, [cible]);
+
+  await trace(cible, 'equipage_periodes', 'DELETE', { utilisateur_id: uuid(), passe_id: uuid() });   // la situation réelle : tout ce qu'elle décrit a disparu
+  const r11 = await db2.exec(pour(cible));
+  const v11 = r11[r11.length - 1].rows[0].verification;
+  eq('trace orpheline (employé, passe et ligne disparus) : supprimée', [await compte11(), v11.trace_encore_presente], [1, false]);
+  eq('… l\'autre trace, sans rapport, est intacte', Number((await q2(`select count(*)::int n from public.journal_modifications where id = $1`, [autre]))[0].n), 1);
+  await db2.exec(pour(cible));
+  eq('ré-exécuter quand la trace n\'existe plus : aucun effet, aucune erreur', await compte11(), 1);
+}
+
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);
 process.exit(ko ? 1 : 0);
+function vrai11(l, c, d) { c ? pass(l) : fail(l, d); }

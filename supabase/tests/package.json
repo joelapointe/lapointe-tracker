@@ -1,0 +1,12 @@
+{
+  "name": "lapointe-tracker-tests-sql",
+  "private": true,
+  "type": "module",
+  "description": "Tests des fichiers SQL de Supabase sur un PostgreSQL local (PGlite). Aucune connexion ? ta vraie base.",
+  "scripts": {
+    "test": "node test-etapes-6-7.mjs && node test-etape-8.mjs && node test-etape-9a.mjs && node test-etape-9b.mjs"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.8"
+  }
+}

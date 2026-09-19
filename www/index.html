@@ -27,63 +27,31 @@
 <!-- APP -->
 <div id="login-screen">
   <div id="login-logo">LAPOINTE <em>TRACKER</em></div>
-  <div id="login-sub">Entrez vos informations pour continuer</div>
-  <div id="login-box">
+  <div id="login-sub">Connecte-toi pour continuer</div>
+  <form id="login-box" onsubmit="doLogin();return false;" autocomplete="on">
     <h2>🔐 Connexion</h2>
     <div class="lf">
-      <label>Numéro de téléphone</label>
-      <input id="l-tel" type="tel" placeholder="8191234567" inputmode="numeric"/>
+      <label for="l-tel">Numéro de téléphone (administrateur : courriel)</label>
+      <input id="l-tel" name="username" type="text" placeholder="819 123-4567" inputmode="tel" autocomplete="username" autocapitalize="off" spellcheck="false" oninput="majChampsConnexion()"/>
     </div>
     <div class="lf">
-      <label>PIN (4 chiffres)</label>
-      <input id="l-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/>
+      <label id="l-pin-label" for="l-pin">NIP (6 chiffres)</label>
+      <input id="l-pin" name="password" type="password" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="current-password"/>
     </div>
-    <div id="login-err"></div>
-    <button id="login-btn" onclick="doLogin()">Connexion →</button>
-	<div style="text-align:center;margin-top:14px;">
-  <span style="font-size:13px;color:#6b7a8d;cursor:pointer;" onclick="showSignup()">Créer un compte →</span>
+    <div id="login-err" role="alert"></div>
+    <button id="login-btn" type="submit">Connexion →</button>
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:#6b7a8d;line-height:1.5;">
+      NIP oublié ? Communique avec Joé.
+    </div>
+  </form>
 </div>
-  </div>
-</div>
-<div id="signup-screen">
-  <div id="login-logo">LAPOINTE <em>TRACKER</em></div>
-  <div id="login-sub">Créer un nouveau compte</div>
-  <div id="login-box">
-    <h2>👤 Inscription</h2>
-    <div class="lf">
-      <label>Ton prénom</label>
-      <input id="s-nom" type="text" placeholder="ex: Marie"/>
-    </div>
-    <div class="lf">
-      <label>Numéro de téléphone</label>
-      <input id="s-tel" type="tel" placeholder="8191234567" inputmode="numeric"/>
-    </div>
-    <div class="lf">
-      <label>PIN (4 chiffres)</label>
-      <input id="s-pin" type="password" placeholder="••••" maxlength="4" inputmode="numeric"/>
-    </div>
-    <div id="signup-err"></div>
-    <button id="signup-btn" onclick="doSignup()">Créer mon compte →</button>
-    <div style="text-align:center;margin-top:14px;">
-      <span style="font-size:13px;color:#6b7a8d;cursor:pointer;" onclick="showLogin()">← Retour à la connexion</span>
-    </div>
-  </div>
-</div>
-
-<div id="pending-screen">
-  <div id="login-logo">LAPOINTE <em>TRACKER</em></div>
-  <div id="login-box" style="text-align:center">
-    <div style="font-size:48px;margin-bottom:16px;">⏳</div>
-    <h2 style="color:#fb923c;margin-bottom:10px;">Compte en attente</h2>
-    <p style="color:#6b7a8d;font-size:14px;line-height:1.6;">Ton compte a été créé.<br>L'administrateur doit l'approuver avant que tu puisses accéder à l'app.</p>
-    <button onclick="doLogout()" style="margin-top:20px;width:100%;padding:12px;background:#252d3a;border:none;border-radius:10px;color:#6b7a8d;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Se déconnecter</button>
-  </div>
-</div>
-<div id="role-badge" onclick="doLogout()"></div>
 <div id="map"></div>
 <div id="topbar">
   <div id="logo">LAPOINTE <em>TRACKER</em></div>
-  <div id="gps-pill"><div id="gps-dot"></div><span id="gps-lbl">GPS</span></div>
+  <div id="topbar-droite">
+    <div id="gps-pill"><div id="gps-dot"></div><span id="gps-lbl">GPS</span></div>
+    <button id="btn-deconnexion" type="button" onclick="doLogout()" aria-label="Se déconnecter">Déconnexion</button>
+  </div>
 </div>
 <div id="addr-row">📍 <span id="addr-txt">Recherche…</span></div>
 <div id="sync">⟳ Sync…</div>

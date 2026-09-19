@@ -54,8 +54,10 @@ function initApp(){
         window._uCk.setLatLng([lat,lon]).setRadius(accuracy);
       }
       geocodeReverse(lat,lon,addrEl);
-		if(currentUser) envoyerPosition(lat,lon);
-		verifierProximite(lat,lon);
+		if(ANCIEN_SUIVI_ACTIF){
+		  if(currentUser) envoyerPosition(lat,lon);
+		  verifierProximite(lat,lon);
+		}
     },()=>{dotEl.className='err';lblEl.textContent='Erreur';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
   }
 
@@ -66,21 +68,8 @@ function initApp(){
     .on('postgres_changes',{event:'*',schema:'public',table:'stops'},()=>loadStops())
     .subscribe();
 
-  const saved=localStorage.getItem('lp_user');
-  if(saved){
-    try{
-      currentUser=JSON.parse(saved);
-      hideLoading();
-      applyRole();
-      loadStops();
-    }catch(e){
-      hideLoading();
-      showLoginScreen();
-    }
-  } else {
-    hideLoading();
-    showLoginScreen();
-  }
+  // Session : reprise de celle déjà ouverte sur ce téléphone (Supabase Auth), sinon écran de connexion
+  restaurerSession();
 }
 
 // ── GEOCODE ────────────────────────────────────────────

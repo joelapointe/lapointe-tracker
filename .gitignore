@@ -29,3 +29,6 @@ Thumbs.db
 *.log
 # Document interne : le dépôt est public, ce fichier reste sur l'ordinateur seulement
 CAHIER-PROJET.md
+
+# Configuration locale de l'aperçu de l'application (serveur d'essai) : propre à cet ordinateur
+.claude/

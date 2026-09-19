@@ -52,6 +52,19 @@
       border-radius:20px;padding:5px 11px;font-size:12px;color:var(--muted);
       pointer-events:all;
     }
+    #topbar-droite{display:flex;align-items:center;gap:8px;margin-left:auto;}
+    /* Bouton de déconnexion : visible seulement quand quelqu'un est connecté (auth.js), zone de toucher d'au moins 44 px de haut */
+    #btn-deconnexion{
+      display:none;align-items:center;min-height:44px;padding:0 13px;
+      background:rgba(26,31,38,.95);border:1px solid var(--border);border-radius:22px;
+      color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;letter-spacing:.3px;white-space:nowrap;
+      cursor:pointer;pointer-events:all;
+    }
+    #btn-deconnexion:active{filter:brightness(.85);}
+    /* Petits écrans : la barre du haut doit contenir logo + GPS + Déconnexion sans passer sur deux lignes */
+    #logo{white-space:nowrap;}
+    @media (max-width:420px){#logo{font-size:20px;}#logo em{display:none;}}
+    @media (max-width:359px){#logo{display:none;}#btn-deconnexion{padding:0 11px;font-size:14px;}}
     #gps-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .4s;}
     #gps-dot.on{background:var(--green);animation:blink 2s infinite;}
     #gps-dot.err{background:var(--red);}
@@ -189,15 +202,6 @@
 .lf input:focus{border-color:var(--accent);}
 #login-err{font-size:12px;color:var(--red);margin-bottom:12px;min-height:16px;text-align:center;}
 #login-btn{width:100%;padding:14px;background:var(--accent);border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:#111;cursor:pointer;}
-#role-badge{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:900;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;cursor:pointer;}
-#role-badge.admin{background:rgba(200,230,60,.15);color:var(--accent);border:1px solid rgba(200,230,60,.3);}
-#role-badge.employe{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25);}
-#signup-screen{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:8000;padding:28px;}
-#signup-screen.show{display:flex;}
-#pending-screen{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:8000;padding:28px;}
-#pending-screen.show{display:flex;}
-#signup-err{font-size:12px;color:#ef4444;margin-bottom:12px;min-height:16px;text-align:center;}
-#signup-btn{width:100%;padding:14px;background:#c8e63c;border:none;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:#111;cursor:pointer;}
 #admin-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
 #admin-overlay.open{display:flex;}
 #admin-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:78vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}

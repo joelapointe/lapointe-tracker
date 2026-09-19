@@ -144,6 +144,7 @@ async function arreterTracking(){
     clearInterval(posInterval);
     posInterval=null;
   }
+  if(!ANCIEN_SUIVI_ACTIF) return;   // ancien suivi désactivé (étape 12) : rien à effacer dans la base
   // Supprimer sa position de la BD.
   // (Avant, la requête n'était jamais envoyée : il manquait le « await ».)
   // On n'attend pas plus de 2,5 s : sans réseau, la déconnexion doit quand même fonctionner.

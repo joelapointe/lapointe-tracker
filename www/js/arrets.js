@@ -12,6 +12,7 @@ async function loadStops(){
     await loadRoutes();
     await chargerTours();
     await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
+    await chargerVehiculesEtEquipages(); // noms des camions et équipages à bord (étape 13f)
     demarrerRelecturePositions();
     await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
     renderAll();
@@ -74,6 +75,7 @@ function renderAll(){
   });
 	updateBar();
   _sigEnCours=signatureEnCours();   // ce qui est dessiné : on ne redessinera que si ça change
+  majVehicules();                   // les camions (un point chacun) avec leur équipage
 }
 
 // Barre du bas : l'avancement de ce qui est affiché (une route, ou toutes les routes ensemble),

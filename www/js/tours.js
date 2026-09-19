@@ -72,6 +72,7 @@ let positionsVehicules=[];   // [{passe_id, lat, lon, precision_m, maj_le}]
 let _tRechargePositions=null;
 let _minuterieEnCours=null;
 let _sigEnCours='';          // ce qui est dessiné en ce moment (pour ne redessiner que si quelque chose change)
+let _tickRelecture=0;
 
 // Distance en mètres entre deux points GPS
 function distanceMetres(lat1,lon1,lat2,lon2){
@@ -128,7 +129,10 @@ function signatureEnCours(){
 async function rafraichirEnCours(){
   if(!currentUser) return;
   await chargerPositionsVehicules();
+  _tickRelecture++;
+  if(_tickRelecture%4===0) await chargerVehiculesEtEquipages();   // relecture de secours des équipages : une fois par minute
   if(signatureEnCours()!==_sigEnCours){ renderAll(); majCarte(); }
+  else majVehicules();   // les camions bougent même quand aucun client ne change d'état
 }
 // Changements de positions reçus en temps réel : on relit une seule fois même si plusieurs arrivent d'un coup
 function planifierRechargementPositions(){

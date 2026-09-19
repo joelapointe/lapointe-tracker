@@ -41,8 +41,10 @@ function monde(o = {}) {
     problemes: o.problemes ?? [],
     tours: o.tours ?? TOURS(),
     positions: o.positions ?? [],
+    equipes: o.equipes ?? [],
+    equipage_periodes: o.equipages ?? [],
   };
-  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [], selects: [], orders: [] };
+  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [], selects: [], orders: [], is: [] };
   const reponsesRpc = o.rpc ?? {};
   const reponsesEcriture = o.ecritures ?? {};
 
@@ -59,6 +61,7 @@ function monde(o = {}) {
       q.select = (c) => { if (q.op === 'select') appels.selects.push([table, c]); return q; };
       q.eq = (c, v) => { appels.eq.push([table, c, v]); q.filtres = [...(q.filtres ?? []), [c, v]]; return q; };
       q.order = (c, opt) => { appels.orders.push([table, c, opt]); return q; };
+      q.is = (c, v) => { appels.is.push([table, c, v]); return q; };
       q.delete = () => { q.op = 'delete'; return q; };
       q.update = (v) => { q.op = 'update'; q.valeur = v; return q; };
       q.insert = (v) => { q.op = 'insert'; q.valeur = v; return q; };
@@ -79,7 +82,7 @@ function monde(o = {}) {
     },
   };
 
-  const marqueurs = [], polygones = [], retires = [];
+  const marqueurs = [], polygones = [], retires = [], camions = [];   // « camions » : les marqueurs de véhicules (zIndexOffset 500), à part des arrêts
   const sandbox = {
     document: { getElementById: el, createElement: () => creer(null) },
     localStorage: { getItem: (k) => (k === 'lp_zone' ? (o.zone ?? null) : null), setItem() {}, removeItem() {} },
@@ -87,7 +90,13 @@ function monde(o = {}) {
     setTimeout, clearTimeout, setInterval, clearInterval, console,
     L: {
       divIcon: (opt) => opt,
-      marker: (ll, opt) => { const m = { ll, opt, addTo() { return m; }, on(ev, f) { m.clic = f; } }; marqueurs.push(m); return m; },
+      marker: (ll, opt) => {
+        const m = { ll, opt, deplacements: 0, popup: null, addTo() { return m; }, on(ev, f) { m.clic = f; },
+          setLatLng(x) { m.ll = x; m.deplacements++; return m; }, setIcon(i) { m.opt = { ...m.opt, icon: i }; return m; },
+          bindPopup(h) { m.popup = h; return m; }, setPopupContent(h) { m.popup = h; return m; } };
+        (opt?.zIndexOffset === 500 ? camions : marqueurs).push(m);
+        return m;
+      },
       polygon: (pts, opt) => { const p = { pts, opt, addTo() { return p; } }; polygones.push(p); return p; },
     },
     __map: { removeLayer: (m) => retires.push(m), flyTo() {} },
@@ -99,13 +108,13 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
   vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', Object.assign(ctx, { __toasts: appels.toasts }) && ctx);
   const w = {
-    ctx, el, donnees, appels, marqueurs, polygones, retires,
+    ctx, el, donnees, appels, marqueurs, polygones, retires, camions,
     run: (code) => vm.runInContext(code, ctx),
     routeActive: (id) => vm.runInContext(`routeActive = ${JSON.stringify(id)};`, ctx),
     couleur: (m) => (m.opt.icon.html.match(/background:(#[0-9a-f]+)/) || [])[1],
@@ -588,6 +597,86 @@ log('\n=== PANNEAU ADMINISTRATEUR : lit les nouvelles colonnes, ne ment jamais =
   vrai('… même quand le réseau est coupé', texte(m).includes('❌ Impossible de charger les problèmes'), texte(m));
   m = monde(); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
   eq('un employé qui essaie d\'ouvrir le panneau : refusé', [m.dernierToast(), m.el('admin-overlay').classList.contains('open')], ['⛔ Accès admin requis', false]);
+}
+
+log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');
+{
+  const il = (min) => new Date(Date.now() - min * 60000).toISOString();
+  const posv = (passe, lat, lon, min = 0.2) => ({ passe_id: passe, lat, lon, precision_m: 8, maj_le: il(min) });
+  const equipes = [{ id: 'e1', nom: 'Camion 1' }, { id: 'e2', nom: 'Camion 2' }, { id: 'e3', nom: 'Camion sel' }];
+  const eqp = (passe, role, id, nom) => ({ passe_id: passe, role, utilisateur_id: id, utilisateurs: nom === null ? null : { nom } });
+  const equipages = [eqp('p-luc', 'passager', 'u-2', 'Lionel'), eqp('p-luc', 'chauffeur', 'u-luc', 'Luc'), eqp('p-luc', 'passager', 'u-3', 'Éric'), eqp('p-marc', 'chauffeur', 'u-marc', 'Marc'), eqp('p-gaby', 'chauffeur', 'u-gaby', 'Ghislain')];
+  const trois = () => [posv('p-luc', 46.443, -72.922), posv('p-marc', 46.441, -72.92), posv('p-gaby', 46.444, -72.919)];
+  const cas = async (o = {}) => { const m = monde({ equipes, equipages, ...o }); await m.run('loadStops()'); return m; };
+  const html = (mk) => mk.opt.icon.html;
+  const camionDe = (m, nom) => m.camions.filter((c) => c.popup && c.popup.includes(nom)).pop();
+
+  let m = await cas({ positions: trois() });
+  eq('les noms des véhicules et les équipages sont lus (colonnes nommées ; la PERSONNE à bord, pas celui qui l\'a ajoutée ; seulement les périodes ouvertes)',
+    [m.appels.selects.find((x) => x[0] === 'equipes')[1], m.appels.selects.find((x) => x[0] === 'equipage_periodes')[1], m.appels.is.some((x) => x[0] === 'equipage_periodes' && x[1] === 'fin' && x[2] === null)],
+    ['id, nom', 'passe_id, role, utilisateur_id, utilisateurs!utilisateur_id(nom)', true]);
+  eq('UN point par camion : 3 camions avec une position = 3 marqueurs', m.camions.length, 3);
+  const luc = camionDe(m, 'Camion 1');
+  vrai('le point de Camion 1 : son nom et « 👤 3 » (Luc, Lionel, Éric)', html(luc).includes('Camion 1') && html(luc).includes('👤 3') && !html(luc).includes('perime'), html(luc));
+  vrai('la bulle : passe, tâche, avancement, chauffeur, personnes à bord (le chauffeur d\'abord, les autres par ordre alphabétique), position récente',
+    luc.popup.includes('Passe n° 1 · Déneigement mécanique') && luc.popup.includes('1/3 (33 %)') && luc.popup.includes('Chauffeur : Luc') && luc.popup.includes('À bord : Éric, Lionel') && luc.popup.includes('position à l’instant'), luc.popup);
+  vrai('un camion sans passager : « personne d’autre »', camionDe(m, 'Camion 2').popup.includes('À bord : personne d’autre'), camionDe(m, 'Camion 2').popup);
+  vrai('le camion de sel a son propre tour (passe n° 2)', camionDe(m, 'Camion sel').popup.includes('Passe n° 2 · Épandage de sel'), camionDe(m, 'Camion sel').popup);
+  eq('le point est bien à la position envoyée par le téléphone du chauffeur', luc.ll, [46.443, -72.922]);
+
+  m = await cas({ positions: [posv('p-luc', 46.443, -72.922)] });
+  eq('un camion SANS position n\'a pas de point (Marc et Ghislain : rien)', m.camions.length, 1);
+  m = await cas({ positions: trois(), equipes: [] });
+  vrai('nom de véhicule inconnu : « Camion » (jamais « undefined »)', m.camions.every((c) => c.popup.includes('<b>🚜 Camion</b>')) && !m.camions.some((c) => c.popup.includes('undefined')), m.camions[0].popup);
+
+  // — Une route ou toutes les routes ensemble —
+  m = await cas({ positions: trois() });
+  const n = () => m.run('Object.keys(marqueursVehicules).length');
+  m.routeActive(SE); m.run('majVehicules()');
+  eq('route Saint-étienne choisie : aucun camion de Charette à l\'écran (ils sont retirés)', [n(), m.retires.filter((x) => x.popup).length], [0, 3]);
+  m.routeActive(CH); m.run('majVehicules()');
+  eq('route Charette : les 3 camions reviennent', n(), 3);
+  m.routeActive(null); m.run('majVehicules()');
+  eq('toutes les routes : les 3 camions', n(), 3);
+
+  // — Position ancienne, position qui bouge, camion qui disparaît —
+  m = await cas({ positions: [posv('p-luc', 46.443, -72.922, 4)] });
+  vrai('position vieille de 4 minutes : le camion reste affiché mais ATTÉNUÉ, avec « ⚠ position il y a 4 min »', html(m.camions[0]).includes('camion perime') && m.camions[0].popup.includes('⚠ position il y a 4 min'), html(m.camions[0]) + m.camions[0].popup);
+  m = await cas({ positions: [posv('p-luc', 46.443, -72.922)] });
+  const avant = m.camions.length; m.donnees.positions = [posv('p-luc', 46.4431, -72.9221)];
+  await m.run('rafraichirEnCours()');
+  eq('le camion se DÉPLACE (même marqueur, pas de doublon)', [m.camions.length - avant, m.camions[0].deplacements, m.camions[0].ll], [0, 1, [46.4431, -72.9221]]);
+  m.donnees.positions = []; await m.run('rafraichirEnCours()');
+  eq('plus de position (passe terminée : le serveur l\'efface) : le point disparaît', [m.run('Object.keys(marqueursVehicules).length'), m.retires.filter((x) => x.popup).length], [0, 1]);
+
+  // — Texte piégé —
+  m = await cas({ positions: [posv('p-luc', 46.443, -72.922)], equipes: [{ id: 'e1', nom: '<img src=x onerror=alert(1)>' }], equipages: [eqp('p-luc', 'chauffeur', 'u-luc', '<b>Luc</b>'), eqp('p-luc', 'passager', 'u-9', null)] });
+  vrai('noms piégés (camion, personne) affichés comme du TEXTE ; une personne sans nom lisible : « ? »',
+    !html(m.camions[0]).includes('<img') && !m.camions[0].popup.includes('<img') && m.camions[0].popup.includes('&lt;b&gt;Luc&lt;/b&gt;') && m.camions[0].popup.includes('À bord : ?'), m.camions[0].popup);
+
+  // — Temps réel : l'équipage change —
+  m = await cas({ positions: trois() });
+  const lE = () => m.appels.lectures.filter((t) => t === 'equipage_periodes').length, lP = () => m.appels.lectures.filter((t) => t === 'positions').length, tr = () => m.appels.rpc.filter((r) => r.nom === 'tours_en_cours').length;
+  const e0 = lE(), p0 = lP(), t0 = tr();
+  m.donnees.equipage_periodes.push(eqp('p-marc', 'passager', 'u-9', 'Nouvel arrivant'));
+  for (let i = 0; i < 5; i++) m.run('planifierRechargementEquipages()');
+  await attendre(120); eq('5 changements d\'équipage d\'un coup : pas encore relu', lE(), e0);
+  await attendre(400);
+  eq('… puis relu UNE seule fois (sans relire les positions ni les tours)', [lE() - e0, lP() - p0, tr() - t0], [1, 0, 0]);
+  vrai('… et la bulle du camion de Marc montre la nouvelle personne à bord', camionDe(m, 'Camion 2').popup.includes('À bord : Nouvel arrivant') && html(camionDe(m, 'Camion 2')).includes('👤 2'), camionDe(m, 'Camion 2').popup);
+  m.run('currentUser = null'); const e1 = lE(); m.run('planifierRechargementEquipages()'); await attendre(450);
+  eq('personne de connecté : aucune lecture', lE(), e1);
+  m.run('currentUser = { id: "u-luc", nom: "Luc", role: "employe" }');
+  const e2 = lE(); for (let i = 0; i < 4; i++) await m.run('rafraichirEnCours()');
+  eq('la relecture de secours relit aussi les équipages, une fois sur quatre (environ chaque minute)', lE() - e2, 1);
+
+  // — Réseau coupé —
+  m = await cas({ positions: trois() });
+  m.run('__dbOk2 = db; db = { rpc: __fauxDb.rpc, from: () => { throw new Error("Failed to fetch"); } }');
+  eq('réseau coupé : la lecture échoue SANS effacer les équipages connus', [await m.run('chargerVehiculesEtEquipages()'), m.run('Object.keys(equipages).length'), m.run('Object.keys(nomsVehicules).length')], [false, 3, 3]);
+  m.run('db = __fauxDb');
+  m = await cas({ positions: trois(), erreurLecture: ['equipage_periodes'] });
+  eq('erreur du serveur : idem, les camions restent affichés (avec un équipage vide)', [m.camions.length, m.run('Object.keys(equipages).length')], [3, 0]);
 }
 
 log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ===');

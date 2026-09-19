@@ -82,7 +82,7 @@
 </div>
 
 <div id="bottombar">
-  <div class="bb" id="bb-op"><div id="op-dot"></div><div id="op-name">—</div></div>
+  <div class="bb" id="bb-op" onclick="ouvrirCompte()" style="cursor:pointer"><div id="op-dot"></div><div id="op-texte"><div class="bbl">Mon compte</div><div id="op-name">—</div></div></div>
 <div class="bb" id="bb-zone" onclick="openRoutes()" style="cursor:pointer">
     <div class="bbl">Zone</div>
     <div class="bbv" id="zone-val" style="color:var(--accent)">—</div>
@@ -152,7 +152,7 @@
     <div id="admin-header">
       <div>
         <div id="admin-title">👑 Panneau Admin</div>
-        <div id="admin-sub">Comptes en attente d'approbation</div>
+        <div id="admin-sub">Problèmes signalés</div>
       </div>
       <button id="admin-x" onclick="closeAdmin()">✕</button>
     </div>
@@ -213,10 +213,29 @@
 
 <div id="toast"></div>
 
+<!-- MON COMPTE : l'employé change lui-même son NIP -->
+<div id="compte-overlay" role="dialog" aria-modal="true" aria-labelledby="compte-titre" onclick="bgClickCompte(event)">
+  <form id="compte-boite" onsubmit="changerNip();return false;" autocomplete="off">
+    <div id="compte-titre">Mon compte</div>
+    <div id="compte-nom">—</div>
+    <div id="compte-nip">
+      <div class="compte-sous-titre">Changer mon NIP</div>
+      <div class="lf"><label for="nip-actuel">NIP actuel</label><input id="nip-actuel" name="nip-actuel" type="password" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="current-password"/></div>
+      <div class="lf"><label for="nip-nouveau">Nouveau NIP (6 chiffres)</label><input id="nip-nouveau" name="nip-nouveau" type="password" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="new-password"/></div>
+      <div class="lf"><label for="nip-confirmation">Retape le nouveau NIP</label><input id="nip-confirmation" name="nip-confirmation" type="password" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="new-password"/></div>
+      <div id="compte-err" role="alert"></div>
+      <button id="compte-btn" type="submit" class="confirm-btn compte-ok">Enregistrer mon NIP</button>
+    </div>
+    <div id="compte-admin">Compte administrateur : ton mot de passe se change dans Supabase (Authentication &gt; Users).</div>
+    <button type="button" class="confirm-btn non" onclick="fermerCompte()">Fermer</button>
+  </form>
+</div>
+
 <script src="js/chargement.js"></script>
 <script src="js/config.js"></script>
 <script src="js/utilitaires.js"></script>
 <script src="js/auth.js"></script>
+<script src="js/compte.js"></script>
 <script src="js/carte.js"></script>
 <script src="js/arrets.js"></script>
 <script src="js/routes.js"></script>

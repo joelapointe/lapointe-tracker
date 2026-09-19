@@ -143,10 +143,12 @@
       position:absolute;bottom:72px;left:0;right:0;z-index:950;
       background:rgba(17,20,24,.97);border-top:1px solid var(--border);
       padding:14px 16px 12px;
-      transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+      /* Cachée : sous l'écran, barre du bas comprise (avant, elle glissait de sa seule hauteur et venait GRISER la barre du bas) */
+      transform:translateY(calc(100% + 72px));visibility:hidden;
+      transition:transform .28s cubic-bezier(.4,0,.2,1),visibility 0s linear .28s;
       pointer-events:none;
     }
-    #stop-card.open{transform:translateY(0);pointer-events:all;}
+    #stop-card.open{transform:translateY(0);visibility:visible;pointer-events:all;transition:transform .28s cubic-bezier(.4,0,.2,1),visibility 0s;}
     #sc-head{display:flex;align-items:flex-start;justify-content:space-between;}
     #sc-addr{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--accent);line-height:1.1;}
     #sc-svc{font-size:14px;color:var(--text);margin-top:2px;}
@@ -283,3 +285,16 @@
 .confirm-btn.non{background:#252d3a;color:var(--text);}
 .confirm-btn:active{filter:brightness(.85);}
 .confirm-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* Mon compte (compte.js) */
+#op-texte{display:flex;flex-direction:column;align-items:flex-start;gap:1px;}
+#compte-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:3500;align-items:center;justify-content:center;padding:20px;}
+#compte-overlay.open{display:flex;}
+#compte-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 20px 18px;width:100%;max-width:360px;max-height:100%;overflow-y:auto;}
+#compte-titre{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;color:var(--text);text-align:center;}
+#compte-nom{font-size:14px;color:var(--muted);text-align:center;margin:2px 0 16px;}
+.compte-sous-titre{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;color:var(--accent);margin-bottom:12px;}
+#compte-err{font-size:12px;color:var(--red);margin-bottom:12px;min-height:16px;text-align:center;}
+#compte-admin{display:none;font-size:13px;color:var(--muted);line-height:1.5;text-align:center;margin-bottom:14px;}
+.confirm-btn.compte-ok{background:var(--accent);color:#111;width:100%;margin-bottom:10px;}
+#compte-boite .confirm-btn{width:100%;}

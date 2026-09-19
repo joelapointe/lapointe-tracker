@@ -22,18 +22,19 @@ function monde(o = {}) {
   const el = (id) => els[id] ??= (() => {
     const classes = new Set(), attrs = {};
     return { id, classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), contains: (c) => classes.has(c), toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) },
-      textContent: '', value: '', style: {}, disabled: false, className: '', attrs, setAttribute: (k, v) => { attrs[k] = v; }, getAttribute: (k) => attrs[k] };
+      textContent: '', value: '', style: {}, disabled: false, className: '', attrs, setAttribute: (k, v) => { attrs[k] = v; }, getAttribute: (k) => attrs[k], focus() { this.focusRecu = true; } };
   })();
   const stockage = new Map(Object.entries(o.stockage ?? {}));
-  const appels = { signIn: [], signOut: [], selects: [], loadStops: 0, demarrerTracking: 0, arreterTracking: 0, reload: 0, hideLoading: 0 };
+  const appels = { signIn: [], signOut: [], updateUser: [], selects: [], loadStops: 0, demarrerTracking: 0, arreterTracking: 0, reload: 0, hideLoading: 0 };
   const etat = { ecouteur: null };
-  const reponses = { signIn: o.signIn ?? { data: { session: { user: { id: 'u-1' } } }, error: null }, profil: o.profil ?? { data: { id: 'u-1', nom: 'Luc', role: 'employe', actif: true, cree_le: 'x' }, error: null }, session: o.session ?? null };
+  const reponses = { update: o.update ?? { data: { user: {} }, error: null }, signIn: o.signIn ?? { data: { session: { user: { id: 'u-1' } } }, error: null }, profil: o.profil ?? { data: { id: 'u-1', nom: 'Luc', role: 'employe', actif: true, cree_le: 'x' }, error: null }, session: o.session ?? null };
   const fauxDb = {
     auth: {
       signInWithPassword: async (c) => { appels.signIn.push(c); if (o.signInLance) throw o.signInLance; return reponses.signIn; },
       getSession: async () => { if (o.getSessionLance) throw new Error('boum'); return { data: { session: reponses.session } }; },
       signOut: async (opts) => { appels.signOut.push(opts); if (etat.ecouteur) etat.ecouteur('SIGNED_OUT'); return { error: null }; },
       onAuthStateChange: (cb) => { etat.ecouteur = cb; return { data: { subscription: {} } }; },
+      updateUser: async (a) => { appels.updateUser.push(a); if (o.updateUserLance) throw o.updateUserLance; return reponses.update; },
     },
     from: (table) => ({ select: (colonnes) => { appels.selects.push({ table, colonnes }); return { eq: (c, v) => ({ maybeSingle: async () => { if (o.profilLance) throw new Error('reseau'); return reponses.profil; } }) }; } }),
   };
@@ -52,7 +53,7 @@ function monde(o = {}) {
     console,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/auth.js']) vm.runInContext(lire(f), ctx, { filename: f });
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/auth.js', 'js/compte.js']) vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb;', ctx);
   // La boîte de confirmation est testée à part (plus bas) ; ici on note la question posée et on répond « oui » ou « non »
   vm.runInContext('confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', ctx);
@@ -324,6 +325,105 @@ log('\n=== BOÎTE DE CONFIRMATION (remplace la fenêtre native, refusée d\'offi
 }
 
 // =====================================================================
+log('\n=== « MON COMPTE » : L\'EMPLOYÉ CHANGE SON NIP ===');
+{
+  const emailEmp = '8195550101@tel.entretienlapointe.ca';
+  const session = { user: { id: 'u-1', email: emailEmp } };
+  const ouvert = async (o = {}) => { const m = monde({ session, ...o }); await m.run('restaurerSession()'); return m; };
+  const saisirNip = (m, a, n, c) => { m.el('nip-actuel').value = a; m.el('nip-nouveau').value = n; m.el('nip-confirmation').value = c; };
+  const champsVides = (m) => ['nip-actuel', 'nip-nouveau', 'nip-confirmation'].every((i) => m.el(i).value === '');
+
+  // Mêmes règles « NIP trop facile » que la fonction serveur (admin-employes) : comparées sur TOUS les NIP de 000000 à 999999
+  const { nipTropFacile: nipServeur } = await import('data:text/javascript;base64,' + Buffer.from((await import('node:module')).stripTypeScriptTypes(fs.readFileSync(fileURLToPath(new URL('../functions/admin-employes/index.ts', import.meta.url)), 'utf8'))).toString('base64'));
+  const m0 = monde();
+  let differences = 0, faciles = 0;
+  for (let i = 0; i < 1000000; i++) { const n = String(i).padStart(6, '0'); const a = m0.ctx.nipTropFacile(n); if (a !== nipServeur(n)) differences++; if (a) faciles++; }
+  eq('les règles « NIP trop facile » de l\'application = celles du serveur, sur les 1 000 000 de NIP possibles', differences, 0);
+  eq('… 10 chiffres identiques + 5 suites montantes + 5 suites descendantes = 20 NIP refusés', faciles, 20);
+
+  const valider = (a, n, c) => m0.run(`validerNouveauNip(${JSON.stringify(a)},${JSON.stringify(n)},${JSON.stringify(c)})`);
+  eq('un bon changement est accepté', valider('482915', '739104', '739104'), '');
+  for (const [libelle, args, msg] of [
+    ['champ vide', ['482915', '', '739104'], 'Remplis les trois champs.'],
+    ['NIP actuel mal formé', ['4829', '739104', '739104'], 'Ton NIP actuel a 6 chiffres.'],
+    ['nouveau NIP trop court', ['482915', '73910', '73910'], 'Le nouveau NIP doit avoir exactement 6 chiffres.'],
+    ['nouveau NIP avec des lettres', ['482915', '73910a', '73910a'], 'Le nouveau NIP doit avoir exactement 6 chiffres.'],
+    ['nouveau NIP évident (123456)', ['482915', '123456', '123456'], 'NIP trop facile à deviner (ex. 123456 ou 000000). Choisis-en un autre.'],
+    ['nouveau NIP évident (000000)', ['482915', '000000', '000000'], 'NIP trop facile à deviner (ex. 123456 ou 000000). Choisis-en un autre.'],
+    ['même NIP que l\'ancien', ['482915', '482915', '482915'], 'Le nouveau NIP doit être différent de l’ancien.'],
+    ['confirmation différente', ['482915', '739104', '739105'], 'Les deux NIP ne sont pas pareils.'],
+  ]) eq(`refusé : ${libelle}`, valider(...args), msg);
+
+  // --- Le bon parcours ---
+  let m = await ouvert();
+  m.run('ouvrirCompte()');
+  eq('la fenêtre « Mon compte » s\'ouvre : nom, formulaire du NIP visible, mot associé à l\'administrateur caché', [m.el('compte-overlay').classList.contains('open'), m.el('compte-nom').textContent, m.el('compte-nip').style.display, m.el('compte-admin').style.display], [true, 'Luc', 'block', 'none']);
+  saisirNip(m, '482915', '739 104', '739104');
+  m.reponses.signIn = { data: { session }, error: null };
+  await m.run('changerNip()');
+  eq('le NIP ACTUEL est revérifié auprès du serveur avec le bon identifiant', m.appels.signIn.slice(-1)[0], { email: emailEmp, password: '482915' });
+  eq('puis le nouveau NIP est enregistré (une seule fois)', m.appels.updateUser, [{ password: '739104' }]);
+  eq('succès : la fenêtre se ferme, message de confirmation, aucun NIP ne reste dans les champs', [m.el('compte-overlay').classList.contains('open'), m.el('toast').textContent, champsVides(m)], [false, '✔ NIP changé.', true]);
+  eq('l\'employé reste connecté (aucune déconnexion, aucun nouveau chargement)', [m.utilisateur()?.nom, m.appels.signOut.length, m.appels.reload], ['Luc', 0, 0]);
+  eq('aucun NIP n\'est écrit dans le téléphone', [...m.stockage.values()].some((v) => /482915|739104/.test(v)), false);
+  eq('le bouton est réactivé', [m.el('compte-btn').disabled, m.el('compte-btn').textContent], [false, 'Enregistrer mon NIP']);
+
+  // --- Les refus ---
+  m = await ouvert(); m.run('ouvrirCompte()'); saisirNip(m, '111111', '739104', '739104');
+  m.reponses.signIn = { data: { session: null }, error: { code: 'invalid_credentials', status: 400 } };
+  await m.run('changerNip()');
+  eq('NIP actuel FAUX : refusé, le nouveau NIP n\'est JAMAIS envoyé', [m.el('compte-err').textContent, m.appels.updateUser.length, m.el('compte-overlay').classList.contains('open')], ['NIP actuel incorrect.', 0, true]);
+  eq('… et les champs sont vidés (aucun NIP ne traîne)', champsVides(m), true);
+
+  m = await ouvert(); m.run('ouvrirCompte()'); saisirNip(m, '482915', '123456', '123456');
+  await m.run('changerNip()');
+  eq('NIP évident : refusé SANS appeler le serveur, les champs restent pour corriger', [m.el('compte-err').textContent.slice(0, 20), m.appels.signIn.length, m.appels.updateUser.length, m.el('nip-nouveau').value], ['NIP trop facile à de', 0, 0, '123456']);
+
+  for (const [libelle, update, attendu] of [
+    ['le serveur dit « même mot de passe »', { data: null, error: { code: 'same_password', status: 422 } }, 'Le nouveau NIP doit être différent de l’ancien.'],
+    ['le serveur juge le NIP trop faible', { data: null, error: { code: 'weak_password', status: 422 } }, 'Ce NIP est refusé (trop facile). Choisis-en un autre.'],
+    ['trop d\'essais', { data: null, error: { code: 'over_request_rate_limit', status: 429 } }, 'Trop d’essais. Attends quelques minutes, puis réessaie.'],
+    ['erreur inconnue', { data: null, error: { code: 'bizarre', status: 500 } }, 'Le changement a échoué. Réessaie.'],
+  ]) {
+    m = await ouvert({ update }); m.run('ouvrirCompte()'); saisirNip(m, '482915', '739104', '739104');
+    m.reponses.signIn = { data: { session }, error: null };
+    await m.run('changerNip()');
+    eq(`${libelle} : message clair, fenêtre ouverte, champs vidés`, [m.el('compte-err').textContent, m.el('compte-overlay').classList.contains('open'), champsVides(m)], [attendu, true, true]);
+  }
+  m = await ouvert({ updateUserLance: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 }) }); m.run('ouvrirCompte()'); saisirNip(m, '482915', '739104', '739104');
+  m.reponses.signIn = { data: { session }, error: null };
+  await m.run('changerNip()');
+  eq('réseau coupé au moment d\'enregistrer : message clair, bouton réactivé', [m.el('compte-err').textContent, m.el('compte-btn').disabled], ['Pas de réseau. Réessaie quand tu auras du signal.', false]);
+
+  m = await ouvert(); m.run('ouvrirCompte()'); saisirNip(m, '482915', '739104', '739104');
+  m.reponses.signIn = { data: { session: null }, error: Object.assign(new Error('x'), { name: 'AuthRetryableFetchError', status: 0 }) };
+  await m.run('changerNip()');
+  eq('réseau coupé pendant la vérification du NIP actuel : message clair, rien envoyé', [m.el('compte-err').textContent, m.appels.updateUser.length], ['Pas de réseau. Vérifie ta connexion, puis réessaie.', 0]);
+
+  m = monde({ session: null }); await m.run('restaurerSession()');
+  await m.run('changerNip()');
+  eq('personne de connecté : rien ne se passe', [m.appels.signIn.length, m.appels.updateUser.length], [0, 0]);
+
+  // --- Administrateur, fermeture ---
+  m = await ouvert({ profil: { data: { id: 'u-1', nom: 'Joé', role: 'admin', actif: true }, error: null } });
+  m.run('ouvrirCompte()');
+  eq('l\'administrateur : pas de formulaire de NIP, renvoi vers Supabase pour son mot de passe', [m.el('compte-nip').style.display, m.el('compte-admin').style.display, m.el('compte-nom').textContent], ['none', 'block', '👑 Joé']);
+  saisirNip(m, '482915', '739104', '739104');
+  await m.run('changerNip()');
+  eq('… et même en forçant l\'appel, rien n\'est envoyé pour un administrateur', [m.appels.signIn.length, m.appels.updateUser.length], [0, 0]);
+
+  m = await ouvert(); m.run('ouvrirCompte()'); saisirNip(m, '482915', '739104', '739104');
+  m.run('fermerCompte()');
+  eq('fermer la fenêtre vide les champs (aucun NIP ne reste)', [m.el('compte-overlay').classList.contains('open'), champsVides(m)], [false, true]);
+  m.run('ouvrirCompte()');
+  m.run('bgClickCompte({target: document.getElementById("compte-overlay")})');
+  eq('toucher en dehors de la fenêtre la ferme', m.el('compte-overlay').classList.contains('open'), false);
+  m.run('ouvrirCompte()');
+  m.run('bgClickCompte({target: {}})');
+  eq('toucher dans la fenêtre ne la ferme pas', m.el('compte-overlay').classList.contains('open'), true);
+}
+
+// =====================================================================
 log('\n=== CONTRÔLES DU CODE DE L\'APPLICATION (plus rien de l\'ancien système) ===');
 {
   const auth = lire('js/auth.js'), html = lire('index.html'), css = lire('css/style.css'), admin = lire('js/admin.js'), carte = lire('js/carte.js');
@@ -338,6 +438,13 @@ log('\n=== CONTRÔLES DU CODE DE L\'APPLICATION (plus rien de l\'ancien système
   vrai('le panneau admin ne parle plus de comptes en attente', !/comptes? en attente/i.test(admin));
   vrai('les fichiers de l\'application chargent auth.js AVANT carte.js et demarrage.js EN DERNIER', html.indexOf('js/auth.js') < html.indexOf('js/carte.js') && html.lastIndexOf('js/demarrage.js') > html.indexOf('js/placement.js'));
   vrai('carte.js reprend la session par restaurerSession()', /restaurerSession\(\)/.test(carte));
+  vrai('la fenêtre « Mon compte » : 3 champs de 6 chiffres numériques, chacun avec la bonne aide du téléphone (NIP actuel / nouveau)',
+    /id="nip-actuel"[^>]*maxlength="6"[^>]*inputmode="numeric"[^>]*autocomplete="current-password"/.test(html) && /id="nip-nouveau"[^>]*maxlength="6"[^>]*inputmode="numeric"[^>]*autocomplete="new-password"/.test(html) && /id="nip-confirmation"[^>]*maxlength="6"[^>]*autocomplete="new-password"/.test(html));
+  vrai('le nom, dans la barre du bas, ouvre « Mon compte » et le dit (« Mon compte »)', /id="bb-op" onclick="ouvrirCompte\(\)"[\s\S]*?Mon compte/.test(html));
+  vrai('compte.js est chargé après auth.js et avant demarrage.js', html.indexOf('js/auth.js') < html.indexOf('js/compte.js') && html.indexOf('js/compte.js') < html.lastIndexOf('js/demarrage.js'));
+  vrai('le NIP n\'est jamais écrit dans un journal ni dans le stockage du téléphone (compte.js)', !/console\.|localStorage|sessionStorage/.test(lire('js/compte.js').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')));
+  vrai('plus aucune mention de « comptes en attente » dans la page', !/en attente/i.test(html));
+  vrai('la carte d\'un arrêt, quand elle est cachée, est sous la barre du bas (elle ne la grise plus) et invisible', /#stop-card\{[^}]*transform:translateY\(calc\(100% \+ 72px\)\);visibility:hidden/.test(css) && /#stop-card\.open\{[^}]*translateY\(0\);visibility:visible/.test(css));
   vrai('la déconnexion n\'utilise plus la fenêtre native confirm() (refusée d\'office par certains navigateurs : le bouton ne faisait rien)', !/[^a-zA-Z_.]confirm\(/.test(auth.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')) && /await confirmer\(/.test(auth));
   const barreHaut = (html.match(/<div id="topbar">[\s\S]*?<div id="addr-row">/) || [''])[0];
   vrai('un VRAI bouton « Déconnexion » existe dans la barre du haut, relié à doLogout()', /<button id="btn-deconnexion" type="button" onclick="doLogout\(\)"[^>]*>[\s\S]*Déconnexion[\s\S]*<\/button>/.test(barreHaut), barreHaut.slice(0, 200));

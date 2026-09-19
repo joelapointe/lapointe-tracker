@@ -35,7 +35,7 @@ Le prochain fichier sera créé à l'étape 12 ou plus tard, au besoin.
 ## Les tests (aucun contact avec ta vraie base)
 
 Les tests exécutent les fichiers SQL sur un PostgreSQL local simulé (PGlite), avec de faux rôles
-(visiteur, employé, employé désactivé, administrateur). **760 tests** au 19 septembre 2026.
+(visiteur, employé, employé désactivé, administrateur). **799 tests** au 19 septembre 2026.
 
 ```
 cd supabase/tests
@@ -44,7 +44,7 @@ npm test
 ```
 
 - `prepare.mjs` reproduit l'ancienne base (avant l'étape 6) puis exécute les fichiers demandés.
-- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (210, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08). `reel-etape-11.mjs` (comptes et accès, 80 essais) et `reel-etape-11b.mjs` (comportement : quarts, passes, équipage, transferts, export de paie ; option `--cron` pour la vraie tâche automatique) : essais sur la VRAIE base (demandent le mot de passe de Joé, masqué), hors de `npm test`. Après chaque série : exécuter `10-nettoyage-comptes-zztest.sql`. `test-nettoyage.mjs` (37, fichiers 10 et 11 : véhicules d'essai et journal des corrections compris), `test-app-connexion.mjs` (101 : la connexion de l'application `www/js/auth.js`, avec un faux navigateur et un faux Supabase). `serveur-www.mjs` sert le dossier `www/` en local pour l'essayer dans un navigateur ; `installer-donnees-de-test.mjs` crée les véhicules et comptes de test durables.
+- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (210, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08). `reel-etape-11.mjs` (comptes et accès, 80 essais) et `reel-etape-11b.mjs` (comportement : quarts, passes, équipage, transferts, export de paie ; option `--cron` pour la vraie tâche automatique) : essais sur la VRAIE base (demandent le mot de passe de Joé, masqué), hors de `npm test`. Après chaque série : exécuter `10-nettoyage-comptes-zztest.sql`. `test-nettoyage.mjs` (37, fichiers 10 et 11 : véhicules d'essai et journal des corrections compris), `test-app-connexion.mjs` (140 : la connexion et « Mon compte » de l'application `www/js/auth.js` et `compte.js`, avec un faux navigateur et un faux Supabase). `serveur-www.mjs` sert le dossier `www/` en local pour l'essayer dans un navigateur ; `reel-etape-12.mjs` : essai réel du changement de NIP (compte « ZZTEST Nip », à nettoyer avec le fichier 10) ; `installer-donnees-de-test.mjs` crée les véhicules et comptes de test durables.
 
 **Règle de travail :** tout nouveau SQL est d'abord écrit avec ses tests, exécuté sur ce banc d'essai, et
 seulement ensuite donné à Joé. Limites : la simulation n'a pas `pg_cron` ni le vrai Supabase Auth ; le

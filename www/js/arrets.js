@@ -11,6 +11,8 @@ async function loadStops(){
  stops=data||[];
     await loadRoutes();
     await chargerTours();
+    await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
+    demarrerRelecturePositions();
     // Charger les problèmes pour chaque stop
     const{data:probs}=await db.from('problemes').select('*').eq('lu',false);
     const probMap={};
@@ -47,7 +49,7 @@ async function dbDel(id){
 
 // ── MARQUEURS ──────────────────────────────────────────
 function mkIcon(done,hasProb,onSite){
-  const c=hasProb?'#fb923c':(done?'#4ade80':(onSite?'#60a5fa':'#c8e63c'));
+  const c=couleurEtat(done,hasProb,onSite);   // règle de couleur unique (tours.js), la même que pour les zones
   const s=done&&!hasProb?14:18;
   return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${c};border:2px solid rgba(0,0,0,.5);transform:rotate(45deg);box-shadow:0 2px 6px rgba(0,0,0,.6)"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]});
 }
@@ -61,7 +63,7 @@ function renderAll(){
   stops.forEach((s,i)=>{
     if(!s.lat) return;
   if(routeActive!==null && s.route_id!==routeActive) return;
-  const m=L.marker([s.lat,s.lon],{icon:mkIcon(estFait(s),s._probleme,s._onSite)}).addTo(map);
+  const m=L.marker([s.lat,s.lon],{icon:mkIcon(estFait(s),s._probleme,estEnCours(s))}).addTo(map);
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });
@@ -69,12 +71,13 @@ function renderAll(){
   stops.forEach(s=>{
     if(!s.zone_points||!Array.isArray(s.zone_points))return;
     if(routeActive!==null && s.route_id!==routeActive) return;
-    const c=s._probleme?'#fb923c':(estFait(s)?'#4ade80':'#c8e63c');
+    const c=couleurEtat(estFait(s),s._probleme,estEnCours(s));
     polys.push(L.polygon(s.zone_points,{
       color:c,fillColor:c,fillOpacity:.15,weight:2
     }).addTo(map));
   });
 	updateBar();
+  _sigEnCours=signatureEnCours();   // ce qui est dessiné : on ne redessinera que si ça change
 }
 
 // Barre du bas : l'avancement de ce qui est affiché (une route, ou toutes les routes ensemble),

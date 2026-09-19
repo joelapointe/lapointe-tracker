@@ -61,7 +61,84 @@ function etatComplete(s){
 function texteTour(s){
   const t=tourDe(s);
   if(!t) return 'Aucune passe en cours pour ce type de service';
-  return 'Passe n° '+t.numero+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)';
+  return 'Passe n° '+t.numero+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)?' · 🚜 camion sur place':'');
+}
+
+// ── CLIENT « EN COURS » (étape 13c) ────────────────────
+// Un client est « en cours » quand un camion de SON tour (même route, même tâche) est sur place, arrêt pas encore fait.
+// Les positions viennent de la table positions : une ligne par camion en passe, écrite par le téléphone du chauffeur seulement,
+// lisible par tous les employés. Arriver chez un client NE le complète PAS (le chauffeur touche « Complété »).
+let positionsVehicules=[];   // [{passe_id, lat, lon, precision_m, maj_le}]
+let _tRechargePositions=null;
+let _minuterieEnCours=null;
+let _sigEnCours='';          // ce qui est dessiné en ce moment (pour ne redessiner que si quelque chose change)
+
+// Distance en mètres entre deux points GPS
+function distanceMetres(lat1,lon1,lat2,lon2){
+  const R=6371000;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Lit les positions des camions. En cas d'échec, on garde les dernières connues (elles expirent d'elles-mêmes après 3 minutes).
+async function chargerPositionsVehicules(){
+  try{
+    const{data,error}=await db.from('positions').select('passe_id, lat, lon, precision_m, maj_le');
+    if(error) throw error;
+    positionsVehicules=Array.isArray(data)?data:[];
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+
+// Une position compte si elle est récente et assez précise (précision inconnue : acceptée)
+function positionCompte(p,maintenant){
+  const age=maintenant-Date.parse(p.maj_le);
+  if(!(age<=POSITION_PERIMEE_MIN*60000)) return false;                  // trop vieille, ou date illisible
+  if(p.precision_m!=null&&p.precision_m>PRECISION_MAX_M) return false;   // GPS trop imprécis
+  return true;
+}
+
+function estEnCours(s){
+  if(!s.lat||!s.lon) return false;
+  if(estFait(s)) return false;
+  const t=tourDe(s);
+  if(!t) return false;
+  const passes=t.passes.map(p=>p.passe_id);
+  const maintenant=Date.now();
+  return positionsVehicules.some(p=>passes.includes(p.passe_id)&&positionCompte(p,maintenant)
+    &&distanceMetres(p.lat,p.lon,s.lat,s.lon)<=RAYON_EN_COURS_M);
+}
+
+// UNE seule règle de couleur pour les marqueurs ET les zones : problème (orange) > en cours (bleu) > fait (vert) > à faire (jaune)
+function couleurEtat(fait,probleme,enCours){
+  return probleme?'#fb923c':(enCours?'#60a5fa':(fait?'#4ade80':'#c8e63c'));
+}
+
+// Identifie l'ensemble des clients « en cours » (pour ne redessiner la carte que si cet ensemble change)
+function signatureEnCours(){
+  return stops.filter(estEnCours).map(s=>s.id).sort().join(',');
+}
+// Relit les positions ; ne redessine que si un client entre ou sort de l'état « en cours »
+async function rafraichirEnCours(){
+  if(!currentUser) return;
+  await chargerPositionsVehicules();
+  if(signatureEnCours()!==_sigEnCours){ renderAll(); majCarte(); }
+}
+// Changements de positions reçus en temps réel : on relit une seule fois même si plusieurs arrivent d'un coup
+function planifierRechargementPositions(){
+  clearTimeout(_tRechargePositions);
+  _tRechargePositions=setTimeout(rafraichirEnCours,500);
+}
+// Relecture de secours (temps réel manqué) ; fait aussi expirer les positions périmées
+function demarrerRelecturePositions(){
+  if(_minuterieEnCours) return;
+  _minuterieEnCours=setInterval(rafraichirEnCours,RELECTURE_POSITIONS_S*1000);
 }
 
 // Messages en français pour les refus du serveur

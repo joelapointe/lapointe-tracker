@@ -38,8 +38,9 @@ function monde(o = {}) {
     routes: o.routes ?? ROUTES.map((r) => ({ ...r })),
     problemes: o.problemes ?? [],
     tours: o.tours ?? TOURS(),
+    positions: o.positions ?? [],
   };
-  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [] };
+  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [] };
   const reponsesRpc = o.rpc ?? {};
   const reponsesEcriture = o.ecritures ?? {};
 
@@ -60,7 +61,7 @@ function monde(o = {}) {
       q.update = (v) => { q.op = 'update'; q.valeur = v; return q; };
       q.then = (ok_, ko_) => {
         let res;
-        if (q.op === 'select') res = { data: donnees[table] ?? [], error: null };
+        if (q.op === 'select') { appels.lectures.push(table); res = { data: donnees[table] ?? [], error: null }; }
         else { appels.ecritures.push({ table, op: q.op, valeur: q.valeur, filtres: q.filtres }); res = reponsesEcriture[table + '.' + q.op] ?? { data: null, error: null }; }
         return Promise.resolve(res).then(ok_, ko_);
       };
@@ -71,9 +72,9 @@ function monde(o = {}) {
   const marqueurs = [], polygones = [], retires = [];
   const sandbox = {
     document: { getElementById: el, createElement: () => creer(null) },
-    localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    localStorage: { getItem: (k) => (k === 'lp_zone' ? (o.zone ?? null) : null), setItem() {}, removeItem() {} },
     window: { open: (u) => appels.ouverts.push(u) },
-    setTimeout, clearTimeout, console,
+    setTimeout, clearTimeout, setInterval, clearInterval, console,
     L: {
       divIcon: (opt) => opt,
       marker: (ll, opt) => { const m = { ll, opt, addTo() { return m; }, on(ev, f) { m.clic = f; } }; marqueurs.push(m); return m; },
@@ -94,15 +95,19 @@ function monde(o = {}) {
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
   vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', Object.assign(ctx, { __toasts: appels.toasts }) && ctx);
-  return {
+  const w = {
     ctx, el, donnees, appels, marqueurs, polygones, retires,
     run: (code) => vm.runInContext(code, ctx),
     routeActive: (id) => vm.runInContext(`routeActive = ${JSON.stringify(id)};`, ctx),
     couleur: (m) => (m.opt.icon.html.match(/background:(#[0-9a-f]+)/) || [])[1],
     elementsListe: () => el('liste-body').children,
     dernierToast: () => appels.toasts[appels.toasts.length - 1],
+    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;', ctx),
   };
+  tousLesMondes.push(w);
+  return w;
 }
+const tousLesMondes = [];
 
 const STOPS = [
   { id: 's1', adresse: '304 rue de l\'Église', client: 'TEST 1', route_id: CH, service: MEC, lat: 46.44, lon: -72.92, ordre: 0, actif: true },
@@ -335,6 +340,111 @@ log('\n=== NAVIGUER VERS UN ARRÊT : choix Google Maps / Waze avec la boîte de 
   eq('la boîte propose bien Google Maps / Waze, avec l\'adresse', m.appels.confirmations, [['Naviguer avec…', '220 rue du Moulin', 'Google Maps', 'Waze']]);
 }
 
+
+log('\n=== CLIENT « EN COURS » : un camion de son tour est sur place (étape 13c) ===');
+{
+  const pos = (passe, lat, lon, o = {}) => ({ passe_id: passe, lat, lon, precision_m: o.precision === undefined ? 8 : o.precision, maj_le: o.majLe ?? new Date(Date.now() - (o.ageMin ?? 0.5) * 60000).toISOString() });
+  const S2 = { lat: 46.443, lon: -72.922 }, S1 = { lat: 46.44, lon: -72.92 }, S4 = { lat: 46.444, lon: -72.919 };
+  const cas = async (positions, opts = {}) => { const m = monde({ positions, ...opts }); await m.run('loadStops()'); return m; };
+  const enCours = (m, id) => m.run(`estEnCours(stops[${idx(id)}])`);
+  const couleurDe = (m, id) => m.couleur(m.marqueurs.slice(-6)[idx(id)]);
+  const avecZones = STOPS.map((s) => ({ ...s, ...(s.id === 's2' ? { zone_points: [[46.44, -72.92], [46.45, -72.92], [46.45, -72.93]] } : {}), ...(s.id === 's1' ? { zone_points: [[46.43, -72.91], [46.44, -72.91], [46.44, -72.92]] } : {}) }));
+
+  const cfg = fs.readFileSync(WWW + 'js/config.js', 'utf8');
+  eq('les réglages décidés par Joé : 20 m, 3 minutes, 30 m de précision, relecture de secours toutes les 15 s',
+    ['RAYON_EN_COURS_M', 'POSITION_PERIMEE_MIN', 'PRECISION_MAX_M', 'RELECTURE_POSITIONS_S'].map((k) => Number(cfg.match(new RegExp(k + '=(\\d+)'))[1])), [20, 3, 30, 15]);
+  const m0 = monde(); await m0.run('loadStops()');
+  vrai('distance : 0,00017° de latitude ≈ 18,9 m', Math.abs(m0.run('distanceMetres(46.443,-72.922,46.44317,-72.922)') - 18.9) < 0.5, m0.run('distanceMetres(46.443,-72.922,46.44317,-72.922)'));
+
+  // — Le cas de base : le camion de Luc est chez s2 —
+  let m = await cas([pos('p-luc', S2.lat, S2.lon)]);
+  eq('le camion de Luc est chez s2 : s2 est « en cours » (marqueur BLEU), pas les autres', [enCours(m, 's2'), couleurDe(m, 's2'), enCours(m, 's3'), couleurDe(m, 's3')], [true, '#60a5fa', false, '#c8e63c']);
+  eq('… la fiche le dit', (m.run(`openCard(${idx('s2')})`), m.el('sc-tour').textContent), 'Passe n° 1 · 1/3 (33 %) · 🚜 camion sur place');
+  eq('… et la fiche d\'un autre arrêt ne le dit pas', (m.run(`openCard(${idx('s3')})`), m.el('sc-tour').textContent), 'Passe n° 1 · 1/3 (33 %)');
+  eq('arriver chez un client ne le complète PAS : aucune écriture, bouton « Complété » toujours à toucher', [m.appels.rpc.filter((r) => r.nom !== 'tours_en_cours').length, m.appels.ecritures.length, m.run(`etatComplete(stops[${idx('s2')}])`).actif], [0, 0, true]);
+
+  // — Le rayon : 20 m —
+  m = await cas([pos('p-luc', S2.lat + 0.00017, S2.lon)]);
+  eq('à 18,9 m : en cours', enCours(m, 's2'), true);
+  m = await cas([pos('p-luc', S2.lat + 0.00023, S2.lon)]);
+  eq('à 25,6 m : pas en cours', enCours(m, 's2'), false);
+
+  // — Le bon tour : même route ET même tâche, n'importe lequel des camions du tour —
+  m = await cas([pos('p-marc', S2.lat, S2.lon)]);
+  eq('l\'AUTRE camion du même tour (Marc) sur place : s2 est en cours (tour partagé)', enCours(m, 's2'), true);
+  m = await cas([pos('p-gaby', S2.lat, S2.lon)]);
+  eq('un camion d\'une autre tâche (sel) chez s2 (déneigement) : PAS en cours', enCours(m, 's2'), false);
+  m = await cas([pos('p-gaby', S4.lat, S4.lon)]);
+  eq('… mais chez un arrêt de SA tâche (s4, sel) : en cours', [enCours(m, 's4'), couleurDe(m, 's4')], [true, '#60a5fa']);
+  m = await cas([pos('p-inconnu', S2.lat, S2.lon)]);
+  eq('une position dont la passe n\'est plus en cours : ignorée', enCours(m, 's2'), false);
+  m = await cas([pos('p-luc', 46.445, -72.78)]);   // chez s5 (route Saint-étienne, aucun tour en cours)
+  eq('un arrêt sans tour en cours n\'est jamais « en cours »', enCours(m, 's5'), false);
+
+  // — Un arrêt déjà fait n'est pas « en cours » —
+  m = await cas([pos('p-luc', S1.lat, S1.lon)]);
+  eq('le camion repasse chez un client déjà fait : reste VERT', [enCours(m, 's1'), couleurDe(m, 's1')], [false, '#4ade80']);
+
+  // — Position récente et précise —
+  for (const [nom, o, attendu] of [['vieille de 2 minutes', { ageMin: 2 }, true], ['vieille de 4 minutes', { ageMin: 4 }, false], ['à la date illisible', { majLe: 'nope' }, false],
+    ['précise à 25 m', { precision: 25 }, true], ['précise à 45 m (trop imprécise)', { precision: 45 }, false], ['de précision inconnue', { precision: null }, true]]) {
+    m = await cas([pos('p-luc', S2.lat, S2.lon, o)]);
+    eq(`position ${nom} : ${attendu ? 'compte' : 'ne compte pas'}`, enCours(m, 's2'), attendu);
+  }
+
+  // — Priorité des couleurs —
+  eq('règle unique : problème > en cours > fait > à faire',
+    [[false, true, true], [false, false, true], [true, false, false], [false, false, false], [true, true, false]].map(([f, p, e]) => m.run(`couleurEtat(${f},${p},${e})`)),
+    ['#fb923c', '#60a5fa', '#4ade80', '#c8e63c', '#fb923c']);
+  m = await cas([pos('p-luc', S2.lat, S2.lon)], { problemes: [{ id: 'pb', stop_id: 's2', note: 'x', lu: false }] });
+  eq('un problème signalé chez s2 reste ORANGE même quand le camion est là', couleurDe(m, 's2'), '#fb923c');
+
+  // — Les zones (polygones) suivent la même règle —
+  const zoneDe = (mm, id) => mm.polygones.slice(-3).find((p) => JSON.stringify(p.pts) === JSON.stringify(avecZones[idx(id)].zone_points))?.opt.color;   // 3 zones dessinées : s1, s2 et s5
+  m = await cas([pos('p-luc', S2.lat, S2.lon)], { stops: avecZones });
+  eq('zone de s2 (camion sur place) BLEUE ; zone de s1 (fait) VERTE ; zone de s5 (sans passe) jaune', [zoneDe(m, 's2'), zoneDe(m, 's1'), zoneDe(m, 's5')], ['#60a5fa', '#4ade80', '#c8e63c']);
+  eq('… le marqueur de s2 a la même couleur que sa zone (jamais de contradiction)', couleurDe(m, 's2'), zoneDe(m, 's2'));
+  m = await cas([], { stops: avecZones });
+  eq('sans camion : zone de s2 jaune, zone de s1 verte', [zoneDe(m, 's2'), zoneDe(m, 's1')], ['#c8e63c', '#4ade80']);
+
+  // — Temps réel, relecture de secours, expiration —
+  m = await cas([]);
+  const lect = () => m.appels.lectures.filter((t) => t === 'positions').length, tr = () => m.appels.rpc.filter((r) => r.nom === 'tours_en_cours').length;
+  const l0 = lect(), t0 = tr();
+  m.donnees.positions = [pos('p-luc', S2.lat, S2.lon)];
+  for (let i = 0; i < 5; i++) m.run('planifierRechargementPositions()');
+  await attendre(200); eq('5 changements de position d\'un coup : pas encore relu', lect(), l0);
+  await attendre(600);
+  eq('… puis relu UNE seule fois, sans relire les tours', [lect() - l0, tr() - t0], [1, 0]);
+  eq('… et le client devient bleu tout seul', [enCours(m, 's2'), couleurDe(m, 's2')], [true, '#60a5fa']);
+  const n1 = m.marqueurs.length; await m.run('rafraichirEnCours()');
+  eq('positions inchangées : la carte n\'est PAS redessinée (pas de scintillement)', m.marqueurs.length, n1);
+  m.donnees.positions[0].maj_le = new Date(Date.now() - 4 * 60000).toISOString();
+  await m.run('rafraichirEnCours()');
+  eq('le camion n\'envoie plus depuis 4 minutes : la relecture de secours retire le bleu', [enCours(m, 's2'), couleurDe(m, 's2')], [false, '#c8e63c']);
+  m.donnees.positions = [pos('p-luc', S2.lat, S2.lon)]; await m.run('rafraichirEnCours()');
+  m.run('__fauxDbSauve = db; db = { rpc: __fauxDb.rpc, from: () => { throw new Error("Failed to fetch"); } }');
+  eq('réseau coupé : la lecture échoue SANS effacer les dernières positions', [await m.run('chargerPositionsVehicules()'), enCours(m, 's2')], [false, true]);
+  m.run('db = __fauxDbSauve; currentUser = null'); const l1 = lect();
+  await m.run('rafraichirEnCours()');
+  eq('personne de connecté : aucune lecture', lect(), l1);
+  m.run('demarrerRelecturePositions(); const _premiere = _minuterieEnCours; demarrerRelecturePositions(); globalThis.__memeMinuterie = (_premiere === _minuterieEnCours);');
+  eq('la relecture de secours ne démarre qu\'une fois', m.run('__memeMinuterie'), true);
+}
+
+log('\n=== LA ROUTE CHOISIE EST RETROUVÉE AU DÉMARRAGE (l\'étiquette et la carte disent la même chose) ===');
+{
+  let m = monde({ zone: 'Saint-étienne-des-grès' }); await m.run('loadStops()');
+  eq('nom mémorisé « Saint-étienne-des-grès » : la route est retrouvée, la carte ne montre QUE ses arrêts', [m.run('routeActive'), m.run('zone'), m.marqueurs.length, m.el('zone-val').textContent], [SE, 'Saint-étienne-des-grès', 2, 'Saint-étienne-des-grès']);
+  eq('… la barre du bas suit cette route (aucune passe dessus)', m.el('prog-txt').textContent, 'Aucune passe');
+  m = monde({ zone: 'Route disparue' }); await m.run('loadStops()');
+  eq('nom mémorisé d\'une route qui n\'existe plus : retour à « Toutes les routes »', [m.run('routeActive'), m.run('zone'), m.marqueurs.length, m.el('zone-val').textContent], [null, '', 6, 'Toutes les routes']);
+  m = monde(); await m.run('loadStops()');
+  eq('rien de mémorisé : toutes les routes', [m.run('routeActive'), m.marqueurs.length], [null, 6]);
+  m = monde({ zone: 'Charette' }); m.routeActive(SE); await m.run('loadStops()');
+  eq('une route déjà choisie pendant la session n\'est pas écrasée par le nom mémorisé', m.run('routeActive'), SE);
+}
+
 log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ===');
 {
   const fichiersJs = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));
@@ -345,6 +455,9 @@ log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ==
   eq('plus de nouvellePasse (remise à zéro qui effaçait les problèmes)', trouve(/\bnouvellePasse\b/), []);
   eq('plus aucune fenêtre native confirm() (refusée d\'office par certains navigateurs)', trouve(/(^|[^\w.])confirm\s*\(/).filter((f) => f !== 'utilitaires.js'), []);
   const html = lire('index.html');
+  eq('plus de référence à l\'ancien _onSite', trouve(/_onSite/), []);
+  vrai('marqueurs ET zones utilisent la règle de couleur unique', (lire('js/arrets.js').match(/couleurEtat\(/g) || []).length === 2, 'mkIcon + zones');
+  vrai('la carte écoute aussi les positions en temps réel', /table:'positions'\},\(\)=>planifierRechargementPositions\(\)/.test(lire('js/carte.js')));
   vrai('la page charge tours.js', html.includes('<script src="js/tours.js"></script>'));
   vrai('le bouton « Nouvelle passe » n\'existe plus dans la page', !/nouvelle-passe|nouvellePasse/.test(html));
   vrai('la fiche d\'un arrêt a sa ligne « Passe n° … »', html.includes('id="sc-tour"'));
@@ -352,5 +465,6 @@ log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ==
     !fichiersJs.some((f) => /from\(\s*['"](passes|passe_arrets)['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(lire('js/' + f))));
 }
 
+tousLesMondes.forEach((w) => w.fin());
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);
 process.exit(ko ? 1 : 0);

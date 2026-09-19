@@ -7,6 +7,16 @@ let routeActive=null;
 async function loadRoutes(){
   const{data}=await db.from('routes').select('*').order('created_at');
   routes=data||[];
+  restaurerRouteChoisie();
+}
+
+// Le nom de la route choisie est gardé d'une session à l'autre (lp_zone) : on retrouve la route par son nom, pour que
+// l'étiquette du bas et la carte disent la même chose. Route disparue : retour à « Toutes les routes ».
+function restaurerRouteChoisie(){
+  if(routeActive!==null&&routes.some(r=>r.id===routeActive)) return;   // déjà choisie pendant cette session
+  const r=zone?routes.find(x=>x.nom===zone):null;
+  if(r){routeActive=r.id;}
+  else{routeActive=null;zone='';}
 }
 
 function openRoutes(){

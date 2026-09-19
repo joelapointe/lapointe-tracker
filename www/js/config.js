@@ -10,6 +10,13 @@ let currentUser=null;   // {id, nom, role} de la personne connectée (Supabase A
 // Ancien suivi GPS et complétion automatique des arrêts : ils écrivent dans des tables qui ont été refaites (étapes 6 à 9).
 // Désactivés à l'étape 12 pour ne pas produire d'erreurs ; remplacés par les nouvelles fonctions aux étapes 13, 14 et 18.
 const ANCIEN_SUIVI_ACTIF=false;
+
+// Client « en cours » (étape 13c) : sa zone devient bleue quand un camion de son tour est sur place.
+// Décision de Joé (19 septembre 2026) : 20 m. Les deux autres seuils évitent du bleu à cause d'un vieux point ou d'un GPS imprécis.
+const RAYON_EN_COURS_M=20;         // le camion est à moins de 20 m de l'arrêt
+const POSITION_PERIMEE_MIN=3;      // une position plus vieille que 3 minutes ne compte plus (le camion n'envoie plus)
+const PRECISION_MAX_M=30;          // un GPS moins précis que 30 m ne peut pas dire « il est chez ce client »
+const RELECTURE_POSITIONS_S=15;    // relecture de secours des positions (fait aussi expirer les positions périmées)
 let operator=localStorage.getItem('lp_op')||'';
 let zone=localStorage.getItem('lp_zone')||'';
 let lastPos=null;

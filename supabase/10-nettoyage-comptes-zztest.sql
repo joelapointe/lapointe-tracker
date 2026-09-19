@@ -9,7 +9,8 @@
 -- COMMENT IL RECONNAÎT UN COMPTE D'ESSAI (les DEUX conditions à la fois)
 --   • le nom commence par « ZZTEST »,
 --   • le téléphone est 819 555 019x (numéros fictifs réservés, jamais attribués à un vrai employé).
---   Un compte administrateur n'est jamais touché. Les comptes de connexion orphelins portant ces
+--   Les véhicules d'essai (nom commençant par « ZZTEST ») sont supprimés aussi, à condition que plus aucune
+--   passe ne s'en serve. Un compte administrateur n'est jamais touché. Les comptes de connexion orphelins portant ces
 --   numéros fictifs (restes d'un essai raté) sont aussi supprimés.
 --
 -- SÉCURITÉ
@@ -27,6 +28,8 @@ do $$
 declare
   v_ids     uuid[];
   v_passes  uuid[];
+  v_quarts  uuid[];
+  v_periodes uuid[];
   v_orph    uuid[];
   v_melange integer;
 begin
@@ -40,6 +43,10 @@ begin
     and not exists (select 1 from public.utilisateurs u where u.id = a.id);
 
   select coalesce(array_agg(id), '{}') into v_passes from public.passes where chauffeur_id = any (v_ids);
+  -- Lignes qui vont disparaître : leurs traces dans le journal des corrections de l'administrateur disparaissent aussi
+  select coalesce(array_agg(id), '{}') into v_quarts from public.quarts where utilisateur_id = any (v_ids);
+  select coalesce(array_agg(id), '{}') into v_periodes from public.equipage_periodes
+   where passe_id = any (v_passes) or utilisateur_id = any (v_ids) or ajoute_par = any (v_ids) or retire_par = any (v_ids);
 
   -- Garde-fou : des données de vrais comptes mêlées à celles des comptes d'essai ?
   select
@@ -67,8 +74,15 @@ begin
   delete from public.passe_arrets       where passe_id = any (v_passes) or complete_par = any (v_ids);
   delete from public.equipage_periodes  where passe_id = any (v_passes) or utilisateur_id = any (v_ids) or ajoute_par = any (v_ids) or retire_par = any (v_ids);
   delete from public.quarts             where utilisateur_id = any (v_ids);
-  delete from public.journal_modifications where auteur_id = any (v_ids);
+  delete from public.journal_modifications where auteur_id = any (v_ids)
+     or (table_cible = 'quarts' and ligne_id = any (v_quarts))
+     or (table_cible = 'equipage_periodes' and ligne_id = any (v_periodes))
+     or (table_cible = 'passes' and ligne_id = any (v_passes));
   delete from public.passes             where id = any (v_passes);
+  -- Véhicules d'essai (nom « ZZTEST… ») : supprimés seulement si plus AUCUNE passe ni position ne s'en sert
+  delete from public.equipes e          where e.nom like 'ZZTEST%'
+                                          and not exists (select 1 from public.passes p where p.equipe_id = e.id)
+                                          and not exists (select 1 from public.positions po where po.equipe_id = e.id);
   delete from public.utilisateurs       where id = any (v_ids);                  -- (aussi supprimé en cascade avec le compte)
   delete from auth.users                where id = any (v_ids) or id = any (v_orph);
 end $$;
@@ -79,6 +93,9 @@ end $$;
 select jsonb_build_object(
   'comptes_zztest_restants', (select count(*) from public.utilisateurs where nom like 'ZZTEST%')
                            + (select count(*) from auth.users where email ~ '^819555019[0-9]@'),
+  'corrections_journalisees', (select count(*) from public.journal_modifications),
+  'vehicules_zztest_restants', (select count(*) from public.equipes where nom like 'ZZTEST%'),
+  'vehicules', (select count(*) from public.equipes),
   'administrateurs', (select count(*) from public.utilisateurs where role = 'admin'),
   'comptes_auth', (select count(*) from auth.users),
   'profils', (select count(*) from public.utilisateurs),

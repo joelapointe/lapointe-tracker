@@ -83,9 +83,17 @@ pass('connexion de l\'administrateur, aucun reste d\'essai précédent');
 const routes = (await rest(A, 'routes?select=id,nom,actif')).json ?? [];
 const stopsTous = (await rest(A, 'stops?select=id,route_id,actif')).json ?? [];
 const route = routes.filter((r) => r.actif).map((r) => ({ ...r, arrets: stopsTous.filter((s) => s.route_id === r.id && s.actif) })).sort((a, b) => b.arrets.length - a.arrets.length)[0];
-const equipes = ((await rest(A, 'equipes?select=id,nom,actif')).json ?? []).filter((e) => e.actif);
+const lireEquipes = async () => ((await rest(A, 'equipes?select=id,nom,actif&order=nom')).json ?? []).filter((e) => e.actif);
+let equipes = await lireEquipes();
 if (!route || route.arrets.length < 4) arret('il faut une route active avec au moins 4 arrêts');
-if (equipes.length < 2) arret(`il faut au moins 2 véhicules (équipes) actifs ; il y en a ${equipes.length}. Dis-le-moi : je te donnerai le SQL pour en ajouter.`);
+// Aucun (ou un seul) véhicule dans la base : on crée des véhicules d'ESSAI, que 10-nettoyage-comptes-zztest.sql effacera.
+for (let i = equipes.length + 1; i <= 2; i++) {
+  const c = await rest(A, 'equipes', 'POST', { nom: `ZZTEST Camion ${i}` });
+  if (c.statut !== 201) arret(`création du véhicule d'essai « ZZTEST Camion ${i} » impossible (${detail(c)})`);
+  log(`   Véhicule d'essai créé : « ZZTEST Camion ${i} »`);
+}
+if (equipes.length < 2) equipes = await lireEquipes();
+if (equipes.length < 2) arret(`il faut au moins 2 véhicules actifs ; il y en a ${equipes.length}`);
 const [cam1, cam2] = equipes;
 const stops = route.arrets.map((s) => s.id);
 log(`Route d'essai : « ${route.nom} » (${stops.length} arrêts) ; véhicules : « ${cam1.nom} » et « ${cam2.nom} »`);
@@ -187,7 +195,14 @@ r = await rest(H.jeton, 'equipage_periodes?select=passe_id,utilisateur_id,role')
 eq('Hector voit l\'équipage complet du véhicule (Gamma + Delta)', (r.json ?? []).map((p) => p.utilisateur_id).sort(), [G.id, D.id].sort());
 r = await rest(H.jeton, 'quarts?select=id,utilisateur_id');
 eq('Hector ne voit AUCUN quart de ses collègues (heures privées)', r.json, []);
-for (const t of ['equipage_journal', 'journal_modifications', 'reglages']) {
+r = await rest(H.jeton, 'reglages?select=cle,valeur');
+eq('Hector peut LIRE les réglages (voulu : durées maximales, seuil d\'alerte)', [r.statut, r.json?.length], [200, 3]);
+{
+  const courant = r.json?.find((x) => x.cle === 'duree_max_quart_heures')?.valeur;
+  const essai = await rest(H.jeton, 'reglages?cle=eq.duree_max_quart_heures', 'PATCH', { valeur: courant });   // même valeur : aucun risque si la règle était trouée
+  vrai('… mais PAS les modifier (aucune ligne modifiée)', refuse(essai) || (Array.isArray(essai.json) && essai.json.length === 0), detail(essai) + ' ' + JSON.stringify(essai.json)?.slice(0, 80));
+}
+for (const t of ['equipage_journal', 'journal_modifications']) {
   r = await rest(H.jeton, `${t}?select=*`);
   vrai(`Hector ne voit rien dans « ${t} »`, refuse(r) || (Array.isArray(r.json) && r.json.length === 0), detail(r));
 }

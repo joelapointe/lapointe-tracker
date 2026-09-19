@@ -33,7 +33,7 @@ const emp = (nom, tel) => compte(`${tel}@tel.entretienlapointe.ca`, { nom, telep
 const nb = async (table, cond = 'true') => Number((await sup(`select count(*)::int n from public.${table} where ${cond}`))[0].n);
 const photo = async () => ({
   auth: await nb('utilisateurs'), quarts: await nb('quarts'), passes: await nb('passes'), passe_arrets: await nb('passe_arrets'), problemes: await nb('problemes'),
-  positions: await nb('positions'), periodes: await nb('equipage_periodes'), journal: await nb('equipage_journal'), stops: await nb('stops'), routes: await nb('routes'), equipes: await nb('equipes'),
+  positions: await nb('positions'), periodes: await nb('equipage_periodes'), journal: await nb('equipage_journal'), corrections: await nb('journal_modifications'),stops: await nb('stops'), routes: await nb('routes'), equipes: await nb('equipes'),
   comptes_auth: Number((await sup('select count(*)::int n from auth.users'))[0].n) });
 
 // ----- Situation : vrais comptes + comptes d'essai mélangés dans la même base -----
@@ -51,7 +51,11 @@ const orphelin = await compte('8195550199@tel.entretienlapointe.ca', { provider:
 
 const nord = (await sup(`select id from routes where nom = 'Route Nord'`))[0].id;
 const sud = (await sup(`select id from routes where nom = 'Route Sud'`))[0].id;
-const [camA, camB] = [(await sup(`insert into equipes(nom) values ('Camion A') returning id`))[0].id, (await sup(`insert into equipes(nom) values ('Camion B') returning id`))[0].id];
+const veh = async (nom) => (await sup(`insert into equipes(nom) values ($1) returning id`, [nom]))[0].id;
+const camA = await veh('ZZTEST Camion A');        // véhicule d'essai utilisé par la passe d'essai de Gamma : doit disparaître
+const camB = await veh('Camion B');               // VRAI véhicule utilisé par Marc : jamais touché
+const camLibre = await veh('ZZTEST Camion Libre'); // véhicule d'essai que personne n'utilise : doit disparaître
+const camPiege = await veh('ZZTEST Camion Piège'); // véhicule d'essai utilisé par une VRAIE passe (Marc) : doit être CONSERVÉ
 const stops = (await sup(`select id from stops where route_id = $1 order by id limit 4`, [nord])).map((x) => x.id);
 
 // Historique d'un VRAI employé (Marc) : quart + passe complète sur l'autre route/camion
@@ -65,9 +69,19 @@ async function commeCompleter() {
   if (stopSud) await fn(marc, `completer_arret($1::uuid,$2::uuid,$3::timestamptz,'manuel',46.5::float8,-72.7::float8)`, [passeMarc, stopSud, at(190)]);
 }
 await fn(marc, `terminer_passe($1::uuid, $2::timestamptz)`, [passeMarc, at(100)]);
+const passeMarc2 = uuid();   // une vraie passe de Marc sur le véhicule « ZZTEST Camion Piège »
+await fn(marc, `debuter_passe($1::uuid,$2::uuid,$3::uuid,'[]'::jsonb,$4::timestamptz,46.5::float8,-72.7::float8,null::real)`, [passeMarc2, sud, camPiege, at(90)]);
+await fn(marc, `terminer_passe($1::uuid, $2::timestamptz)`, [passeMarc2, at(80)]);
 
 // Historique des comptes d'essai
-await fn(beta, `quart_commencer($1::uuid, $2::timestamptz, null, null, null)`, [uuid(), at(120)]);
+const quartBeta = uuid();
+await fn(beta, `quart_commencer($1::uuid, $2::timestamptz, null, null, null)`, [quartBeta, at(120)]);
+await fn(beta, `quart_terminer($1::uuid, $2::timestamptz, null, null, null)`, [quartBeta, at(100)]);
+// Corrections faites par l'ADMINISTRATEUR pendant les essais : journalisées automatiquement (sur des lignes d'essai ET sur une ligne d'un vrai employé)
+const quartMarc = (await sup(`select id from quarts where utilisateur_id = $1`, [marc]))[0].id;
+await fn(marc, `quart_terminer($1::uuid, $2::timestamptz, null, null, null)`, [quartMarc, at(70)]);
+await fn(joe, `admin_valider_quart($1::uuid, 'ok')`, [quartBeta]);   // ligne d'essai
+await fn(joe, `admin_valider_quart($1::uuid, 'ok')`, [quartMarc]);   // ligne d'un VRAI employé : sa trace doit rester
 const passeG = uuid();
 await fn(gamma, `debuter_passe($1::uuid,$2::uuid,$3::uuid,'[]'::jsonb,$4::timestamptz,46.5::float8,-72.7::float8,null::real)`, [passeG, nord, camA, at(60)]);
 await fn(gamma, `completer_arret($1::uuid,$2::uuid,$3::timestamptz,'manuel',46.5::float8,-72.7::float8)`, [passeG, stops[0], at(50)]);
@@ -79,7 +93,9 @@ await sup(`insert into problemes(stop_id, utilisateur_id, note) values ($1, $2, 
 const avant = await photo();
 log('=== AVANT LE NETTOYAGE ===');
 eq('les comptes d\'essai ont bien de l\'historique (quarts, passes, arrêts, équipage, problèmes, positions)',
-  [avant.quarts >= 4, avant.passes, avant.passe_arrets >= 1, avant.periodes >= 2, avant.problemes, avant.positions >= 1], [true, 2, true, true, 2, true]);
+  [avant.quarts >= 4, avant.passes, avant.passe_arrets >= 1, avant.periodes >= 2, avant.problemes, avant.positions >= 1], [true, 3, true, true, 2, true]);
+eq('les corrections de l\'administrateur ont été journalisées automatiquement (une sur un quart d\'essai, une sur le quart d\'un vrai employé)',
+  [await nb('journal_modifications', `ligne_id = '${quartBeta}'`) >= 1, await nb('journal_modifications', `ligne_id = '${quartMarc}'`) >= 1], [true, true]);
 eq('… et un compte de connexion orphelin existe', (await sup('select count(*)::int n from auth.users where id = $1', [orphelin]))[0].n, 1);
 
 // ----- Le garde-fou : données mélangées -----
@@ -106,6 +122,9 @@ eq('le compte de connexion ORPHELIN (numéro fictif, sans profil) est supprimé'
 eq('tout ce que les comptes d\'essai avaient produit a disparu : passe de Gamma, arrêts, problèmes, positions, équipage, journal', [
   await nb('passes', `id = '${passeG}'`), await nb('passe_arrets', `passe_id = '${passeG}'`), await nb('problemes'), await nb('positions'), await nb('equipage_periodes', `passe_id = '${passeG}'`), await nb('equipage_journal')], [0, 0, 0, 0, 0, 0]);
 eq('le quart de Beta est supprimé (il ne reste que celui de Marc)', await nb('quarts'), 1);
+eq('la trace des corrections de l\'administrateur sur le quart de Beta est supprimée avec lui, mais celle du quart de Marc (vrai employé) reste',
+  [await nb('journal_modifications', `ligne_id = '${quartBeta}'`), await nb('journal_modifications', `ligne_id = '${quartMarc}'`) >= 1], [0, true]);
+eq('… la vérification annonce les corrections restantes', verif.corrections_journalisees, apres.corrections);
 
 log('\n=== CE QUI NE DOIT PAS ÊTRE TOUCHÉ ===');
 eq('Joé (administrateur) : intact', (await sup('select role, actif from public.utilisateurs where id = $1', [joe]))[0], { role: 'admin', actif: true });
@@ -114,7 +133,10 @@ eq('un administrateur avec nom ET numéro d\'essai : jamais touché (le rôle pr
 eq('Marc (vrai employé) : profil, quart, passe et arrêt complétés intacts', [await nb('utilisateurs', `id = '${marc}'`), await nb('quarts', `utilisateur_id = '${marc}'`), await nb('passes', `id = '${passeMarc}'`), await nb('passe_arrets', `passe_id = '${passeMarc}'`)], [1, 1, 1, 1]);
 eq('nom « ZZTEST » mais numéro non fictif : pas touché', await nb('utilisateurs', `id = '${fauxNom}'`), 1);
 eq('numéro fictif mais nom normal : pas touchée', await nb('utilisateurs', `id = '${fauxTel}'`), 1);
-eq('arrêts, routes et camions de test : intacts', [apres.stops, apres.routes, apres.equipes], [avant.stops, avant.routes, avant.equipes]);
+eq('arrêts et routes de test : intacts', [apres.stops, apres.routes], [avant.stops, avant.routes]);
+eq('véhicules : « ZZTEST Camion A » (passe d\'essai) et « ZZTEST Camion Libre » (inutilisé) supprimés ; le VRAI « Camion B » et « ZZTEST Camion Piège » (utilisé par une vraie passe de Marc) conservés',
+  (await sup('select nom from public.equipes order by nom')).map((e) => e.nom), ['Camion B', 'ZZTEST Camion Piège']);
+eq('… la vérification annonce 1 véhicule d\'essai restant (le piège) sur 2 véhicules', [verif.vehicules_zztest_restants, verif.vehicules], [1, 2]);
 eq('les 2 chiffres de comptes : profils avant − 4 ; comptes de connexion avant − 5 (4 comptes + 1 orphelin)', [avant.auth - apres.auth, avant.comptes_auth - apres.comptes_auth], [4, 5]);
 
 log('\n=== RÉ-EXÉCUTION ===');

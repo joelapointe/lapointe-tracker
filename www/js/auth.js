@@ -179,7 +179,8 @@ async function restaurerSession(){
 }
 
 async function doLogout(){
-  if(!confirm('Se déconnecter ?'))return;
+  // Boîte de l'application (pas la fenêtre native confirm(), refusée d'office par certains navigateurs intégrés)
+  if(!(await confirmer('Se déconnecter ?','Tu devras te reconnecter pour utiliser l’application.','Se déconnecter','Rester connecté')))return;
   deconnexionVolontaire=true;
   try{await arreterTracking();}catch(e){}
   effacerProfilLocal();

@@ -270,3 +270,16 @@
 #prog-fill{height:100%;background:#c8e63c;border-radius:3px;transition:width .5s;}
 #bb-add{flex:0 0 68px;background:#c8e63c;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:26px;color:#111;cursor:pointer;}
 #bb-add-lbl{font-size:9px;font-weight:700;color:#111;letter-spacing:.5px;}
+
+/* Boîte de confirmation (utilitaires.js : confirmer) */
+#confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:4000;display:flex;align-items:center;justify-content:center;padding:24px;}
+#confirm-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 20px 18px;width:100%;max-width:340px;text-align:center;}
+#confirm-titre{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:8px;}
+#confirm-texte{font-size:14px;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+#confirm-boutons{display:flex;flex-direction:column;gap:10px;margin-top:16px;}
+#confirm-texte + #confirm-boutons{margin-top:0;}
+.confirm-btn{min-height:50px;border:none;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:.3px;cursor:pointer;}
+.confirm-btn.oui{background:var(--red);color:#fff;}
+.confirm-btn.non{background:#252d3a;color:var(--text);}
+.confirm-btn:active{filter:brightness(.85);}
+.confirm-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}

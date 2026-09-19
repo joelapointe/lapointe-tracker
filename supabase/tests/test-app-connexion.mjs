@@ -42,7 +42,8 @@ function monde(o = {}) {
     localStorage: { getItem: (k) => (stockage.has(k) ? stockage.get(k) : null), setItem: (k, v) => stockage.set(k, String(v)), removeItem: (k) => stockage.delete(k) },
     navigator: { onLine: o.enLigne ?? true },
     location: { reload: () => { appels.reload++; } },
-    confirm: () => o.confirme ?? true,
+    __confirmations: [],
+    __reponseConfirmation: o.confirme ?? true,
     hideLoading: () => { appels.hideLoading++; },
     loadStops: () => { appels.loadStops++; },
     demarrerTracking: () => { appels.demarrerTracking++; },
@@ -53,8 +54,10 @@ function monde(o = {}) {
   const ctx = vm.createContext(sandbox);
   for (const f of ['js/config.js', 'js/utilitaires.js', 'js/auth.js']) vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb;', ctx);
+  // La boîte de confirmation est testée à part (plus bas) ; ici on note la question posée et on répond « oui » ou « non »
+  vm.runInContext('confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', ctx);
   return {
-    ctx, el, stockage, appels, reponses,
+    ctx, el, stockage, appels, reponses, confirmations: sandbox.__confirmations,
     run: (code) => vm.runInContext(code, ctx),
     utilisateur: () => vm.runInContext('currentUser', ctx),
     saisir: (id, secret) => { el('l-tel').value = id; el('l-pin').value = secret; },
@@ -241,7 +244,8 @@ log('\n=== DÉCONNEXION VOLONTAIRE ===');
   let m = monde({ session: { user: { id: 'u-1' } }, confirme: false });
   await m.run('restaurerSession()');
   await m.run('doLogout()');
-  eq('« Annuler » à la confirmation : rien ne change', [m.utilisateur()?.nom, m.appels.signOut.length, m.appels.reload], ['Luc', 0, 0]);
+  eq('« Rester connecté » à la confirmation : rien ne change', [m.utilisateur()?.nom, m.appels.signOut.length, m.appels.reload], ['Luc', 0, 0]);
+  eq('la question est posée avec la boîte de l\'application, avec des boutons clairs', m.confirmations[0]?.[0] + ' | ' + m.confirmations[0]?.[2] + ' | ' + m.confirmations[0]?.[3], 'Se déconnecter ? | Se déconnecter | Rester connecté');
 
   m = monde({ session: { user: { id: 'u-1' } } });
   await m.run('restaurerSession()');
@@ -249,6 +253,74 @@ log('\n=== DÉCONNEXION VOLONTAIRE ===');
   eq('« Se déconnecter » : session LOCALE fermée (les autres appareils du même compte restent connectés), page rechargée', [m.appels.signOut, m.appels.reload], [[{ scope: 'local' }], 1]);
   eq('… le suivi est arrêté, l\'ancien profil gardé est effacé, personne n\'est connecté', [m.appels.arreterTracking, m.stockage.has('lp_profil'), m.utilisateur()], [1, false, null]);
   eq('… sans message « Session terminée » (c\'est un choix de l\'employé)', m.erreur(), '');
+}
+
+// =====================================================================
+log('\n=== BOÎTE DE CONFIRMATION (remplace la fenêtre native, refusée d\'office par certains navigateurs) ===');
+{
+  // Mini-navigateur : assez pour construire la boîte, cliquer, appuyer sur Échap et vérifier ce qui reste à l'écran
+  class Faux {
+    constructor(tag) { this.tag = tag; this.id = ''; this.className = ''; this.type = ''; this.textContent = ''; this.attrs = {}; this.enfants = []; this.ecouteurs = {}; this.parent = null; this.focusRecu = false; }
+    setAttribute(k, v) { this.attrs[k] = v; }
+    appendChild(e) { e.parent = this; this.enfants.push(e); return e; }
+    addEventListener(t, f) { (this.ecouteurs[t] ??= []).push(f); }
+    focus() { this.focusRecu = true; }
+    remove() { if (this.parent) { this.parent.enfants = this.parent.enfants.filter((x) => x !== this); this.parent = null; } }
+    clic(cible = this) { for (const f of this.ecouteurs.click ?? []) f({ target: cible }); }
+    trouver(id) { if (this.id === id) return this; for (const e of this.enfants) { const r = e.trouver(id); if (r) return r; } return null; }
+    tous(classe) { return [...(this.className.split(' ').includes(classe) ? [this] : []), ...this.enfants.flatMap((e) => e.tous(classe))]; }
+  }
+  const nouveau = () => {
+    const body = new Faux('body');
+    const touches = [];
+    const document = { body, createElement: (t) => new Faux(t), getElementById: (id) => body.trouver(id), addEventListener: (t, f) => touches.push({ t, f }), removeEventListener: (t, f) => { const i = touches.findIndex((x) => x.f === f); if (i >= 0) touches.splice(i, 1); } };
+    const ctx = vm.createContext({ document, console, setTimeout, clearTimeout });
+    vm.runInContext(lire('js/utilitaires.js'), ctx);
+    return { body, touches, ouvrir: (...a) => vm.runInContext(`confirmer(${a.map((x) => JSON.stringify(x)).join(',')})`, ctx), appuyer: (key) => touches.filter((x) => x.t === 'keydown').forEach((x) => x.f({ key })) };
+  };
+  const etat = (p) => { const r = { fini: false, val: undefined }; p.then((v) => { r.fini = true; r.val = v; }); return r; };
+  const attendre = () => new Promise((res) => setImmediate(res));
+
+  let n = nouveau();
+  let p = etat(n.ouvrir('Se déconnecter ?', 'Tu devras te reconnecter.', 'Oui, sortir', 'Rester'));
+  let fond = n.body.trouver('confirm-overlay');
+  eq('la boîte s\'affiche : titre, texte, deux boutons aux libellés donnés', [n.body.trouver('confirm-titre')?.textContent, n.body.trouver('confirm-texte')?.textContent, fond.tous('confirm-btn').map((b) => b.textContent)], ['Se déconnecter ?', 'Tu devras te reconnecter.', ['Oui, sortir', 'Rester']]);
+  eq('c\'est une vraie boîte de dialogue (accessibilité)', [fond.attrs.role, fond.attrs['aria-modal']], ['dialog', 'true']);
+  eq('le bouton sélectionné par défaut est « non » : Entrée ne confirme jamais par accident', fond.tous('non')[0].focusRecu && !fond.tous('oui')[0].focusRecu, true);
+  eq('tant qu\'on n\'a rien touché : pas de réponse', p.fini, false);
+  fond.tous('oui')[0].clic(); await attendre();
+  eq('clic sur « oui » : réponse vraie, la boîte disparaît, l\'écouteur du clavier est retiré', [p.val, !!n.body.trouver('confirm-overlay'), n.touches.length], [true, false, 0]);
+
+  n = nouveau(); p = etat(n.ouvrir('Q', '', 'Oui', 'Non'));
+  n.body.trouver('confirm-overlay').tous('non')[0].clic(); await attendre();
+  eq('clic sur « non » : réponse fausse', [p.val, !!n.body.trouver('confirm-overlay')], [false, false]);
+
+  n = nouveau(); p = etat(n.ouvrir('Q', '', 'Oui', 'Non'));
+  n.appuyer('Enter'); await attendre();
+  eq('la touche Entrée seule ne ferme rien (le bouton « non » activé au clavier le ferait, pas la boîte)', [p.fini, !!n.body.trouver('confirm-overlay')], [false, true]);
+  n.appuyer('Escape'); await attendre();
+  eq('la touche Échap annule', [p.val, n.touches.length], [false, 0]);
+
+  n = nouveau(); p = etat(n.ouvrir('Q', '', 'Oui', 'Non'));
+  fond = n.body.trouver('confirm-overlay');
+  fond.clic(n.body.trouver('confirm-boite')); await attendre();
+  eq('toucher DANS la boîte ne la ferme pas', [p.fini, !!n.body.trouver('confirm-overlay')], [false, true]);
+  fond.clic(fond); await attendre();
+  eq('toucher EN DEHORS de la boîte annule', [p.val, !!n.body.trouver('confirm-overlay')], [false, false]);
+
+  n = nouveau(); p = etat(n.ouvrir('Q', '', 'Oui', 'Non'));
+  const oui = n.body.trouver('confirm-overlay').tous('oui')[0];
+  oui.clic(); oui.clic(); n.appuyer('Escape'); await attendre();
+  eq('plusieurs gestes de suite : une seule réponse (la première)', p.val, true);
+
+  n = nouveau(); const p1 = etat(n.ouvrir('Première', '', 'Oui', 'Non')); const p2 = etat(n.ouvrir('Deuxième', '', 'Oui', 'Non')); await attendre();
+  eq('une 2e boîte par-dessus la 1re : la 1re reçoit « non » (jamais laissée sans réponse), une seule boîte à l\'écran', [p1.val, p2.fini, n.body.enfants.length, n.body.trouver('confirm-titre')?.textContent], [false, false, 1, 'Deuxième']);
+  n.body.trouver('confirm-overlay').tous('oui')[0].clic(); await attendre();
+  eq('… et la 2e répond normalement', p2.val, true);
+
+  n = nouveau(); p = etat(n.ouvrir()); await attendre();
+  eq('sans texte ni libellés : valeurs par défaut sensées', [n.body.trouver('confirm-titre').textContent, n.body.trouver('confirm-overlay').tous('confirm-btn').map((b) => b.textContent), n.body.trouver('confirm-texte')], ['Confirmer ?', ['Confirmer', 'Annuler'], null]);
+  vrai('le texte affiché est inséré comme TEXTE (jamais comme HTML) : un nom piégé ne peut pas exécuter de code', /textContent/.test(lire('js/utilitaires.js')) && !/innerHTML/.test(lire('js/utilitaires.js').split('function confirmer')[1]));
 }
 
 // =====================================================================
@@ -266,6 +338,7 @@ log('\n=== CONTRÔLES DU CODE DE L\'APPLICATION (plus rien de l\'ancien système
   vrai('le panneau admin ne parle plus de comptes en attente', !/comptes? en attente/i.test(admin));
   vrai('les fichiers de l\'application chargent auth.js AVANT carte.js et demarrage.js EN DERNIER', html.indexOf('js/auth.js') < html.indexOf('js/carte.js') && html.lastIndexOf('js/demarrage.js') > html.indexOf('js/placement.js'));
   vrai('carte.js reprend la session par restaurerSession()', /restaurerSession\(\)/.test(carte));
+  vrai('la déconnexion n\'utilise plus la fenêtre native confirm() (refusée d\'office par certains navigateurs : le bouton ne faisait rien)', !/[^a-zA-Z_.]confirm\(/.test(auth.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')) && /await confirmer\(/.test(auth));
   const barreHaut = (html.match(/<div id="topbar">[\s\S]*?<div id="addr-row">/) || [''])[0];
   vrai('un VRAI bouton « Déconnexion » existe dans la barre du haut, relié à doLogout()', /<button id="btn-deconnexion" type="button" onclick="doLogout\(\)"[^>]*>[\s\S]*Déconnexion[\s\S]*<\/button>/.test(barreHaut), barreHaut.slice(0, 200));
   vrai('l\'ancien bandeau invisible « role-badge » n\'existe plus nulle part', !tous.some(([, s]) => /role-badge/.test(s)) && !/role-badge/.test(css));

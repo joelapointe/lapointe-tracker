@@ -1,5 +1,5 @@
 // js/liste-arrets.js — Liste des arrêts et ajout d'un arrêt
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 function openListe(){
   renderListe();
   document.getElementById('liste-overlay').classList.add('open');
@@ -35,8 +35,8 @@ function renderListe(){
       '<div class="ci-num">'+(i+1)+'</div>'+
       '<div class="ci-diamond '+(s.fait?'done':'todo')+'"></div>'+
       '<div class="ci-info">'+
-        '<div class="ci-addr '+(s.fait?'done':'')+'">'+s.adresse+'</div>'+
-        '<div class="ci-svc">'+(s.service||'')+(s.client?' · '+s.client:'')+'</div>'+
+        '<div class="ci-addr '+(s.fait?'done':'')+'">'+esc(s.adresse)+'</div>'+
+        '<div class="ci-svc">'+esc(s.service||'')+(s.client?' · '+esc(s.client):'')+'</div>'+
       '</div>'+
       '<div class="ci-badge '+(s.fait?'done':'todo')+'">'+(s.fait?'✔ FAIT':'À FAIRE')+'</div>';
     body.appendChild(div);

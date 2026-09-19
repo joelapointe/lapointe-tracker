@@ -1,5 +1,5 @@
 // js/auth.js — Connexion, inscription, déconnexion, rôle
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 function showLoginScreen(){
   document.getElementById('login-screen').classList.add('show');
   document.getElementById('signup-screen').classList.remove('show');
@@ -57,9 +57,9 @@ async function doSignup(){
   localStorage.setItem('lp_user',JSON.stringify(data));
   showPending();
 }
-function doLogout(){
+async function doLogout(){
   if(!confirm('Se déconnecter ?'))return;
-  arreterTracking();
+  await arreterTracking();
 	currentUser=null;
   localStorage.removeItem('lp_user');
   location.reload();

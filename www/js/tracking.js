@@ -1,5 +1,5 @@
 // js/tracking.js — Positions des tracteurs, proximité, suivi GPS
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 // ── HELPERS ────────────────────────────────────────────
 // ── TRACTEURS EN TEMPS RÉEL ──────────────────────────────
 let tracteurs={};
@@ -58,7 +58,7 @@ async function chargerPositions(){
         display:flex;
         align-items:center;
         gap:4px;
-      ">🚜<span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#c8e63c;">${p.nom}</span></div>`,
+      ">🚜<span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#c8e63c;">${esc(p.nom)}</span></div>`,
       iconAnchor:[20,20],
     });
 
@@ -68,7 +68,7 @@ async function chargerPositions(){
     } else {
       tracteurs[p.utilisateur_id]=L.marker([p.lat,p.lon],{icon,zIndexOffset:500})
         .addTo(map)
-        .bindPopup(`🚜 ${p.nom}`);
+        .bindPopup(`🚜 ${esc(p.nom)}`);
     }
   });
 }
@@ -139,13 +139,20 @@ function verifierProximite(lat,lon){
   chargerPositions();
 }
 
-function arreterTracking(){
+async function arreterTracking(){
   if(posInterval){
     clearInterval(posInterval);
     posInterval=null;
   }
-  // Supprimer sa position de la BD
+  // Supprimer sa position de la BD.
+  // (Avant, la requête n'était jamais envoyée : il manquait le « await ».)
+  // On n'attend pas plus de 2,5 s : sans réseau, la déconnexion doit quand même fonctionner.
   if(currentUser){
-    db.from('positions').delete().eq('utilisateur_id',currentUser.id);
+    try{
+      await Promise.race([
+        db.from('positions').delete().eq('utilisateur_id',currentUser.id),
+        new Promise(res=>setTimeout(res,2500))
+      ]);
+    }catch(e){}
   }
 }

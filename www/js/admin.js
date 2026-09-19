@@ -1,5 +1,5 @@
 // js/admin.js — Panneau administrateur : problèmes et comptes en attente
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 	function openAdmin(){
   if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}
  document.getElementById('admin-overlay').classList.add('open');
@@ -39,15 +39,19 @@ async function loadProblemes(){
     div.style='padding:12px 16px;border-bottom:1px solid rgba(37,45,58,.8);border-left:3px solid #fb923c;';
     div.innerHTML=
       '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:17px;font-weight:700;color:#f0f4f8;">'+
-        (p.stops?p.stops.adresse:'Stop supprimé')+
+        esc(p.stops?p.stops.adresse:'Stop supprimé')+
       '</div>'+
       '<div style="font-size:11px;color:#6b7a8d;margin-top:2px;">'+
-        (p.utilisateurs?p.utilisateurs.nom:'?')+' · '+(p.stops?p.stops.service||'':'')+
+        esc(p.utilisateurs?p.utilisateurs.nom:'?')+' · '+esc(p.stops?p.stops.service||'':'')+
       '</div>'+
       '<div style="font-size:13px;color:#fb923c;margin-top:6px;background:rgba(251,146,60,.08);padding:8px;border-radius:6px;">'+
-        '💬 '+p.note+
-      '</div>'+
-      '<button onclick="marquerLu(\''+p.id+'\')" style="margin-top:8px;padding:6px 14px;background:#252d3a;border:none;border-radius:6px;color:#6b7a8d;font-size:12px;font-family:\'Barlow Condensed\',sans-serif;font-weight:700;cursor:pointer;">✔ Marquer comme lu</button>';
+        '💬 '+esc(p.note)+
+      '</div>';
+    const btLu=document.createElement('button');
+    btLu.style.cssText='margin-top:8px;padding:6px 14px;background:#252d3a;border:none;border-radius:6px;color:#6b7a8d;font-size:12px;font-family:\'Barlow Condensed\',sans-serif;font-weight:700;cursor:pointer;';
+    btLu.textContent='✔ Marquer comme lu';
+    btLu.onclick=()=>marquerLu(p.id);
+    div.appendChild(btLu);
     body.appendChild(div);
   });
 }
@@ -91,11 +95,19 @@ async function loadPendingUsers(){
     div.id='user-'+u.id;
     div.innerHTML=
       '<div class="user-info">'+
-        '<div class="user-nom">'+u.nom+'</div>'+
-        '<div class="user-tel">📞 '+u.telephone+'</div>'+
-      '</div>'+
-      '<button class="user-refuse" onclick="refuseUser(\''+u.id+'\')">Refuser</button>'+
-      '<button class="user-approve" onclick="approveUser(\''+u.id+'\')">Approuver</button>';
+        '<div class="user-nom">'+esc(u.nom)+'</div>'+
+        '<div class="user-tel">📞 '+esc(u.telephone)+'</div>'+
+      '</div>';
+    const btRefus=document.createElement('button');
+    btRefus.className='user-refuse';
+    btRefus.textContent='Refuser';
+    btRefus.onclick=()=>refuseUser(u.id);
+    const btOk=document.createElement('button');
+    btOk.className='user-approve';
+    btOk.textContent='Approuver';
+    btOk.onclick=()=>approveUser(u.id);
+    div.appendChild(btRefus);
+    div.appendChild(btOk);
     body.appendChild(div);
   });
 }

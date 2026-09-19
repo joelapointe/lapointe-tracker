@@ -1,5 +1,5 @@
 // js/chargement.js — Chargement des librairies, écran de chargement et erreurs
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 // ── Chargement séquentiel des scripts ──────────────────
 function loadScript(src){
   return new Promise((res,rej)=>{

@@ -1,17 +1,17 @@
 // js/carte.js — Initialisation de la carte, GPS, temps réel, adresse inverse
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 function initApp(){
   try{
     db = supabase.createClient(SUPA_URL, SUPA_KEY);
   } catch(e){
-    showErr('Erreur Supabase: '+e.message); return;
+    showErr('Erreur Supabase: '+esc(e.message)); return;
   }
 
   // Carte
   try{
     map = L.map('map',{center:[46.55,-72.75],zoom:14,zoomControl:false});
   } catch(e){
-    showErr('Erreur carte: '+e.message); return;
+    showErr('Erreur carte: '+esc(e.message)); return;
   }
 
   const layers={

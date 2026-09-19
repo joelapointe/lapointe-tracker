@@ -1,5 +1,5 @@
 // js/placement.js — Mode placement de la zone (4 points) et navigation
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 // ── MODE PLACEMENT ───────────────────────────────────────
 let modeplace=false;
 let pointsPlacement=[];

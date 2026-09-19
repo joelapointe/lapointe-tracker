@@ -1,5 +1,5 @@
 // js/arrets.js — Arrêts (stops) : lecture/écriture Supabase, marqueurs, fiche
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 // ── SUPABASE CRUD ──────────────────────────────────────
 async function loadStops(){
   setStatus('Chargement des stops…');
@@ -19,7 +19,7 @@ async function loadStops(){
 	  checkProblemes();
     
   }catch(e){
-    showErr('Impossible de charger les données.<br>Vérifie que les politiques RLS sont activées dans Supabase.<br><br><small>'+e.message+'</small>');
+    showErr('Impossible de charger les données.<br>Vérifie que les politiques RLS sont activées dans Supabase.<br><br><small>'+esc(e.message)+'</small>');
   }
 }
 

@@ -1,5 +1,5 @@
 // js/problemes.js — Signalement des problèmes
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 function openProbleme(){
   if(activeIdx===null)return;
   const s=stops[activeIdx];

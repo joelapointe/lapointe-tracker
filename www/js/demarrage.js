@@ -1,5 +1,5 @@
 // js/demarrage.js — Démarrage de l'application (doit rester chargé en dernier)
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 setStatus('Chargement de la carte…');
 Promise.all([
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'),
@@ -8,5 +8,5 @@ Promise.all([
   setStatus('Connexion à la base de données…');
   initApp();
 }).catch(e=>{
-  showErr('Impossible de charger les librairies.<br>Vérifie ta connexion internet.<br><br><small>'+e.message+'</small>');
+  showErr('Impossible de charger les librairies.<br>Vérifie ta connexion internet.<br><br><small>'+esc(e.message)+'</small>');
 });

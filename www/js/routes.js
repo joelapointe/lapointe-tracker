@@ -1,5 +1,5 @@
 // js/routes.js — Routes et « Nouvelle passe »
-// (extrait de l'ancien index.html, aucun changement de code)
+// (extrait de l'ancien index.html)
 // ── MODAL ──────────────────────────────────────────────
 let routes=[];
 let routeActive=null;
@@ -77,10 +77,16 @@ function renderRoutes(){
       closeRoutes();
     };
     div.innerHTML=
-      '<div class="route-dot" style="background:'+r.couleur+'"></div>'+
-      '<div class="route-nom">'+r.nom+'</div>'+
-      '<div class="route-count">'+count+' stops</div>'+
-      (isAdmin?'<button class="route-del" onclick="supprimerRoute(event,\''+r.id+'\')">🗑</button>':'');
+      '<div class="route-dot" style="background:'+couleurSure(r.couleur)+'"></div>'+
+      '<div class="route-nom">'+esc(r.nom)+'</div>'+
+      '<div class="route-count">'+count+' stops</div>';
+    if(isAdmin){
+      const del=document.createElement('button');
+      del.className='route-del';
+      del.textContent='🗑';
+      del.onclick=e=>supprimerRoute(e,r.id);
+      div.appendChild(del);
+    }
     body.appendChild(div);
   });
 

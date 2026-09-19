@@ -18,7 +18,7 @@ Chacun se termine par une requête « vérification » dont le résultat est à 
 | `04-etape9a-quarts-equipage.sql` | Fonctions : « Je commence / Je termine », équipage, transferts | exécuté et vérifié |
 | `05-etape9b-passes-fermetures-export.sql` | Fonctions : passes, arrêts, position, fermetures automatiques, export de paie | exécuté et vérifié |
 
-| `06-etape10-outils-admin-employes.sql` | Outils pour les fonctions d'administration des employés (détection de l'historique, droits du serveur) | **écrit et testé, PAS encore exécuté** |
+| `06-etape10-outils-admin-employes.sql` | Outils pour les fonctions d'administration des employés (détection de l'historique, droits du serveur) | exécuté et vérifié (19 septembre 2026) |
 
 Le prochain fichier sera créé à l'étape 11 (compte administrateur de Joé).
 
@@ -26,7 +26,7 @@ Le prochain fichier sera créé à l'étape 11 (compte administrateur de Joé).
 
 | Dossier | Rôle | État |
 |---|---|---|
-| `functions/admin-employes/` | Créer, désactiver, réactiver, supprimer un employé ; réinitialiser un NIP (administrateur seulement) | écrite et testée, **PAS encore déployée** (mode d'emploi dans son README) |
+| `functions/admin-employes/` | Créer, désactiver, réactiver, supprimer un employé ; réinitialiser un NIP (administrateur seulement) | déployée le 19 septembre 2026 ; refuse bien un appelant non administrateur ; **jamais encore essayée par un administrateur** (étape 11). Mode d'emploi dans son README |
 
 ## Les tests (aucun contact avec ta vraie base)
 

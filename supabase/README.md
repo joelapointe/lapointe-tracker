@@ -19,8 +19,10 @@ Chacun se termine par une requête « vérification » dont le résultat est à 
 | `05-etape9b-passes-fermetures-export.sql` | Fonctions : passes, arrêts, position, fermetures automatiques, export de paie | exécuté et vérifié |
 
 | `06-etape10-outils-admin-employes.sql` | Outils pour les fonctions d'administration des employés (détection de l'historique, droits du serveur) | exécuté et vérifié (19 septembre 2026) |
+| `07-etape11-profil-sans-telephone.sql` | Corrige le déclencheur de l'étape 6 : un compte sans téléphone ni rôle admin ne reçoit plus de profil (sans ça, créer le compte de Joé dans le tableau de bord échoue) | **écrit et testé, PAS encore exécuté** |
+| `08-etape11-donner-role-admin.sql` | Donne le rôle administrateur au compte de Joé (une ligne à modifier : le courriel). Refuse un 2e administrateur | **écrit et testé, PAS encore exécuté** |
 
-Le prochain fichier sera créé à l'étape 11 (compte administrateur de Joé).
+Le prochain fichier sera créé à l'étape 12 ou plus tard, au besoin.
 
 ## Les Edge Functions (dossier `functions/`)
 
@@ -31,7 +33,7 @@ Le prochain fichier sera créé à l'étape 11 (compte administrateur de Joé).
 ## Les tests (aucun contact avec ta vraie base)
 
 Les tests exécutent les fichiers SQL sur un PostgreSQL local simulé (PGlite), avec de faux rôles
-(visiteur, employé, employé désactivé, administrateur). **571 tests** au 19 septembre 2026.
+(visiteur, employé, employé désactivé, administrateur). **607 tests** au 19 septembre 2026.
 
 ```
 cd supabase/tests
@@ -40,7 +42,7 @@ npm test
 ```
 
 - `prepare.mjs` reproduit l'ancienne base (avant l'étape 6) puis exécute les fichiers demandés.
-- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (195, fichier 06 + Edge Function avec un faux Supabase Auth).
+- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (195, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08).
 
 **Règle de travail :** tout nouveau SQL est d'abord écrit avec ses tests, exécuté sur ce banc d'essai, et
 seulement ensuite donné à Joé. Limites : la simulation n'a pas `pg_cron` ni le vrai Supabase Auth ; le

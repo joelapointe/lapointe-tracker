@@ -1,0 +1,31 @@
+# Dépendances (se réinstallent avec "npm install")
+node_modules/
+
+# Fichiers de compilation
+android/build/
+android/app/build/
+android/.gradle/
+android/capacitor-cordova-android-plugins/
+*.apk
+*.aab
+*.aar
+
+# Configuration personnelle à ta machine
+android/local.properties
+.idea/
+android/.idea/
+
+# SÉCURITÉ : ne jamais envoyer de clés secrètes ni de clés de signature
+.env
+.env.*
+*.jks
+*.keystore
+*.pem
+*service_role*
+
+# Fichiers système
+Thumbs.db
+.DS_Store
+*.log
+# Document interne : le dépôt est public, ce fichier reste sur l'ordinateur seulement
+CAHIER-PROJET.md

@@ -1,0 +1,132 @@
+// Fichier 10 — nettoyage des comptes d'essai « ZZTEST » : ne doit toucher QUE ces comptes.
+import { fileURLToPath } from 'url';
+const SQL_DIR = fileURLToPath(new URL('../', import.meta.url));
+import { prepare } from './prepare.mjs';
+import fs from 'fs';
+import { randomUUID as uuid } from 'crypto';
+
+let ok = 0, ko = 0;
+const log = (s) => console.log(s);
+const pass = (l) => { ok++; log('  ✔ ' + l); };
+const fail = (l, d) => { ko++; log('  ✘ ' + l + (d ? '  -> ' + d : '')); };
+const eq = (l, a, b) => (JSON.stringify(a) === JSON.stringify(b) ? pass(l) : fail(l, `obtenu ${JSON.stringify(a)}, attendu ${JSON.stringify(b)}`));
+const FILES = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.sql', '03-etape8-regles-acces.sql', '04-etape9a-quarts-equipage.sql', '05-etape9b-passes-fermetures-export.sql',
+  '06-etape10-outils-admin-employes.sql', '07-etape11-profil-sans-telephone.sql', '09-etape11-profil-employe-par-le-serveur.sql'];
+const at = (minAgo) => new Date(Date.now() - minAgo * 60000).toISOString();
+
+const db = await prepare(FILES);
+const NETTOYAGE = fs.readFileSync(SQL_DIR + '10-nettoyage-comptes-zztest.sql', 'utf8');
+const sup = async (sql, p) => { await db.query('reset role'); return (await db.query(sql, p)).rows; };
+const fn = async (uid, call, params = []) => {
+  await db.query('reset role');
+  await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [uid]);
+  await db.query('set role authenticated');
+  try { return (await db.query(`select public.${call} as r`, params)).rows[0].r; } finally { await db.query('reset role'); }
+};
+const nettoyer = async () => { const r = await db.exec(NETTOYAGE); return r[r.length - 1].rows[0].verification; };
+async function echoue(l, f, motif) {
+  try { await f(); fail(l, 'aurait dû échouer'); }
+  catch (e) { e.message.includes(motif) ? pass(l + `  [${e.message.split('\n')[0].slice(0, 100)}]`) : fail(l, 'autre erreur : ' + e.message); }
+}
+const compte = async (email, app) => (await sup('insert into auth.users(email, raw_app_meta_data) values ($1,$2::jsonb) returning id', [email, JSON.stringify(app)]))[0].id;
+const emp = (nom, tel) => compte(`${tel}@tel.entretienlapointe.ca`, { nom, telephone: tel });
+const nb = async (table, cond = 'true') => Number((await sup(`select count(*)::int n from public.${table} where ${cond}`))[0].n);
+const photo = async () => ({
+  auth: await nb('utilisateurs'), quarts: await nb('quarts'), passes: await nb('passes'), passe_arrets: await nb('passe_arrets'), problemes: await nb('problemes'),
+  positions: await nb('positions'), periodes: await nb('equipage_periodes'), journal: await nb('equipage_journal'), stops: await nb('stops'), routes: await nb('routes'), equipes: await nb('equipes'),
+  comptes_auth: Number((await sup('select count(*)::int n from auth.users'))[0].n) });
+
+// ----- Situation : vrais comptes + comptes d'essai mélangés dans la même base -----
+const joe = await compte('joe@exemple.ca', { nom: 'Joé', role: 'admin' });
+const marc = await emp('Marc', '8195550101');            // VRAI employé (numéro non fictif)
+const zzAdmin = await compte('zz@exemple.ca', { nom: 'ZZTEST Admin', role: 'admin' });   // nom d'essai mais administrateur : ne doit JAMAIS être touché
+const zzAdminTel = await compte('zz2@exemple.ca', { nom: 'ZZTEST Admin Deux', role: 'admin', telephone: '8195550196' });   // administrateur avec nom ET numéro d'essai : seule la condition sur le rôle le protège
+const alpha = await emp('ZZTEST Alpha', '8195550191');    // sans historique
+const beta = await emp('ZZTEST Beta', '8195550192');      // un quart
+const gamma = await emp('ZZTEST Gamma', '8195550193');    // chauffeur, avec tout
+const delta = await emp('ZZTEST Delta', '8195550194');    // passager de Gamma
+const fauxNom = await emp('ZZTEST Faux', '8195550777');   // nom d'essai MAIS numéro non fictif : ne doit pas être touché
+const fauxTel = await emp('Vraie Personne', '8195550195'); // numéro fictif MAIS pas de nom ZZTEST : ne doit pas être touchée
+const orphelin = await compte('8195550199@tel.entretienlapointe.ca', { provider: 'email' });   // reste d'un essai raté : compte de connexion sans profil
+
+const nord = (await sup(`select id from routes where nom = 'Route Nord'`))[0].id;
+const sud = (await sup(`select id from routes where nom = 'Route Sud'`))[0].id;
+const [camA, camB] = [(await sup(`insert into equipes(nom) values ('Camion A') returning id`))[0].id, (await sup(`insert into equipes(nom) values ('Camion B') returning id`))[0].id];
+const stops = (await sup(`select id from stops where route_id = $1 order by id limit 4`, [nord])).map((x) => x.id);
+
+// Historique d'un VRAI employé (Marc) : quart + passe complète sur l'autre route/camion
+await fn(marc, `quart_commencer($1::uuid, $2::timestamptz, null, null, null)`, [uuid(), at(300)]);
+await sup(`insert into stops(adresse, route_id) values ('Adresse Sud 1', $1)`, [sud]);   // la route Sud n'a aucun arrêt de test : on en ajoute un pour que Marc ait un arrêt complété
+const passeMarc = uuid();
+await fn(marc, `debuter_passe($1::uuid,$2::uuid,$3::uuid,'[]'::jsonb,$4::timestamptz,46.5::float8,-72.7::float8,null::real)`, [passeMarc, sud, camB, at(200)]);
+await commeCompleter();
+async function commeCompleter() {
+  const stopSud = (await sup(`select id from stops where route_id = $1 limit 1`, [sud]))[0]?.id;
+  if (stopSud) await fn(marc, `completer_arret($1::uuid,$2::uuid,$3::timestamptz,'manuel',46.5::float8,-72.7::float8)`, [passeMarc, stopSud, at(190)]);
+}
+await fn(marc, `terminer_passe($1::uuid, $2::timestamptz)`, [passeMarc, at(100)]);
+
+// Historique des comptes d'essai
+await fn(beta, `quart_commencer($1::uuid, $2::timestamptz, null, null, null)`, [uuid(), at(120)]);
+const passeG = uuid();
+await fn(gamma, `debuter_passe($1::uuid,$2::uuid,$3::uuid,'[]'::jsonb,$4::timestamptz,46.5::float8,-72.7::float8,null::real)`, [passeG, nord, camA, at(60)]);
+await fn(gamma, `completer_arret($1::uuid,$2::uuid,$3::timestamptz,'manuel',46.5::float8,-72.7::float8)`, [passeG, stops[0], at(50)]);
+await fn(gamma, `equipage_ajouter($1::uuid,$2::uuid,$3::uuid,$4::timestamptz,null,null,null,false)`, [uuid(), passeG, delta, at(40)]);
+await fn(gamma, `envoyer_position($1::uuid, 46.51::float8, -72.71::float8, 5::real, $2::timestamptz)`, [passeG, at(1)]);
+await sup(`insert into problemes(stop_id, passe_id, utilisateur_id, note) values ($1, $2, $3, 'chien')`, [stops[1], passeG, delta]);
+await sup(`insert into problemes(stop_id, utilisateur_id, note) values ($1, $2, 'barrière')`, [stops[2], gamma]);   // problème sans passe
+
+const avant = await photo();
+log('=== AVANT LE NETTOYAGE ===');
+eq('les comptes d\'essai ont bien de l\'historique (quarts, passes, arrêts, équipage, problèmes, positions)',
+  [avant.quarts >= 4, avant.passes, avant.passe_arrets >= 1, avant.periodes >= 2, avant.problemes, avant.positions >= 1], [true, 2, true, true, 2, true]);
+eq('… et un compte de connexion orphelin existe', (await sup('select count(*)::int n from auth.users where id = $1', [orphelin]))[0].n, 1);
+
+// ----- Le garde-fou : données mélangées -----
+log('\n=== GARDE-FOU : données de vrais comptes mêlées aux comptes d\'essai ===');
+{
+  await sup(`insert into equipage_periodes(passe_id, utilisateur_id, role, debut, fin) values ($1, $2, 'passager', $3, $4)`, [passeG, marc, at(45), at(44)]);
+  await echoue('un VRAI employé (Marc) dans la passe d\'un compte d\'essai : REFUSÉ', () => db.exec(NETTOYAGE), 'refuse');
+  eq('… rien n\'a été supprimé (état identique)', await photo(), { ...avant, periodes: avant.periodes + 1 });
+  await sup(`delete from equipage_periodes where utilisateur_id = $1 and passe_id = $2`, [marc, passeG]);
+  await sup(`insert into equipage_periodes(passe_id, utilisateur_id, role, debut, fin) values ($1, $2, 'passager', $3, $4)`, [passeMarc, alpha, at(150), at(149)]);
+  await echoue('un compte d\'essai dans la passe d\'un VRAI chauffeur : REFUSÉ', () => db.exec(NETTOYAGE), 'refuse');
+  await sup(`delete from equipage_periodes where utilisateur_id = $1 and passe_id = $2`, [alpha, passeMarc]);
+  eq('… après avoir retiré ces lignes mêlées, la photo est revenue à l\'état de départ', await photo(), avant);
+}
+
+// ----- Le nettoyage -----
+log('\n=== NETTOYAGE ===');
+const verif = await nettoyer();
+const apres = await photo();
+eq('vérification : restent seulement les 4 cas voulus (2 administrateurs « ZZTEST », « ZZTEST Faux » au numéro non fictif, « Vraie Personne » au numéro fictif)', verif.comptes_zztest_restants, 4);
+eq('les comptes d\'essai reconnus sont supprimés (Alpha, Beta, Gamma, Delta)', (await sup(`select count(*)::int n from auth.users where id = any($1::uuid[])`, [[alpha, beta, gamma, delta]]))[0].n, 0);
+eq('… leurs profils aussi', await nb('utilisateurs', `id in ('${alpha}','${beta}','${gamma}','${delta}')`), 0);
+eq('le compte de connexion ORPHELIN (numéro fictif, sans profil) est supprimé', (await sup('select count(*)::int n from auth.users where id = $1', [orphelin]))[0].n, 0);
+eq('tout ce que les comptes d\'essai avaient produit a disparu : passe de Gamma, arrêts, problèmes, positions, équipage, journal', [
+  await nb('passes', `id = '${passeG}'`), await nb('passe_arrets', `passe_id = '${passeG}'`), await nb('problemes'), await nb('positions'), await nb('equipage_periodes', `passe_id = '${passeG}'`), await nb('equipage_journal')], [0, 0, 0, 0, 0, 0]);
+eq('le quart de Beta est supprimé (il ne reste que celui de Marc)', await nb('quarts'), 1);
+
+log('\n=== CE QUI NE DOIT PAS ÊTRE TOUCHÉ ===');
+eq('Joé (administrateur) : intact', (await sup('select role, actif from public.utilisateurs where id = $1', [joe]))[0], { role: 'admin', actif: true });
+eq('« ZZTEST Admin » : compte administrateur, jamais touché même avec un nom d\'essai', await nb('utilisateurs', `id = '${zzAdmin}'`), 1);
+eq('un administrateur avec nom ET numéro d\'essai : jamais touché (le rôle protège)', await nb('utilisateurs', `id = '${zzAdminTel}' and role = 'admin'`), 1);
+eq('Marc (vrai employé) : profil, quart, passe et arrêt complétés intacts', [await nb('utilisateurs', `id = '${marc}'`), await nb('quarts', `utilisateur_id = '${marc}'`), await nb('passes', `id = '${passeMarc}'`), await nb('passe_arrets', `passe_id = '${passeMarc}'`)], [1, 1, 1, 1]);
+eq('nom « ZZTEST » mais numéro non fictif : pas touché', await nb('utilisateurs', `id = '${fauxNom}'`), 1);
+eq('numéro fictif mais nom normal : pas touchée', await nb('utilisateurs', `id = '${fauxTel}'`), 1);
+eq('arrêts, routes et camions de test : intacts', [apres.stops, apres.routes, apres.equipes], [avant.stops, avant.routes, avant.equipes]);
+eq('les 2 chiffres de comptes : profils avant − 4 ; comptes de connexion avant − 5 (4 comptes + 1 orphelin)', [avant.auth - apres.auth, avant.comptes_auth - apres.comptes_auth], [4, 5]);
+
+log('\n=== RÉ-EXÉCUTION ===');
+const v2 = await nettoyer();
+eq('exécuter le nettoyage une deuxième fois : ne change plus rien', await photo(), apres);
+eq('… et la vérification est identique', v2, verif);
+
+// Base sans aucun compte d'essai
+const db2 = await prepare(FILES);
+await db2.query(`insert into auth.users(email, raw_app_meta_data) values ('joe@exemple.ca', '{"nom":"Joé","role":"admin"}'::jsonb)`);
+const r2 = await db2.exec(NETTOYAGE);
+eq('sur une base sans aucun compte d\'essai : aucun effet, aucune erreur', [r2[r2.length - 1].rows[0].verification.comptes_zztest_restants, r2[r2.length - 1].rows[0].verification.administrateurs], [0, 1]);
+
+console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);
+process.exit(ko ? 1 : 0);

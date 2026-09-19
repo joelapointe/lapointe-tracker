@@ -72,6 +72,7 @@ function initApp(){
     .on('postgres_changes',{event:'*',schema:'public',table:'passes'},()=>planifierRechargementTours())
     .on('postgres_changes',{event:'*',schema:'public',table:'passe_arrets'},()=>planifierRechargementTours())
     .on('postgres_changes',{event:'*',schema:'public',table:'positions'},()=>planifierRechargementPositions())
+    .on('postgres_changes',{event:'*',schema:'public',table:'problemes'},()=>planifierRechargementProblemes())
     .subscribe();
 
   // Session : reprise de celle déjà ouverte sur ce téléphone (Supabase Auth), sinon écran de connexion

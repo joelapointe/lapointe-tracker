@@ -13,11 +13,7 @@ async function loadStops(){
     await chargerTours();
     await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
     demarrerRelecturePositions();
-    // Charger les problèmes pour chaque stop
-    const{data:probs}=await db.from('problemes').select('*').eq('lu',false);
-    const probMap={};
-    (probs||[]).forEach(p=>{probMap[p.stop_id]=p;});
-    stops=stops.map(s=>({...s,_probleme:probMap[s.id]||null}));
+    await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
     renderAll();
     hideLoading();
     updateBar();
@@ -63,7 +59,7 @@ function renderAll(){
   stops.forEach((s,i)=>{
     if(!s.lat) return;
   if(routeActive!==null && s.route_id!==routeActive) return;
-  const m=L.marker([s.lat,s.lon],{icon:mkIcon(estFait(s),s._probleme,estEnCours(s))}).addTo(map);
+  const m=L.marker([s.lat,s.lon],{icon:mkIcon(estFait(s),aProbleme(s),estEnCours(s))}).addTo(map);
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });
@@ -71,7 +67,7 @@ function renderAll(){
   stops.forEach(s=>{
     if(!s.zone_points||!Array.isArray(s.zone_points))return;
     if(routeActive!==null && s.route_id!==routeActive) return;
-    const c=couleurEtat(estFait(s),s._probleme,estEnCours(s));
+    const c=couleurEtat(estFait(s),aProbleme(s),estEnCours(s));
     polys.push(L.polygon(s.zone_points,{
       color:c,fillColor:c,fillOpacity:.15,weight:2
     }).addTo(map));
@@ -108,6 +104,7 @@ function majCarte(){
   document.getElementById('sc-svc').textContent=s.service||'';
   document.getElementById('sc-cli').textContent=s.client||'';
   document.getElementById('sc-tour').textContent=texteTour(s);
+  document.getElementById('sc-prob').innerHTML=htmlProblemes(s);
   const e=etatComplete(s);
   const b=document.getElementById('btn-cmp');
   b.textContent=e.texte;

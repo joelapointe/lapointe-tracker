@@ -27,7 +27,9 @@ function monde(o = {}) {
     const classes = new Set();
     const e = { id, children: [], style: {}, textContent: '', _html: '', value: '', disabled: false, className: '', onclick: null, attrs: {},
       classList: { add: (c) => classes.add(c), remove: (c) => classes.delete(c), contains: (c) => classes.has(c), toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) },
-      appendChild(c) { this.children.push(c); return c; }, setAttribute(k, v) { this.attrs[k] = v; }, remove() {}, focus() {} };
+      appendChild(c) { c.parent = this; this.children.push(c); return c; }, setAttribute(k, v) { this.attrs[k] = v; }, focus() {},
+      remove() { if (this.parent) this.parent.children = this.parent.children.filter((x) => x !== this); },
+      querySelector(sel) { return this.children.find((c) => '.' + c.className === sel) ?? null; } };
     Object.defineProperty(e, 'innerHTML', { get() { return this._html; }, set(v) { this._html = v; if (v === '') this.children = []; } });
     return e;
   };
@@ -40,7 +42,7 @@ function monde(o = {}) {
     tours: o.tours ?? TOURS(),
     positions: o.positions ?? [],
   };
-  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [] };
+  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [], selects: [], orders: [] };
   const reponsesRpc = o.rpc ?? {};
   const reponsesEcriture = o.ecritures ?? {};
 
@@ -54,15 +56,23 @@ function monde(o = {}) {
     },
     from: (table) => {
       const q = { op: 'select', valeur: null };
-      q.select = () => q;
+      q.select = (c) => { if (q.op === 'select') appels.selects.push([table, c]); return q; };
       q.eq = (c, v) => { appels.eq.push([table, c, v]); q.filtres = [...(q.filtres ?? []), [c, v]]; return q; };
-      q.order = () => q;
+      q.order = (c, opt) => { appels.orders.push([table, c, opt]); return q; };
       q.delete = () => { q.op = 'delete'; return q; };
       q.update = (v) => { q.op = 'update'; q.valeur = v; return q; };
+      q.insert = (v) => { q.op = 'insert'; q.valeur = v; return q; };
       q.then = (ok_, ko_) => {
         let res;
-        if (q.op === 'select') { appels.lectures.push(table); res = { data: donnees[table] ?? [], error: null }; }
-        else { appels.ecritures.push({ table, op: q.op, valeur: q.valeur, filtres: q.filtres }); res = reponsesEcriture[table + '.' + q.op] ?? { data: null, error: null }; }
+        if (q.op === 'select') {
+          appels.lectures.push(table);
+          if (o.lectureLance?.includes(table)) throw new Error('Failed to fetch');
+          res = o.erreurLecture?.includes(table) ? { data: null, error: { message: 'boum' } } : { data: donnees[table] ?? [], error: null };
+        } else {
+          appels.ecritures.push({ table, op: q.op, valeur: q.valeur, filtres: q.filtres });
+          const rep = reponsesEcriture[table + '.' + q.op];
+          res = typeof rep === 'function' ? rep(q.valeur, donnees, q.filtres) : (rep ?? { data: null, error: null });
+        }
         return Promise.resolve(res).then(ok_, ko_);
       };
       return q;
@@ -85,12 +95,11 @@ function monde(o = {}) {
     setStatus: (t) => appels.statut.push(t),
     hideLoading() {},
     showErr: (m) => appels.erreurs.push(m),
-    checkProblemes() {},
     __confirmations: appels.confirmations,
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -445,6 +454,142 @@ log('\n=== LA ROUTE CHOISIE EST RETROUVÉE AU DÉMARRAGE (l\'étiquette et la ca
   eq('une route déjà choisie pendant la session n\'est pas écrasée par le nom mémorisé', m.run('routeActive'), SE);
 }
 
+log('\n=== PROBLÈMES : plusieurs par arrêt, jamais effacés, rattachés à la passe (étape 13) ===');
+{
+  const il = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+  const pb = (id, stop, note, o = {}) => ({ id, stop_id: stop, passe_id: o.passe ?? null, utilisateur_id: o.auteur ?? 'u-autre', note, cree_le: o.cree ?? il(5), utilisateurs: o.nom === null ? null : { nom: o.nom ?? (o.auteur === 'u-luc' ? 'Luc' : 'Marc-Antoine') } });
+  const lignes = [pb('pb1', 's2', 'barrière fermée', { cree: il(5) }), pb('pb2', 's2', 'chien méchant', { auteur: 'u-luc', cree: il(90) }), pb('pb3', 's3', '<img src=x onerror=alert(1)>')];
+  const cas = async (o = {}) => { const m = monde(o); await m.run('loadStops()'); return m; };
+  const couleurDe = (m, id) => m.couleur(m.marqueurs.slice(-6)[idx(id)]);
+  const fiche = (m, id) => { m.run(`openCard(${idx(id)})`); return m.el('sc-prob').innerHTML; };
+
+  // — Lecture et affichage —
+  let m = await cas({ problemes: lignes });
+  const lecture = m.appels.selects.find((x) => x[0] === 'problemes');
+  eq('les problèmes sont lus avec des colonnes NOMMÉES (jamais « * »)', lecture[1], 'id, stop_id, passe_id, utilisateur_id, note, cree_le, utilisateurs!utilisateur_id(nom)');
+  vrai('… seulement les non lus, du plus ancien au plus récent', m.appels.eq.some((e) => e[0] === 'problemes' && e[1] === 'lu' && e[2] === false) && m.appels.orders.some((o) => o[0] === 'problemes' && o[1] === 'cree_le'), JSON.stringify(m.appels.orders));
+  eq('DEUX problèmes sur s2, un sur s3, aucun sur s1', [m.run(`problemesDe(stops[${idx('s2')}]).length`), m.run(`problemesDe(stops[${idx('s3')}]).length`), m.run(`problemesDe(stops[${idx('s1')}]).length`)], [2, 1, 0]);
+  eq('marqueurs ORANGES pour s2 et s3 ; s1 (fait) reste vert', [couleurDe(m, 's2'), couleurDe(m, 's3'), couleurDe(m, 's1')], ['#fb923c', '#fb923c', '#4ade80']);
+  let h = fiche(m, 's2');
+  vrai('la fiche de s2 annonce « 2 problèmes signalés » et montre les deux notes', h.includes('2 problèmes signalés') && h.includes('barrière fermée') && h.includes('chien méchant'), h);
+  vrai('… chaque ligne dit QUI et QUAND : « Marc-Antoine · il y a 5 min », et « vous · il y a 2 h » pour celui de Luc (la personne connectée)', h.includes('barrière fermée <span>· Marc-Antoine · il y a 5 min</span>') && h.includes('chien méchant <span>· vous · il y a 2 h</span>') && !h.includes('Luc'), h);
+  h = fiche(m, 's3');
+  vrai('une note piégée est affichée comme du TEXTE (aucun code exécuté)', h.includes('&lt;img src=x onerror=alert(1)&gt;') && !h.includes('<img'), h);
+  eq('la fiche d\'un arrêt sans problème n\'affiche rien', fiche(m, 's1'), '');
+  m = await cas({ problemes: [pb('x1', 's2', 'nom piégé', { nom: 'Marc <script>alert(1)</script>' }), pb('x2', 's2', 'auteur sans nom lisible', { nom: null, cree: il(3) })] });
+  h = fiche(m, 's2');
+  vrai('un nom piégé est affiché comme du TEXTE ; un auteur dont le nom n\'est pas lisible : seulement l\'heure (jamais « null »)', h.includes('Marc &lt;script&gt;alert(1)&lt;/script&gt; · il y a 5 min') && !h.includes('<script>') && h.includes('auteur sans nom lisible <span>· il y a 3 min</span>') && !h.includes('null'), h);
+  m = await cas({ problemes: [1, 2, 3, 4].map((i) => pb('p' + i, 's2', 'note ' + i, { cree: il(50 - i) })) });
+  h = fiche(m, 's2');
+  vrai('4 problèmes : les 3 plus récents + « … et 1 autre »', h.includes('4 problèmes signalés') && h.includes('note 4') && h.includes('note 3') && h.includes('note 2') && !h.includes('note 1') && h.includes('… et 1 autre'), h);
+
+  // — Signaler —
+  const inserer = (valeur, donnees) => { donnees.problemes.push(...valeur.map((v, i) => ({ id: 'nouveau' + i, utilisateur_id: 'u-luc', cree_le: new Date().toISOString(), ...v }))); return { data: null, error: null }; };
+  m = await cas({ ecritures: { 'problemes.insert': inserer } });
+  m.run(`openCard(${idx('s2')})`); m.run('openProbleme()');
+  eq('la boîte de signalement limite la note à 500 caractères', m.el('prob-note').attrs.maxlength, '500');
+  m.el('prob-note').value = '  Entrée bloquée par la neige  ';
+  await m.run('envoyerProbleme()');
+  const ins = m.appels.ecritures.filter((x) => x.table === 'problemes');
+  eq('UN seul envoi : la note nettoyée, l\'arrêt, la passe du camion de Luc — et RIEN d\'autre (ni « lu », ni nom : c\'est la base qui les met)', [ins.length, ins[0].op, ins[0].valeur], [1, 'insert', [{ stop_id: 's2', passe_id: 'p-luc', note: 'Entrée bloquée par la neige' }]]);
+  eq('aucun problème n\'est jamais effacé (aucun « delete » sur les problèmes)', m.appels.ecritures.filter((x) => x.op === 'delete').length, 0);
+  eq('après l\'envoi : relu, l\'arrêt devient ORANGE, message, boîte et fiche fermées', [couleurDe(m, 's2'), m.dernierToast(), m.el('prob-overlay').classList.contains('open'), m.el('stop-card').classList.contains('open')], ['#fb923c', '⚠ Problème signalé !', false, false]);
+  m.run(`openCard(${idx('s2')})`); m.run('openProbleme()'); m.el('prob-note').value = 'Deuxième problème, même arrêt'; await m.run('envoyerProbleme()');
+  eq('un 2e problème sur le MÊME arrêt s\'AJOUTE au premier (rien n\'est remplacé)', [m.run(`problemesDe(stops[${idx('s2')}]).length`), m.appels.ecritures.filter((x) => x.op === 'delete').length], [2, 0]);
+
+  // — À quelle passe le rattacher —
+  const passePour = (mm, id) => mm.run(`passePourSignalement(stops[${idx(id)}])`);
+  m = await cas();
+  eq('dans le tour de l\'arrêt (s2) : la passe de Luc', passePour(m, 's2'), 'p-luc');
+  eq('chez un arrêt d\'un autre tour (s4, sel) : la passe où Luc se trouve quand même', passePour(m, 's4'), 'p-luc');
+  const passager = monde({ tours: TOURS().map((t) => ({ ...t, passes: t.passes.map((x) => ({ ...x, je_suis_chauffeur: false, je_suis_a_bord: x.passe_id === 'p-marc' })) })) }); await passager.run('loadStops()');
+  eq('un passager : la passe où il est à bord', passePour(passager, 's2'), 'p-marc');
+  const hors = monde({ tours: TOURS().map((t) => ({ ...t, passes: t.passes.map((x) => ({ ...x, je_suis_chauffeur: false, je_suis_a_bord: false })) })) }); await hors.run('loadStops()');
+  eq('quelqu\'un qui n\'est dans aucun camion : aucune passe (permis), le signalement part quand même', [passePour(hors, 's2'), hors.run('tours.length')], [null, 2]);
+
+  // — Refus, notes vides, doubles touchers —
+  m = await cas({ ecritures: { 'problemes.insert': { data: null, error: { message: 'permission denied for table problemes' } } } });
+  m.run(`openCard(${idx('s2')})`); m.run('openProbleme()'); m.el('prob-note').value = 'ma note importante';
+  const lectures0 = m.appels.lectures.filter((t) => t === 'problemes').length;
+  await m.run('envoyerProbleme()');
+  eq('refus du serveur : message clair, la boîte reste ouverte, la NOTE EST CONSERVÉE, rien n\'est relu', [m.dernierToast(), m.el('prob-overlay').classList.contains('open'), m.el('prob-note').value, m.appels.lectures.filter((t) => t === 'problemes').length - lectures0], ['❌ Problème non envoyé (pas de réseau ?). Réessaie.', true, 'ma note importante', 0]);
+  m.el('prob-note').value = '   '; const n0 = m.appels.ecritures.length;
+  await m.run('envoyerProbleme()');
+  eq('une note vide n\'est pas envoyée', [m.dernierToast(), m.appels.ecritures.length - n0], ['⚠ Écris une note', 0]);
+  m = await cas({ ecritures: { 'problemes.insert': async (v, d) => { await attendre(60); return inserer(v, d); } } });
+  m.run(`openCard(${idx('s2')})`); m.run('openProbleme()'); m.el('prob-note').value = 'toucher deux fois';
+  await Promise.all([m.run('envoyerProbleme()'), m.run('envoyerProbleme()')]);
+  eq('toucher « Envoyer » deux fois de suite : UN seul problème créé', m.appels.ecritures.filter((x) => x.op === 'insert').length, 1);
+
+  // — Temps réel, réseau coupé, pastille —
+  m = await cas({ problemes: [pb('a', 's3', 'x')] });
+  m.run(`openCard(${idx('s2')})`);
+  const l0 = m.appels.lectures.filter((t) => t === 'problemes').length;
+  m.donnees.problemes.push(pb('b', 's2', 'signalé sur un autre téléphone'));
+  for (let i = 0; i < 5; i++) m.run('planifierRechargementProblemes()');
+  await attendre(120); eq('5 changements d\'un coup : pas encore relu', m.appels.lectures.filter((t) => t === 'problemes').length, l0);
+  await attendre(400);
+  eq('… puis relu UNE seule fois ; s2 devient orange et sa fiche ouverte se met à jour', [m.appels.lectures.filter((t) => t === 'problemes').length - l0, couleurDe(m, 's2'), m.el('sc-prob').innerHTML.includes('signalé sur un autre téléphone')], [1, '#fb923c', true]);
+  m.donnees.problemes = []; m.run('planifierRechargementProblemes()'); await attendre(450);
+  eq('l\'administrateur marque tout « lu » : les marqueurs orange disparaissent', [couleurDe(m, 's2'), couleurDe(m, 's3')], ['#c8e63c', '#c8e63c']);
+  m.donnees.problemes = [pb('c', 's2', 'encore')]; await m.run('chargerProblemes()');
+  m.run('__dbOk = db; db = { rpc: __fauxDb.rpc, from: () => { throw new Error("Failed to fetch"); } }');
+  eq('réseau coupé : la lecture échoue SANS effacer les problèmes connus', [await m.run('chargerProblemes()'), m.run('problemesNonLus.length')], [false, 1]);
+  m.run('db = __fauxDb; currentUser = null'); const l1 = m.appels.lectures.filter((t) => t === 'problemes').length;
+  m.run('planifierRechargementProblemes()'); await attendre(450);
+  eq('personne de connecté : aucune lecture', m.appels.lectures.filter((t) => t === 'problemes').length, l1);
+  m = await cas({ problemes: lignes });
+  eq('pastille du bouton ADMIN : nombre de problèmes non lus (3)', m.el('bb-admin').children.map((c) => c.textContent), [3]);
+  m.donnees.problemes = []; await m.run('chargerProblemes()'); m.run('checkProblemes()');
+  eq('… et elle disparaît quand il n\'y en a plus', m.el('bb-admin').children.length, 0);
+}
+
+log('\n=== PANNEAU ADMINISTRATEUR : lit les nouvelles colonnes, ne ment jamais ===');
+{
+  const il = (minutes) => new Date(Date.now() - minutes * 60000).toISOString();
+  const admin = { id: 'u-joe', nom: 'Joé', role: 'admin' };
+  const lignes = [
+    { id: 'pb1', stop_id: 's2', passe_id: 'p-luc', utilisateur_id: 'u-marc', note: 'barrière fermée', cree_le: il(5), stops: { adresse: '220 rue du Moulin', service: MEC, client: 'TEST 3' }, utilisateurs: { nom: 'Marc' }, passes: { numero: 3, tache: MEC } },
+    { id: 'pb2', stop_id: 's3', passe_id: null, utilisateur_id: 'u-luc', note: '<b>gras</b> & "guillemets"', cree_le: il(200), stops: { adresse: '50 rue Notre-Dame', service: MEC, client: 'TEST 5' }, utilisateurs: { nom: 'Luc <script>' }, passes: null },
+  ];
+  const texte = (m) => m.el('admin-body').innerHTML + m.el('admin-body').children.map((c) => c.innerHTML).join('|');
+  let m = monde({ utilisateur: admin, problemes: lignes }); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
+  const admSel = m.appels.selects.filter((x) => x[0] === 'problemes').pop();
+  eq('la lecture du panneau nomme l\'AUTEUR (« utilisateurs!utilisateur_id », car lu_par pointe aussi vers utilisateurs), la passe et l\'arrêt', admSel[1], 'id, note, cree_le, stops(adresse,service,client), utilisateurs!utilisateur_id(nom), passes(numero,tache)');
+  vrai('… triée par « cree_le » (l\'ancienne colonne « created_at » n\'existe plus), le plus récent d\'abord', m.appels.orders.some((o) => o[0] === 'problemes' && o[1] === 'cree_le' && o[2]?.ascending === false), JSON.stringify(m.appels.orders));
+  let t = texte(m);
+  vrai('le titre compte les problèmes', t.includes('⚠ Problèmes signalés (2)') || m.el('admin-body').children[0].textContent === '⚠ Problèmes signalés (2)', t.slice(0, 200));
+  vrai('chaque problème : adresse, auteur, type de service, numéro de passe, note', t.includes('220 rue du Moulin') && t.includes('Marc') && t.includes('Déneigement mécanique') && t.includes('Passe n° 3') && t.includes('barrière fermée'), t);
+  vrai('un problème sans passe : pas de « Passe n° »', !t.split('|')[2].includes('Passe n°'), t);
+  vrai('texte piégé (note et nom) affiché comme du TEXTE', t.includes('&lt;b&gt;gras&lt;/b&gt; &amp; &quot;guillemets&quot;') && t.includes('Luc &lt;script&gt;') && !t.includes('<b>') && !t.includes('<script>'), t);
+  vrai('un bouton « Marquer comme lu » par problème', m.el('admin-body').children.filter((c) => c.children.some((b) => b.textContent === '✔ Marquer comme lu')).length === 2);
+
+  // — « Marquer comme lu » —
+  m = monde({ utilisateur: admin, problemes: lignes, ecritures: { 'problemes.update': (v, d, f) => { const i = d.problemes.findIndex((p) => p.id === f[0][1]); const [p] = d.problemes.splice(i, 1); return { data: [{ id: p.id }], error: null }; } } });
+  await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
+  m.el('admin-body').children[1].children.find((b) => b.textContent === '✔ Marquer comme lu').onclick();
+  await attendre(50);
+  const maj = m.appels.ecritures.find((x) => x.table === 'problemes' && x.op === 'update');
+  eq('« lu » enregistre QUI l\'a lu et QUAND (le problème n\'est pas effacé)', [maj.valeur.lu, maj.valeur.lu_par, typeof maj.valeur.lu_le, maj.filtres], [true, 'u-joe', 'string', [['id', 'pb1']]]);
+  eq('… message, l\'arrêt n\'est plus orange, la liste est rafraîchie (1 problème restant)', [m.dernierToast(), m.marqueurs.slice(-6)[idx('s2')] && m.couleur(m.marqueurs.slice(-6)[idx('s2')]), m.el('admin-body').children[0].textContent], ['✔ Problème marqué comme lu', '#c8e63c', '⚠ Problèmes signalés (1)']);
+  eq('aucun « delete » : rien n\'est effacé', m.appels.ecritures.filter((x) => x.op === 'delete').length, 0);
+  m = monde({ utilisateur: admin, problemes: lignes, ecritures: { 'problemes.update': { data: [], error: null } } });
+  await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30); const nL = m.appels.lectures.filter((x) => x === 'problemes').length;
+  await m.run(`marquerLu('pb1')`);
+  eq('les règles d\'accès refusent sans erreur (0 ligne changée) : on le DIT, on ne relit rien', [m.dernierToast(), m.appels.lectures.filter((x) => x === 'problemes').length - nL], ['❌ Impossible de marquer comme lu', 0]);
+
+  // — Ne jamais mentir —
+  m = monde({ utilisateur: admin, problemes: lignes }); await m.run('loadStops()'); m.donnees.problemes = []; await m.run('openAdmin()'); await attendre(30);
+  eq('aucun problème : « ✔ Aucun problème signalé. »', texte(m).includes('✔ Aucun problème signalé.'), true);
+  m = monde({ utilisateur: admin, problemes: lignes, erreurLecture: ['problemes'] }); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
+  t = texte(m);
+  vrai('lecture impossible : le panneau le DIT (et n\'affiche PAS « Aucun problème signalé »)', t.includes('❌ Impossible de charger les problèmes') && !t.includes('Aucun problème signalé'), t);
+  m = monde({ utilisateur: admin, problemes: lignes, lectureLance: ['problemes'] }); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
+  vrai('… même quand le réseau est coupé', texte(m).includes('❌ Impossible de charger les problèmes'), texte(m));
+  m = monde(); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
+  eq('un employé qui essaie d\'ouvrir le panneau : refusé', [m.dernierToast(), m.el('admin-overlay').classList.contains('open')], ['⛔ Accès admin requis', false]);
+}
+
 log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ===');
 {
   const fichiersJs = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));
@@ -456,6 +601,12 @@ log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ==
   eq('plus aucune fenêtre native confirm() (refusée d\'office par certains navigateurs)', trouve(/(^|[^\w.])confirm\s*\(/).filter((f) => f !== 'utilitaires.js'), []);
   const html = lire('index.html');
   eq('plus de référence à l\'ancien _onSite', trouve(/_onSite/), []);
+  eq('les problèmes n\'utilisent plus « created_at » (leur colonne s\'appelle cree_le ; celle des routes, elle, s\'appelle bien created_at)', trouve(/created_at/).filter((f) => ['admin.js', 'problemes.js'].includes(f)), []);
+  eq('plus de « probMap » ni de « _probleme » (un seul problème par arrêt)', trouve(/probMap|_probleme\b/), []);
+  eq('l\'application n\'efface JAMAIS un problème (ni delete, ni upsert)', trouve(/from\(\s*['"]problemes['"]\s*\)\s*\.\s*(delete|upsert)/), []);
+  eq('un problème neuf n\'envoie jamais « lu » (la base l\'interdit aux employés)', trouve(/from\(\s*['"]problemes['"]\s*\)\s*\.\s*insert\(\s*\[\s*\{[^}]*\blu\s*:/), []);
+  vrai('la fiche d\'un arrêt a sa zone « problèmes »', lire('index.html').includes('id="sc-prob"'));
+  vrai('la carte écoute aussi les problèmes en temps réel', /table:'problemes'\},\(\)=>planifierRechargementProblemes\(\)/.test(lire('js/carte.js')));
   vrai('marqueurs ET zones utilisent la règle de couleur unique', (lire('js/arrets.js').match(/couleurEtat\(/g) || []).length === 2, 'mkIcon + zones');
   vrai('la carte écoute aussi les positions en temps réel', /table:'positions'\},\(\)=>planifierRechargementPositions\(\)/.test(lire('js/carte.js')));
   vrai('la page charge tours.js', html.includes('<script src="js/tours.js"></script>'));

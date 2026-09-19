@@ -1,5 +1,6 @@
 // js/admin.js — Panneau administrateur : problèmes signalés
 // (Étape 12 : plus d'approbation de comptes — Joé crée chaque compte lui-même.)
+// (Étape 13 : lit les nouvelles colonnes — cree_le, passe, auteur — et n'affiche jamais « aucun problème » quand la lecture échoue.)
 // (extrait de l'ancien index.html)
 	function openAdmin(){
   if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}
@@ -17,12 +18,21 @@ function bgClickAdmin(e){
 }
 
 async function loadProblemes(){
-  const{data}=await db.from('problemes')
-    .select('*, stops(adresse,service,client), utilisateurs(nom)')
-    .eq('lu',false)
-    .order('created_at',{ascending:false});
-
   const body=document.getElementById('admin-body');
+  // « utilisateurs!utilisateur_id » : l'AUTEUR du signalement (la table a aussi lu_par, qui pointe vers utilisateurs)
+  let data=null,error=null;
+  try{
+    const r=await db.from('problemes')
+      .select('id, note, cree_le, stops(adresse,service,client), utilisateurs!utilisateur_id(nom), passes(numero,tache)')
+      .eq('lu',false)
+      .order('cree_le',{ascending:false});
+    data=r.data;error=r.error;
+  }catch(e){error=e;}
+
+  if(error){
+    body.innerHTML+='<div style="padding:16px;color:#ef4444;font-size:13px;border-top:1px solid #252d3a;">❌ Impossible de charger les problèmes. Vérifie la connexion, puis réessaie.</div>';
+    return;
+  }
   const probs=data||[];
 
   if(probs.length===0){
@@ -32,18 +42,19 @@ async function loadProblemes(){
 
   const titre=document.createElement('div');
   titre.style='padding:10px 16px 4px;font-size:10px;color:#fb923c;text-transform:uppercase;letter-spacing:.8px;font-weight:700;';
-  titre.textContent='⚠ Problèmes signalés';
+  titre.textContent='⚠ Problèmes signalés ('+probs.length+')';
   body.appendChild(titre);
 
   probs.forEach(p=>{
     const div=document.createElement('div');
     div.style='padding:12px 16px;border-bottom:1px solid rgba(37,45,58,.8);border-left:3px solid #fb923c;';
+    const passe=p.passes?' · Passe n° '+p.passes.numero:'';
     div.innerHTML=
       '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:17px;font-weight:700;color:#f0f4f8;">'+
         esc(p.stops?p.stops.adresse:'Stop supprimé')+
       '</div>'+
       '<div style="font-size:11px;color:#6b7a8d;margin-top:2px;">'+
-        esc(p.utilisateurs?p.utilisateurs.nom:'?')+' · '+esc(p.stops?p.stops.service||'':'')+
+        esc(p.utilisateurs?p.utilisateurs.nom:'?')+' · '+esc(p.stops?p.stops.service||'':'')+esc(passe)+' · '+esc(dateHeure(p.cree_le))+
       '</div>'+
       '<div style="font-size:13px;color:#fb923c;margin-top:6px;background:rgba(251,146,60,.08);padding:8px;border-radius:6px;">'+
         '💬 '+esc(p.note)+
@@ -57,11 +68,20 @@ async function loadProblemes(){
   });
 }
 
+// « Lu » : le problème disparaît de l'écran de tout le monde mais reste dans la base (avec qui l'a lu et quand).
+// On vérifie qu'une ligne a VRAIMENT changé (les règles d'accès peuvent refuser sans erreur).
 async function marquerLu(id){
-  await db.from('problemes').update({lu:true}).eq('id',id);
+  let r;
+  try{
+    r=await db.from('problemes').update({lu:true,lu_par:currentUser.id,lu_le:new Date().toISOString()}).eq('id',id).select('id');
+  }catch(e){
+    r={data:null,error:e};
+  }
+  if(r.error||!r.data||r.data.length===0){toast('❌ Impossible de marquer comme lu');return;}
   toast('✔ Problème marqué comme lu');
-  openAdmin();
-  checkProblemes();
+  await chargerProblemes();
+  renderAll();majCarte();checkProblemes();
+  chargerPanneauAdmin();
 }
 async function chargerPanneauAdmin(){
   const body=document.getElementById('admin-body');

@@ -303,3 +303,9 @@
 #sc-tour{font-size:12px;color:#9aa8ba;margin-top:3px;}
 .scb:disabled{opacity:.6;cursor:default;}
 .scb:disabled:active{transform:none;}
+
+/* Étape 13 : problèmes signalés sur la fiche d'un arrêt (plusieurs possibles) */
+#sc-prob{margin-top:6px;}
+.sc-prob-titre{font-size:12px;font-weight:700;color:#fb923c;}
+.sc-prob-ligne{font-size:12px;color:#fdba74;margin-top:2px;overflow-wrap:anywhere;}
+.sc-prob-ligne span{color:#6b7a8d;}

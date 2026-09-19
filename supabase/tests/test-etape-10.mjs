@@ -31,6 +31,10 @@ const at = (minAgo) => new Date(Date.now() - minAgo * 60000).toISOString();
 const db = await prepare(FILES);
 const r06 = await db.exec(fs.readFileSync(SQL_DIR + '06-etape10-outils-admin-employes.sql', 'utf8'));
 const verif = r06[r06.length - 1].rows[0].verification;
+// Comme sur la vraie base : 07 (déclencheur corrigé) puis 09 (le serveur crée le profil de l'employé) ont aussi été exécutés.
+await db.exec(fs.readFileSync(SQL_DIR + '07-etape11-profil-sans-telephone.sql', 'utf8'));
+const r09 = await db.exec(fs.readFileSync(SQL_DIR + '09-etape11-profil-employe-par-le-serveur.sql', 'utf8'));
+const verif09 = r09[r09.length - 1].rows[0].verification;
 // Comme sur Supabase : service_role voit le schéma public et contourne les règles d'accès par ligne.
 await db.exec(`grant usage on schema public to service_role; alter role service_role bypassrls;`);
 
@@ -67,11 +71,17 @@ function fabriquerDeps(surcharges = {}) {
     },
     async definirActif(id, actif) { await commeRole('service_role', '', 'update public.utilisateurs set actif = $2 where id = $1', [id, actif]); },
     async aUnHistorique(id) { return (await commeRole('service_role', '', 'select public._utilisateur_a_de_l_historique($1) as r', [id]))[0].r; },
+    async creerProfilEmploye(id, nom, telephone) {
+      await commeRole('service_role', '', 'select public._creer_profil_employe($1::uuid, $2, $3)', [id, nom, telephone]);
+    },
     async authCreer(a) {
       dernierCreer = a;
       if ((await sup('select 1 from auth.users where email = $1', [a.email])).length) return { erreur: 'existe_deja' };
       try {
-        const r = await sup('insert into auth.users(email, raw_app_meta_data) values ($1, $2::jsonb) returning id', [a.email, JSON.stringify(a.app_metadata)]);
+        // Comme le VRAI Supabase Auth (constaté le 19 sept. 2026) : le compte est d'abord créé avec seulement le fournisseur,
+        // puis les données « app_metadata » sont ajoutées dans une DEUXIÈME écriture. Un déclencheur « à l'insertion » ne les voit donc pas.
+        const r = await sup('insert into auth.users(email, raw_app_meta_data) values ($1, $2::jsonb) returning id', [a.email, JSON.stringify({ provider: 'email', providers: ['email'] })]);
+        await sup('update auth.users set raw_app_meta_data = raw_app_meta_data || $2::jsonb where id = $1', [r[0].id, JSON.stringify(a.app_metadata)]);
         motsDePasse.set(r[0].id, a.password);
         return { id: r[0].id };
       } catch { return { erreur: 'echec' }; }
@@ -217,7 +227,7 @@ eq('l\'identifiant technique est numéro@domaine', dernierCreer.email, `81955502
 eq('le mot de passe envoyé à Auth est le NIP', motsDePasse.get(luc), '482915');
 let p = await profil(luc);
 eq('profil créé par le déclencheur : nom, téléphone, rôle employé, actif', [p.nom, p.telephone, p.role, p.actif], ['Luc Tremblay', '8195550201', 'employe', true]);
-eq('la fonction n\'a JAMAIS fourni de rôle à Auth', Object.keys((await compte(luc)).raw_app_meta_data).sort(), ['nom', 'telephone']);
+eq('la fonction n\'a JAMAIS fourni de rôle à Auth (seulement nom et téléphone, en plus du fournisseur ajouté par Auth)', Object.keys((await compte(luc)).raw_app_meta_data).sort(), ['nom', 'provider', 'providers', 'telephone']);
 eq('le NIP n\'est pas dans la réponse sous une autre forme (une seule clé « nip »)', Object.keys(r.json).sort(), ['employe', 'nip', 'nip_genere', 'ok']);
 
 r = await appel(joe, { action: 'creer', nom: 'Nina', telephone: '819 555 0202', role: 'admin', actif: false, id: joe, nip: nip('135790') });
@@ -263,6 +273,50 @@ for (const [libelle, corps, code] of [
   eq(`refusé : ${libelle}`, [r.statut, r.json.erreur], [400, code]);
 }
 eq('… aucun compte créé par ces refus', await nbUsers(), avantRefus);
+
+// Le serveur crée le profil (correction du 19 sept. 2026 : Auth écrit nom/téléphone APRÈS la création du compte)
+{
+  eq('09 : _creer_profil_employe — visiteur / employé : interdit, serveur : permis', [verif09.appelable_par_un_visiteur, verif09.appelable_par_un_employe, verif09.appelable_par_le_serveur], [false, false, true]);
+  await db.exec(fs.readFileSync(SQL_DIR + '09-etape11-profil-employe-par-le-serveur.sql', 'utf8'));
+  pass('09 : peut être ré-exécuté sans erreur');
+  for (const [role, uid] of [['anon', ''], ['authenticated', employe], ['authenticated', joe]]) {
+    try { await commeRole(role, uid, `select public._creer_profil_employe($1::uuid, 'X', '8195550000')`, [employe]); fail(`09 : ${role} refusé`, 'aurait dû échouer'); }
+    catch (e) { e.message.includes('permission denied') ? pass(`09 : ${role}${uid === joe ? ' (administrateur, depuis l\'application)' : ''} ne peut pas l'appeler  [permission denied]`) : fail('autre erreur', e.message); }
+  }
+  try { await commeRole('service_role', '', `select public._creer_profil_employe(gen_random_uuid(), 'Fantôme', '8195550000')`); fail('09 : compte Auth inexistant refusé', 'aurait dû échouer'); }
+  catch (e) { e.message.includes('compte_introuvable') ? pass('09 : refuse un compte Auth qui n\'existe pas  [compte_introuvable]') : fail('autre erreur', e.message); }
+  const avantConflit = await profil(joe);
+  await commeRole('service_role', '', `select public._creer_profil_employe($1::uuid, 'Pirate', '8195550000')`, [joe]);
+  eq('09 : si le profil existe déjà (ici celui de Joé), rien n\'est modifié', await profil(joe), avantConflit);
+  const nbAvant = await nbUsers();
+  r = await appel(joe, { action: 'creer', nom: 'Deux temps', telephone: '8195550601', nip: nip('482915') });
+  eq('Auth en DEUX écritures (comportement réel) : création réussie, profil « employe »', [r.statut, (await profil(r.json?.employe?.id))?.role, (await profil(r.json?.employe?.id))?.nom], [200, 'employe', 'Deux temps']);
+  const unTemps = fabriquerDeps({
+    async authCreer(a) {   // ancien comportement supposé : données fournies dès l'insertion, le déclencheur crée le profil
+      dernierCreer = a;
+      const x = await sup('insert into auth.users(email, raw_app_meta_data) values ($1,$2::jsonb) returning id', [a.email, JSON.stringify(a.app_metadata)]);
+      motsDePasse.set(x[0].id, a.password);
+      return { id: x[0].id };
+    } });
+  r = await appel(joe, { action: 'creer', nom: 'Un temps', telephone: '8195550602', nip: nip('482915') }, { deps: unTemps });
+  eq('Auth en UNE écriture (le déclencheur crée déjà le profil) : fonctionne aussi, sans doublon', [r.statut, (await sup(`select count(*)::int n from utilisateurs where telephone = '8195550602'`))[0].n], [200, 1]);
+  const avantPanne = await nbUsers();
+  const debutJournal = journal.length;
+  r = await appel(joe, { action: 'creer', nom: 'Panne profil', telephone: '8195550603', nip: nip('482915') },
+    { deps: fabriquerDeps({ creerProfilEmploye: async () => { throw new Error('boum 8195550603'); } }) });
+  eq('la création du profil plante : création ANNULÉE (aucun compte fantôme)', [r.statut, r.json.erreur, await nbUsers()], [500, 'profil_incorrect', avantPanne]);
+  vrai('… le journal dit pourquoi, sans nom ni numéro', journal.slice(debutJournal).some((l) => l === 'creer detail: profil_erreur') && !journal.slice(debutJournal).join('').includes('8195550603'));
+  r = await appel(joe, { action: 'creer', nom: 'Panne totale', telephone: '8195550604', nip: nip('482915') },
+    { deps: fabriquerDeps({ creerProfilEmploye: async () => { throw new Error('x'); }, authSupprimer: async () => false }) });
+  vrai('… si l\'annulation échoue aussi : le message le dit et indique où vérifier', r.statut === 500 && /Authentication > Users/.test(r.json.message), JSON.stringify(r.json));
+  await sup(`delete from auth.users where email = '8195550604@${DOMAINE_EMAIL}'`);   // ménage du compte laissé exprès par ce test
+  r = await appel(joe, { action: 'creer', nom: 'Profil absent', telephone: '8195550605', nip: nip('482915') },
+    { deps: fabriquerDeps({ creerProfilEmploye: async () => {} , profilParId: async () => null }) });
+  eq('le profil reste introuvable : création annulée', [r.statut, r.json.erreur], [500, 'profil_incorrect']);
+  eq('… (et le journal le distingue)', journal.slice(debutJournal).includes('creer detail: profil_absent'), true);
+  eq('… aucun compte ni profil « Profil absent » ne subsiste', [(await sup(`select 1 from auth.users where email like '8195550605@%'`)).length, (await sup(`select 1 from utilisateurs where telephone = '8195550605'`)).length], [0, 0]);
+  void nbAvant;
+}
 
 // Filet de sécurité : un profil qui n'est pas celui attendu annule tout
 {

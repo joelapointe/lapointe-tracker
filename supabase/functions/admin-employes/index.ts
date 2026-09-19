@@ -43,6 +43,7 @@ export type Deps = {
   profilParTelephone(telephone: string): Promise<Profil | null>;
   definirActif(id: string, actif: boolean): Promise<void>;
   aUnHistorique(id: string): Promise<boolean>;
+  creerProfilEmploye(id: string, nom: string, telephone: string): Promise<void>;
   authCreer(a: { email: string; password: string; app_metadata: { nom: string; telephone: string } }): Promise<{ id: string } | { erreur: 'existe_deja' | 'echec' }>;
   authChangerMotDePasse(id: string, password: string): Promise<boolean>;
   authBloquer(id: string, bloque: boolean): Promise<boolean>;
@@ -138,11 +139,22 @@ async function creer(deps: Deps, corps: any): Promise<Reponse> {
       : refus(500, 'creation_echouee', 'La création du compte a échoué. Réessayez ; si le problème continue, regardez les journaux de la fonction.');
   }
 
-  // Vérification : le profil doit exister, comme employé. Sinon on annule tout (pas de compte à moitié créé).
-  const profil = await deps.profilParId(cree.id);
-  if (!profil || profil.role !== 'employe' || profil.telephone !== telephone) {
-    await deps.authSupprimer(cree.id);
-    return refus(500, 'profil_incorrect', 'Le compte a été annulé : le profil créé n\'est pas celui attendu.');
+  // Le profil est créé ICI, par le serveur (rôle « employe » écrit par la base, jamais par l'appelant) : Supabase Auth
+  // écrit nom et téléphone APRÈS la création du compte, le déclencheur de la base ne peut donc pas s'en charger.
+  // Puis vérification : le profil doit être exactement celui attendu, sinon on annule tout (pas de compte à moitié créé).
+  let profil: Profil | null = null;
+  let raison = 'profil_absent';
+  try {
+    await deps.creerProfilEmploye(cree.id, nom, telephone);
+    profil = await deps.profilParId(cree.id);
+    if (profil && (profil.role !== 'employe' || profil.telephone !== telephone || profil.nom !== nom)) { profil = null; raison = 'profil_different'; }
+  } catch { raison = 'profil_erreur'; }
+  if (!profil) {
+    deps.journal(`creer detail: ${raison}`);
+    const annule = await deps.authSupprimer(cree.id);
+    return refus(500, 'profil_incorrect', annule
+      ? 'Le compte a été annulé : le profil créé n\'est pas celui attendu.'
+      : 'Le profil n\'a pas pu être créé ET le compte n\'a pas pu être annulé : vérifiez la liste des utilisateurs dans Supabase (Authentication > Users).');
   }
   return ok({ employe: decrire(profil), nip: n.nip, nip_genere: n.genere });
 }
@@ -274,6 +286,10 @@ async function depsSupabase(): Promise<Deps> {
       const { data, error } = await admin.rpc('_utilisateur_a_de_l_historique', { p_id: id });
       if (error) throw new Error('lecture_historique');
       return data === true;
+    },
+    async creerProfilEmploye(id, nom, telephone) {
+      const { error } = await admin.rpc('_creer_profil_employe', { p_id: id, p_nom: nom, p_telephone: telephone });
+      if (error) { console.log(`_creer_profil_employe refusé (code ${error.code ?? '?'})`); throw new Error('creation_profil'); }
     },
     async authCreer({ email, password, app_metadata }) {
       const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, app_metadata });

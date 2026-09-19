@@ -13,7 +13,7 @@ const eq = (l, a, b) => (JSON.stringify(a) === JSON.stringify(b) ? pass(l) : fai
 const vrai = (l, c, d) => (c ? pass(l) : fail(l, d));
 const at = (minAgo) => new Date(Date.now() - minAgo * 60000).toISOString();
 const FILES = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.sql', '03-etape8-regles-acces.sql', '04-etape9a-quarts-equipage.sql',
-  '05-etape9b-passes-fermetures-export.sql', '13-etape13-taches-et-tours-partages.sql'];
+  '05-etape9b-passes-fermetures-export.sql', '13-etape13-taches-et-tours-partages.sql', '14-etape13d-retrait-stops-fait.sql'];
 const SQL13 = fs.readFileSync(SQL_DIR + FILES[5], 'utf8');
 const MEC = 'Déneigement mécanique', SEL = 'Épandage de sel';
 

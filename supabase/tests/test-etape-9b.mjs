@@ -17,6 +17,7 @@ async function env() {
   const r = await db.exec(fs.readFileSync(SQL_DIR + FILES[4], 'utf8'));
   const verif = r[r.length - 1].rows[0].verification;
   await db.exec(fs.readFileSync(SQL_DIR + '13-etape13-taches-et-tours-partages.sql', 'utf8'));   // le fichier 13 (tâche + tours) s'applique par-dessus : les anciens comportements doivent rester vrais
+  await db.exec(fs.readFileSync(SQL_DIR + '14-etape13d-retrait-stops-fait.sql', 'utf8'));   // puis le fichier 14 (colonne stops.fait retirée) : tout doit encore marcher
   await db.exec(`alter table public.passes alter column tache set default 'Déneigement mécanique'`);   // BANC D'ESSAI SEULEMENT : les insertions directes de ces anciens tests n'indiquent pas la tâche (la vraie base n'a pas ce défaut)
   const q = async (sql, p) => (await db.query(sql, p)).rows;
   async function fn(uid, call, params = [], role = 'authenticated') {

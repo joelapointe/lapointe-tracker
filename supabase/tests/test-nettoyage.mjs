@@ -11,7 +11,7 @@ const pass = (l) => { ok++; log('  ✔ ' + l); };
 const fail = (l, d) => { ko++; log('  ✘ ' + l + (d ? '  -> ' + d : '')); };
 const eq = (l, a, b) => (JSON.stringify(a) === JSON.stringify(b) ? pass(l) : fail(l, `obtenu ${JSON.stringify(a)}, attendu ${JSON.stringify(b)}`));
 const FILES = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.sql', '03-etape8-regles-acces.sql', '04-etape9a-quarts-equipage.sql', '05-etape9b-passes-fermetures-export.sql',
-  '06-etape10-outils-admin-employes.sql', '07-etape11-profil-sans-telephone.sql', '09-etape11-profil-employe-par-le-serveur.sql'];
+  '06-etape10-outils-admin-employes.sql', '07-etape11-profil-sans-telephone.sql', '09-etape11-profil-employe-par-le-serveur.sql', '13-etape13-taches-et-tours-partages.sql'];
 const at = (minAgo) => new Date(Date.now() - minAgo * 60000).toISOString();
 
 const db = await prepare(FILES);

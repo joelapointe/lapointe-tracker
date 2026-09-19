@@ -16,6 +16,8 @@ async function env() {
   const db = await prepare(FILES.slice(0, 4));
   const r = await db.exec(fs.readFileSync(SQL_DIR + FILES[4], 'utf8'));
   const verif = r[r.length - 1].rows[0].verification;
+  await db.exec(fs.readFileSync(SQL_DIR + '13-etape13-taches-et-tours-partages.sql', 'utf8'));   // le fichier 13 (tâche + tours) s'applique par-dessus : les anciens comportements doivent rester vrais
+  await db.exec(`alter table public.passes alter column tache set default 'Déneigement mécanique'`);   // BANC D'ESSAI SEULEMENT : les insertions directes de ces anciens tests n'indiquent pas la tâche (la vraie base n'a pas ce défaut)
   const q = async (sql, p) => (await db.query(sql, p)).rows;
   async function fn(uid, call, params = [], role = 'authenticated') {
     await db.query('reset role');

@@ -44,7 +44,7 @@ npm test
 ```
 
 - `prepare.mjs` reproduit l'ancienne base (avant l'étape 6) puis exécute les fichiers demandés.
-- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (210, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08). `reel-etape-11.mjs` : essais sur la VRAIE base (demande le mot de passe de Joé, masqué), hors de `npm test`. `test-nettoyage.mjs` (23, fichier 10).
+- `test-etapes-6-7.mjs` (76), `test-etape-8.mjs` (105), `test-etape-9a.mjs` (89), `test-etape-9b.mjs` (106), `test-etape-10.mjs` (210, fichier 06 + Edge Function avec un faux Supabase Auth), `test-etape-11.mjs` (36, fichiers 07 et 08). `reel-etape-11.mjs` (comptes et accès, 80 essais) et `reel-etape-11b.mjs` (comportement : quarts, passes, équipage, transferts, export de paie ; option `--cron` pour la vraie tâche automatique) : essais sur la VRAIE base (demandent le mot de passe de Joé, masqué), hors de `npm test`. Après chaque série : exécuter `10-nettoyage-comptes-zztest.sql`. `test-nettoyage.mjs` (23, fichier 10).
 
 **Règle de travail :** tout nouveau SQL est d'abord écrit avec ses tests, exécuté sur ce banc d'essai, et
 seulement ensuite donné à Joé. Limites : la simulation n'a pas `pg_cron` ni le vrai Supabase Auth ; le

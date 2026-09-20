@@ -184,6 +184,14 @@
     </div>
   </div>
 </div>
+<!-- Étape 16b : la liste « Gestes non envoyés » (file-attente.js), ouverte en touchant la bande du haut -->
+<div id="gestes-overlay" onclick="bgClickGestes(event)">
+  <div id="gestes-boite" role="dialog" aria-modal="true" aria-labelledby="gestes-h">
+    <h2 id="gestes-h">Gestes non envoyés</h2>
+    <div id="gestes-corps"></div>
+    <button type="button" class="confirm-btn non" onclick="fermerListeGestes()">Fermer la fenêtre</button>
+  </div>
+</div>
 <div id="prob-overlay" onclick="bgClickProb(event)">
   <div id="prob-modal">
     <h2>⚠ Signaler un problème</h2>
@@ -308,6 +316,7 @@
 <script src="js/config.js"></script>
 <script src="js/utilitaires.js"></script>
 <script src="js/hors-reseau.js"></script>
+<script src="js/file-attente.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/compte.js"></script>
 <script src="js/carte.js"></script>

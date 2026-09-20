@@ -211,6 +211,12 @@ async function ouvrirSansSignal(){
 }
 
 async function doLogout(){
+  // Décision de Joé : on ne se déconnecte pas tant qu'un geste attend d'être envoyé (il serait relu au nom de la prochaine personne connectée : jamais)
+  const enAttente=gestesEnAttente().length;
+  if(enAttente){
+    if(await confirmer('Déconnexion impossible',pluriel(enAttente,'geste n’est pas encore envoyé','gestes ne sont pas encore envoyés')+'. Reste connecté : ils partiront dès que le signal revient, puis tu pourras te déconnecter.','Voir la liste','Compris')) ouvrirListeGestes();
+    return;
+  }
   // Boîte de l'application (pas la fenêtre native confirm(), refusée d'office par certains navigateurs intégrés)
   if(!(await confirmer('Se déconnecter ?','Tu devras te reconnecter pour utiliser l’application.','Se déconnecter','Rester connecté')))return;
   deconnexionVolontaire=true;

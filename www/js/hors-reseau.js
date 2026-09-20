@@ -6,7 +6,7 @@
 //   • Au démarrage sans signal, l'application s'ouvre avec ces copies ; une bande « 📴 Hors réseau · données de 14 h 05 » le dit.
 //   • Le signal est détecté par les échecs de lecture, puis surveillé par une petite sonde (l'indication « en ligne » du téléphone
 //     ment souvent en zone morte). Au retour du signal, tout est relu depuis le serveur, qui a le dernier mot.
-//   • Les gestes faits sans signal (compléter, débuter…) viendront à l'étape 16b (file d'attente) et 16c.
+//   • Les gestes faits sans signal sont gardés par la file d'attente (file-attente.js, étape 16b) ; les écrans qui s'en servent : étape 16c.
 const CACHE_VERSION=1;            // change quand la forme des copies change : les anciennes sont alors ignorées
 let SONDE_INTERVALLE_MS=10000;    // pendant qu'on est hors réseau : on vérifie toutes les 10 secondes si le signal est revenu
 let SONDE_DELAI_MS=5000;          // une sonde qui ne répond pas en 5 secondes = pas de signal
@@ -32,6 +32,8 @@ async function _base(){
   if(_idb===null) _idb=(await _ouvrirBase())||false;
   return _idb||null;
 }
+// Le stockage garde-t-il vraiment sur le téléphone (IndexedDB), ou seulement en mémoire vive ?
+async function magasinDurable(){return !!(await _base());}
 async function magasinEcrire(cle,valeur){
   const b=await _base();
   if(!b){_memoire[cle]=valeur;return true;}
@@ -53,6 +55,37 @@ async function magasinLire(cle){
       r.onsuccess=()=>resolve(r.result);
       r.onerror=()=>resolve(undefined);
     }catch(e){resolve(undefined);}
+  });
+}
+// Toutes les valeurs dont la clé commence par « prefixe », dans l'ordre des clés : [{cle, valeur}] (ou null si le stockage a échoué)
+async function magasinLister(prefixe){
+  const b=await _base();
+  if(!b) return Object.keys(_memoire).filter(k=>k.startsWith(prefixe)).sort().map(k=>({cle:k,valeur:_memoire[k]}));
+  return new Promise(resolve=>{
+    try{
+      const sortie=[];
+      const cur=b.transaction('kv','readonly').objectStore('kv').openCursor(IDBKeyRange.bound(prefixe,prefixe+String.fromCharCode(65535)));
+      cur.onsuccess=()=>{
+        const c=cur.result;
+        if(!c){resolve(sortie);return;}
+        sortie.push({cle:String(c.key),valeur:c.value});
+        c.continue();
+      };
+      cur.onerror=()=>resolve(null);
+    }catch(e){resolve(null);}
+  });
+}
+// Retire UNE clé (exactement celle-là)
+async function magasinRetirer(cle){
+  const b=await _base();
+  if(!b){delete _memoire[cle];return true;}
+  return new Promise(resolve=>{
+    try{
+      const tx=b.transaction('kv','readwrite');
+      tx.objectStore('kv').delete(cle);
+      tx.oncomplete=()=>resolve(true);
+      tx.onerror=tx.onabort=()=>resolve(false);
+    }catch(e){resolve(false);}
   });
 }
 // Efface toutes les clés qui commencent par « prefixe »
@@ -133,15 +166,24 @@ function heureCourte(iso){
 function texteBandeauReseau(){
   return '📴 Hors réseau'+(reseau.donneesDe?' · données de '+heureCourte(reseau.donneesDe):'');
 }
+// La bande du haut dit deux choses : « hors réseau » (16a) et les gestes qui attendent (16b, file-attente.js). Elle s'ouvre sur la liste des gestes.
 function majBandeauReseau(){
   const b=document.getElementById('bandeau-reseau');
   if(!b) return;
-  if(reseau.enLigne||!currentUser){
+  const lignes=[];
+  if(currentUser){
+    if(!reseau.enLigne) lignes.push(texteBandeauReseau());
+    if(typeof texteBandeauFile==='function') lignes.push(...texteBandeauFile());
+  }
+  if(!lignes.length){
     b.textContent='';
-    b.classList.remove('show');
+    b.classList.remove('show','actif');
   }else{
-    b.textContent=texteBandeauReseau();
+    b.textContent=lignes.join(' · ');
     b.classList.add('show');
+    const cliquable=typeof fileAGestes==='function'&&fileAGestes();
+    b.classList.toggle('actif',!!cliquable);
+    b.onclick=cliquable?()=>ouvrirListeGestes():null;
   }
 }
 
@@ -199,8 +241,12 @@ async function marquerEnLigne(retour){
     if(!reseau.enLigne) demarrerSonde();   // (le rechargement a de nouveau constaté l'absence de signal)
   }
 }
-// Le signal est de retour : on relit tout depuis le serveur, qui a le dernier mot
+// Le signal est de retour : d'abord les gestes faits sans réseau (file-attente.js, dans l'ordre), puis on relit tout depuis le serveur, qui a le dernier mot.
 async function apresRetourReseau(){
+  if(typeof rejouerFile==='function'){
+    try{await rejouerFile();}catch(e){}
+    if(!reseau.enLigne) return;   // le signal a de nouveau disparu pendant l'envoi : la sonde reprend, on ne relit pas
+  }
   try{await loadStops();}catch(e){}
 }
 

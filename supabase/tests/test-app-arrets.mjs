@@ -108,7 +108,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »

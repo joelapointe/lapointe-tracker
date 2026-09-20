@@ -4,6 +4,7 @@
 // ── SUPABASE CRUD ──────────────────────────────────────
 async function loadStops(){
   setStatus('Chargement des stops…');
+  await initialiserFile();   // les gestes gardés sur ce téléphone (étape 16b) : relus, envoyés s'il y a du signal
   try{
     // Seulement les arrêts actifs : un arrêt archivé (il a de l'historique) ne s'affiche plus, même pour l'administrateur
     const{data,error}=await db.from('stops').select('*').eq('actif',true).order('ordre');

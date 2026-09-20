@@ -94,7 +94,7 @@ function monde(o = {}) {
   };
   const marqueurs = [], camions = [];
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map;', ctx);
   if (!o.sansUtilisateur) vm.runInContext('currentUser = ' + JSON.stringify(user) + ';', ctx);

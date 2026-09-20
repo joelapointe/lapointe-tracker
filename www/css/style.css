@@ -433,4 +433,21 @@
 /* Étape 16a : la bande « hors réseau » et un fond de carte sombre quand le fond satellite ne se charge pas */
 #bandeau-reseau{position:absolute;top:50px;right:12px;z-index:960;display:none;padding:4px 12px;border-radius:999px;background:rgba(58,26,26,.96);border:1px solid rgba(248,113,113,.6);color:#fecaca;font-size:12px;font-weight:600;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5);}
 #bandeau-reseau.show{display:block;}
+/* Étape 16b : la bande dit aussi les gestes en attente ; elle s'ouvre sur leur liste (elle peut passer sur deux lignes) */
+#bandeau-reseau{white-space:normal;text-align:right;max-width:calc(100vw - 24px);}
+#bandeau-reseau.actif{pointer-events:auto;cursor:pointer;}
+#gestes-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:4000;align-items:center;justify-content:center;padding:20px;}
+#gestes-overlay.open{display:flex;}
+#gestes-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 16px 16px;width:100%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;}
+#gestes-boite h2{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;color:var(--text);margin-bottom:10px;}
+#gestes-corps{overflow-y:auto;flex:1;margin-bottom:12px;}
+.gestes-titre{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:10px 0 6px;}
+.gestes-vide{font-size:14px;color:var(--muted);padding:12px 0;}
+.geste{background:#0f1318;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.geste-ref{border-color:rgba(248,113,113,.6);}
+.geste-nom{font-size:14px;font-weight:600;color:var(--text);}
+.geste-heure{font-weight:400;color:var(--muted);}
+.geste-raison{font-size:13px;color:var(--muted);line-height:1.4;margin-top:4px;}
+.geste-ref .geste-raison{color:#fecaca;}
+.geste-fermer{margin-top:8px;min-height:44px;width:100%;border:none;border-radius:10px;background:#252d3a;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;cursor:pointer;}
 #map,.leaflet-container{background:#0c1117;}

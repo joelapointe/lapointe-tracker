@@ -160,7 +160,9 @@ const pret = async (o = {}) => { const m = await ouvrir(o); m.toucher('Camion 1'
 log('=== L\'ÉCRAN : les noms de l\'équipage précédent, EN GROS, jamais pré-cochés ===');
 {
   let m = await ouvrir();
-  eq('l\'équipage précédent est demandé UNE fois au serveur (fonction equipage_precedent), les employés actifs sont lus', [m.appels.rpc.filter((r) => r.nom === 'equipage_precedent').length, m.appels.eq.some((e) => e[0] === 'utilisateurs' && e[1] === 'actif' && e[2] === true)], [1, true]);
+  // (une fois à l'ouverture de l'écran ; plus, au chargement, la copie anticipée gardée en arrière-plan pour pouvoir débuter sans réseau : étape 16c)
+  const nbPrecedent = m.appels.rpc.filter((r) => r.nom === 'equipage_precedent').length;
+  eq('l\'équipage précédent est demandé au serveur (fonction equipage_precedent) à l\'ouverture de l\'écran, les employés actifs sont lus', [nbPrecedent >= 1 && nbPrecedent <= 2, m.appels.eq.some((e) => e[0] === 'utilisateurs' && e[1] === 'actif' && e[2] === true)], [true, true]);
   eq('les deux noms de la dernière passe sont là, dans l\'ordre reçu', m.lignes().map((l) => l.nom), ['Eric', 'Marc']);
   eq('AUCUN n\'est pré-coché : ni « À bord » ni « Pas à bord »', m.lignes().map((l) => [l.oui.className, l.non.className]), [['debut-oui', 'debut-non'], ['debut-oui', 'debut-non']]);
   vrai('un bouton distinct « ✔ Tous à bord » et un bouton « ＋ Quelqu’un d’autre »', m.bouton('debut-tous')?.textContent === '✔ Tous à bord' && m.bouton('debut-ajout')?.textContent === '＋ Quelqu’un d’autre');
@@ -308,23 +310,21 @@ log('\n=== LES RÉPONSES DU SERVEUR : avertissements, refus, erreurs ===');
   await m.run('demarrerPasse()');
   eq('« déjà à bord » compte comme monté (geste renvoyé)', m.dernierToast(), '▶ Passe n° 1 débutée · 3 à bord');
 
-  // La réponse du départ se perd : le serveur avait créé la passe et déjà monté l'équipage
+  // La réponse du départ se perd (étape 16c) : le serveur avait peut-être créé la passe et monté l'équipage. Le départ est GARDÉ sur le téléphone,
+  // équipage compris, avec les MÊMES clés : renvoyé au retour du signal, il ne peut rien doubler (« déjà à bord »).
   m = await tous({ debuter: { 0: 'reponse-perdue' } });
   await m.run('demarrerPasse()');
-  const aj2 = m.ajouts();
-  eq('la réponse du départ se perd : l\'application retrouve la passe, puis refait CHAQUE ajout avec la MÊME clé (jamais de doublon : « déjà à bord »)', [m.debuts().length, aj2.length, aj2.map((x) => x.args.p_cle_client).sort().join() === m.debuts()[0].args.p_equipage.map((x) => x.cle_client).sort().join(), m.dernierToast()], [1, 2, true, '▶ Passe n° 1 débutée · 2 à bord']);
-  eq('… et personne n\'est ajouté deux fois', m.donnees.equipage_periodes.filter((p) => p.role === 'passager').length, 2);
-  m = await tous({ debuter: { 0: 'reponse-perdue' }, ajouter: { 'u-eric': ['reseau'] } });
-  await m.run('demarrerPasse()');
-  eq('… un ajout qui échoue au réseau : compté « pas monté » sans plantage', m.dernierToast(), '▶ Passe n° 1 débutée · 1 à bord · ⚠ 1 pas monté');
+  const cles0 = m.debuts()[0].args.p_equipage.map((x) => x.cle_client);
+  eq('la réponse du départ se perd : le départ est gardé (⏳), 2 à bord à l\'écran, l\'écran de départ est fermé', [m.debuts().length, m.dernierToast().startsWith('▶ Passe n° 1 (à confirmer) débutée · 2 à bord · ⏳ envoyé au retour du signal'), m.debutOuvert()], [1, true, false]);
+  eq('… le geste gardé contient CHAQUE équipier avec la MÊME clé que la première demande, et « forcer » (décision A : un conflit s\'applique tout seul)', [m.run('gestesEnAttente()[0].args.equipage.map(x=>x.cle_client)'), m.run('gestesEnAttente()[0].args.equipage.every(x=>x.forcer===true)')], [cles0, true]);
+  eq('… et aucun ajout séparé n\'est tenté sans signal (tout partira avec le départ)', m.ajouts().length, 0);
 
-  // Échec du départ : l'équipage choisi n'est pas perdu, mêmes clés au nouvel essai
+  // Échec du départ par le réseau : l'équipage choisi n'est pas perdu (gardé avec le départ), l'équipage est visible à bord à l'écran
   m = await tous({ debuter: { 0: 'reseau' } });
   await m.run('demarrerPasse()');
   const cles1 = m.debuts()[0].args.p_equipage.map((x) => x.cle_client);
-  eq('le départ échoue (réseau) : un message, l\'écran reste ouvert avec l\'équipage tel qu\'il était choisi', [m.dernierToast(), m.debutOuvert(), m.lignes().map((l) => l.oui.className)], ['❌ Pas de réseau ou erreur. Réessaie.', true, ['debut-oui choisi', 'debut-oui choisi']]);
-  await m.run('demarrerPasse()');
-  eq('au nouvel essai : les MÊMES clés (un renvoi ne peut pas doubler un ajout)', [m.debuts()[1].args.p_equipage.map((x) => x.cle_client), m.dernierToast()], [cles1, '▶ Passe n° 1 débutée · 2 à bord']);
+  eq('le départ échoue (réseau) : gardé (⏳), l\'écran de départ se ferme, la passe est en cours', [m.dernierToast().startsWith('▶ Passe n° 1 (à confirmer) débutée · 2 à bord · ⏳'), m.debutOuvert(), m.run('maPasse() !== null')], [true, false, true]);
+  eq('… l\'équipage choisi est à bord à l\'écran (chauffeur d\'abord), avec les MÊMES clés dans le geste gardé', [m.run('equipages[maPasse().passe.passe_id].map(x=>x.role)'), m.run('gestesEnAttente()[0].args.equipage.map(x=>x.cle_client)')], [['chauffeur', 'passager', 'passager'], cles1]);
 }
 
 log('\n=== LE CODE : la page, aucune écriture directe ===');

@@ -23,6 +23,7 @@ async function loadStops(){
     updateBar();
 	  checkProblemes();
     resumeAuDemarrage();   // une passe terminée à l'instant (avant un rechargement) : son résumé (passe.js)
+    prechargerPourDebuter();   // de quoi débuter une passe sans réseau (passe.js), gardé en copie en arrière-plan
   }catch(e){
     // Pas de signal : on s'ouvre avec ce qu'on savait à la dernière connexion (étape 16a). Un refus du serveur, lui, reste une erreur.
     if(estErreurReseau(e)){
@@ -165,15 +166,13 @@ async function completeStop(){
 // ── SANS RÉSEAU (étape 16c) ────────────────────────────
 // Le geste est gardé sur le téléphone (file-attente.js) puis l'écran montre TOUT DE SUITE son résultat : les tours affichés sont la copie du
 // serveur avec les gestes en attente posés par-dessus (tours.js). Au retour du signal, le geste part et le serveur a le dernier mot.
-const TEXTE_ATTENTE=' · ⏳ envoyé au retour du signal';
-function texteGardeSeulementEnMemoire(r){return r&&r.durable===false?' · garde l’application ouverte':'';}   // pas d'IndexedDB : le geste ne survivrait pas à la fermeture
 let _gardeEnCours=false;
 async function completerSansReseau(s,e){
   if(_gardeEnCours) return;
   _gardeEnCours=true;   // pas de double geste pendant que le téléphone écrit
   try{
     const r=await enfiler('completer_arret',{passeId:e.passeId,stopId:s.id,mode:'manuel',lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null},{libelle:'✔ Complété : '+s.adresse});
-    if(!r.ok){toast('❌ Le téléphone n’a pas pu garder ce geste. Réessaie.');return;}   // jamais « fait » si rien n'est gardé
+    if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}
     renderAll();majCarte();
     const fermee=!tourEnCours(tourDe(s));   // 100 % atteint : la passe est fermée à l'écran, comme le ferait le serveur
     closeCard();
@@ -196,7 +195,7 @@ async function annulerSansReseau(s,e){
       // (le serveur a déjà cet arrêt : un « annuler » doit quand même partir, on continue plus bas)
     }
     const r=await enfiler('annuler_arret',{passeId:e.passeId,stopId:s.id},{libelle:'↩ Annulé : '+s.adresse});
-    if(!r.ok){toast('❌ Le téléphone n’a pas pu garder ce geste. Réessaie.');return;}
+    if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}
     renderAll();majCarte();
     toast('↩ Arrêt annulé'+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
   }finally{

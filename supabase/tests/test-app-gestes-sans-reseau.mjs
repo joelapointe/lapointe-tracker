@@ -148,7 +148,10 @@ const tourInit = (o = {}) => ({ route_id: CH, tache: MEC, numero: 1, en_cours: t
 async function ouvrir(o = {}) {
   const m = monde(o.monde || {});
   if (o.tours) m.donnees.tours = o.tours;
+  if (o.equipes) m.donnees.equipes = o.equipes;
+  if (o.equipages) m.donnees.equipage_periodes = o.equipages;
   await m.run('loadStops()');
+  await attendre(80);   // la copie anticipée de l'écran « Débuter » (arrière-plan, passe.js) doit être finie : sinon sa lecture réussie remettrait l'application « en ligne » APRÈS que le test a coupé le signal
   await m.run('attendreEcritures()');
   return m;
 }
@@ -284,8 +287,8 @@ log('\n=== COMPLÉTÉ, ANNULÉ, PUIS COMPLÉTÉ DE NOUVEAU (le premier geste est
 log('\n=== LE DÉLAI DE 10 MINUTES SE COMPTE DEPUIS L\'HEURE DU GESTE ===');
 {
   const m = await ouvrir(); coupe(m);
-  await m.enfiler('completer_arret', { passeId: 'p-luc', stopId: 's1', mode: 'manuel' }, { moment: iso(4) });
-  eq('fait il y a 4 minutes : « Annuler » offert (≈ 6 min restantes)', m.run(`etatComplete(stops[${idx('s1')}]).texte`), '↩ Annuler (6 min)');
+  await m.enfiler('completer_arret', { passeId: 'p-luc', stopId: 's1', mode: 'manuel' }, { moment: iso(4.5) });   // (4 min 30 s : évite de tomber pile sur une minute ronde, où l'arrondi peut basculer)
+  eq('fait il y a 4 min 30 s : « Annuler » offert (≈ 6 min restantes)', m.run(`etatComplete(stops[${idx('s1')}]).texte`), '↩ Annuler (6 min)');
   await m.enfiler('completer_arret', { passeId: 'p-luc', stopId: 's2', mode: 'manuel' }, { moment: iso(11) });
   eq('fait il y a 11 minutes : « Déjà complété », plus d\'annulation possible', [m.run(`etatComplete(stops[${idx('s2')}]).texte`), m.run(`etatComplete(stops[${idx('s2')}]).actif`)], ['✔ Déjà complété', false]);
   m.fin();
@@ -392,6 +395,265 @@ log('\n=== UN GESTE EN PLEIN ENVOI NE SE RETIRE PAS ===');
   eq('pas encore parti : il est retiré (la file et l\'écran suivent)', [await m.run(`retirerGesteSiPasParti('${r.id}')`), m.attentes().length, estFait(m, 's1')], [true, 0, false]);
   eq('un identifiant inconnu : rien ne se passe', await m.run('retirerGesteSiPasParti("n-existe-pas")'), false);
   m.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// MORCEAU 2 : DÉBUTER ET TERMINER LA PASSE (avec l'équipage au départ)
+// ══════════════════════════════════════════════════════════════════════
+const E1E2 = [{ id: 'e1', nom: 'Camion 1' }, { id: 'e2', nom: 'Camion 2' }];
+const PASSE_MARC = { passe_id: 'p-marc', equipe_id: 'e2', chauffeur_id: 'u-marc', je_suis_chauffeur: false, je_suis_a_bord: false };
+const PASSE_ERIC = { passe_id: 'p-eric', equipe_id: 'e2', chauffeur_id: 'u-eric', je_suis_chauffeur: false, je_suis_a_bord: false };
+// Sur l'écran « Débuter » (ouvert avec les copies gardées) : le véhicule 1, et éventuellement d'autres personnes à bord, puis « Démarrer »
+const debuterHors = async (m, extras = []) => {
+  await m.run('ouvrirDebut()');
+  m.run("choisirVehiculeDebut('e1')");
+  if (extras.length) m.run('_debut.equipage.extras=' + JSON.stringify(extras));
+  await m.run('demarrerPasse()');
+};
+const passeLocale = (m) => m.run('gestesEnAttente().filter(g=>g.type==="debuter_passe").pop().args.passeId');
+const ecranDebutOuvert = (m) => m.el('debut-overlay').classList.contains('open');
+
+log('\n=== DÉBUTER LA PASSE SANS RÉSEAU : LA PASSE EST EN COURS TOUT DE SUITE ===');
+{
+  const m = await ouvrir({ tours: [], equipes: E1E2 }); coupe(m);
+  await debuterHors(m);
+  const passeId = passeLocale(m);
+  eq('UN geste gardé : débuter, avec la route, la tâche, le véhicule (et l\'identifiant de passe fabriqué par le téléphone)', m.run('gestesEnAttente().map(g=>[g.type,g.args.routeId,g.args.tache,g.args.equipeId,typeof g.args.passeId])'), [['debuter_passe', CH, MEC, 'e1', 'string']]);
+  eq('aucun envoi au serveur (hors réseau)', m.appels.envois.length, 0);
+  eq('l\'écran de départ se ferme ; la passe est EN COURS à moi ; la carte montre la route de la passe', [ecranDebutOuvert(m), m.run('maPasse()!==null'), m.run('routeActive')], [false, true, CH]);
+  eq('un nouveau tour, remis à zéro : total 2 (les arrêts actifs de la route et de la tâche), 0 fait, numéro 1 « à confirmer »', [m.run('tours.length'), m.run('tours[0].total'), m.run('tours[0].faits'), m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('tours[0].passes[0].passe_id') === passeId], [1, 2, 0, 1, true, true]);
+  const b = m.el('passe-bandeau').innerHTML;
+  eq('le bandeau : « Passe n° 1 (à confirmer) », 0 %, le bouton « Terminer », plus « Débuter »', [b.includes('Passe n° 1 (à confirmer)'), b.includes('0 %'), b.includes('btn-terminer'), b.includes('btn-debuter')], [true, true, true, false]);
+  eq('le message : passe débutée + ⏳', m.appels.toasts.some((t) => t.startsWith('▶ Passe n° 1 (à confirmer) débutée · ⏳ envoyé au retour du signal')), true);
+  eq('l\'équipage à bord : moi, chauffeur', m.run('equipages[maPasse().passe.passe_id].map(x=>[x.nom,x.role])'), [['Luc', 'chauffeur']]);
+  eq('la mémoire du téléphone garde le véhicule et la route (pour la fois suivante)', [m.run('lireMemo(CLE_VEHICULE)'), m.run('lireMemo(CLE_ROUTE_DEBUT)')], ['e1', CH]);
+  eq('la copie du serveur est intacte : aucun tour, aucun équipage de cette passe', [m.run('_toursServeur.length'), m.run(`_equipagesServeur['${passeId}']===undefined`)], [0, true]);
+  eq('la bande : « ⏳ 1 geste en attente »', m.bande().texte.includes('⏳ 1 geste en attente'), true);
+  // Et on peut travailler sur cette passe tout de suite : compléter un arrêt (la passe locale est BIEN celle du geste)
+  await toucher(m, 's1');
+  eq('compléter un arrêt de cette passe : 1/2 ; les gestes sont gardés dans l\'ordre (débuter, puis compléter avec la MÊME passe)', [m.run('tours[0].faits'), m.run('gestesEnAttente().map(g=>g.type)'), m.run('gestesEnAttente()[1].args.passeId') === passeId], [1, ['debuter_passe', 'completer_arret'], true]);
+  m.fin();
+}
+
+log('\n=== ON REJOINT LE TOUR D\'UN AUTRE CAMION (les arrêts déjà faits restent faits) ===');
+{
+  const tourMarc = tourInit({ numero: 4, faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 100 }, passes: [{ ...PASSE_MARC }] });
+  const m = await ouvrir({ tours: [tourMarc], equipes: E1E2, equipages: [{ passe_id: 'p-marc', role: 'chauffeur', utilisateur_id: 'u-marc', utilisateurs: { nom: 'Marc' } }] }); coupe(m);
+  await debuterHors(m);
+  eq('le tour de Marc est rejoint : 2 camions, numéro 4 (le vrai : pas « à confirmer »), s1 toujours fait (1/2)', [m.run('tours.length'), m.run('tours[0].passes.length'), m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('tours[0].faits'), estFait(m, 's1')], [1, 2, 4, undefined, 1, true]);
+  eq('le message : « rejoint la passe n° 4 » + ⏳', m.appels.toasts.some((t) => t.startsWith('🤝 Tu as rejoint la passe n° 4 · ⏳ envoyé au retour du signal')), true);
+  eq('le camion de Marc garde son équipage ; le mien est à moi', [m.run("equipages['p-marc'].map(x=>x.nom)"), m.run('equipages[maPasse().passe.passe_id].map(x=>x.nom)')], [['Marc'], ['Luc']]);
+  m.fin();
+}
+
+log('\n=== UN TOUR TERMINÉ NE SE REJOINT PAS : DÉBUTER OUVRE UN NOUVEAU TOUR, REMIS À ZÉRO ===');
+{
+  const termine = tourInit({ numero: 3, en_cours: false, faits: 2, pourcentage: 100, arrets_faits: ['s1', 's2'], faits_il_y_a: { s1: 5000, s2: 4000 }, passes: [] });
+  const m = await ouvrir({ tours: [termine], equipes: E1E2 }); coupe(m);
+  await debuterHors(m);
+  eq('un seul tour pour cette route et cette tâche : le nouveau, numéro 4 « à confirmer », 0/2, en cours', [m.run('tours.length'), m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('tours[0].faits'), m.run('tours[0].en_cours'), estFait(m, 's1')], [1, 4, true, 0, true, false]);
+  eq('la copie du serveur garde le tour terminé (3, 2/2)', [m.run('_toursServeur[0].numero'), m.run('_toursServeur[0].faits')], [3, 2]);
+  m.fin();
+}
+
+log('\n=== LE VÉHICULE ÉTAIT À UN AUTRE : SA PASSE EST TERMINÉE (le serveur fait pareil), ET IL Y A UNE QUESTION AVANT ===');
+{
+  const tourMarc = tourInit({ numero: 2, faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 100 }, passes: [{ ...PASSE_MARC, equipe_id: 'e1' }] });
+  const m = await ouvrir({ tours: [tourMarc], equipes: E1E2, equipages: [{ passe_id: 'p-marc', role: 'chauffeur', utilisateur_id: 'u-marc', utilisateurs: { nom: 'Marc' } }] }); coupe(m);
+  await debuterHors(m);
+  eq('la question « Remplacer la passe de Marc ? » est posée (avec la copie du téléphone)', m.appels.confirmations.map((c) => c[0]), ['Remplacer la passe de Marc ?']);
+  eq('la passe de Marc n\'est plus en cours à l\'écran ; un nouveau tour (numéro 3 à confirmer) est le mien', [m.run("tours.some(t=>t.passes.some(p=>p.passe_id==='p-marc'))"), m.run('tours.length'), m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('maPasse()!==null')], [false, 1, 3, true, true]);
+  eq('l\'équipage de la passe remplacée n\'est plus affiché', m.run("equipages['p-marc']===undefined"), true);
+  m.fin();
+}
+
+log('\n=== L\'ÉQUIPAGE AU DÉPART : GARDÉ AVEC LE DÉPART, « FORCER » (décision A), TRANSFÉRÉ SI À BORD AILLEURS ===');
+{
+  const tourEric = tourInit({ numero: 2, passes: [{ ...PASSE_ERIC }] });
+  const m = await ouvrir({ tours: [tourEric], equipes: E1E2, equipages: [
+    { passe_id: 'p-eric', role: 'chauffeur', utilisateur_id: 'u-eric', utilisateurs: { nom: 'Eric' } }, { passe_id: 'p-eric', role: 'passager', utilisateur_id: 'u-marc', utilisateurs: { nom: 'Marc' } }] }); coupe(m);
+  await debuterHors(m, [{ utilisateur_id: 'u-marc', nom: 'Marc', cle: 'cle-marc', forcer: false }]);
+  eq('le geste gardé contient l\'équipier avec sa clé, son nom et « forcer » (même si l\'écran ne l\'avait pas demandé : un conflit s\'applique tout seul)', m.run('gestesEnAttente()[0].args.equipage'), [{ utilisateur_id: 'u-marc', cle_client: 'cle-marc', forcer: true, nom: 'Marc' }]);
+  eq('à l\'écran : Marc est à bord de MON camion (Luc chauffeur d\'abord), et il a QUITTÉ le camion d\'Eric', [m.run('equipages[maPasse().passe.passe_id].map(x=>[x.nom,x.role])'), m.run("equipages['p-eric'].map(x=>x.nom)")], [[['Luc', 'chauffeur'], ['Marc', 'passager']], ['Eric']]);
+  eq('le message compte l\'équipier : « 1 à bord » + ⏳', m.appels.toasts.some((t) => t.startsWith('🤝 Tu as rejoint la passe n° 2 · 1 à bord · ⏳')), true);
+  eq('la copie du serveur est intacte : Marc est toujours dans le camion d\'Eric', m.run("_equipagesServeur['p-eric'].map(x=>x.nom)"), ['Eric', 'Marc']);
+  m.fin();
+}
+
+log('\n=== TERMINER LA PASSE SANS RÉSEAU : ELLE SE FERME TOUT DE SUITE À L\'ÉCRAN ===');
+{
+  const m = await ouvrir(); coupe(m);
+  await m.run('terminerPasse()');
+  eq('UN geste gardé : terminer MA passe', m.run('gestesEnAttente().map(g=>[g.type,g.args.passeId])'), [['terminer_passe', 'p-luc']]);
+  eq('la passe n\'est plus à moi ; le tour reste affiché, TERMINÉ (0/2), sans camion', [m.run('maPasse()'), m.run('tours[0].en_cours'), m.run('tours[0].passes.length'), m.run('tours[0].faits')], [null, false, 0, 0]);
+  eq('l\'équipage de cette passe n\'est plus à bord ; la copie du serveur, elle, le garde', [m.run("equipages['p-luc']===undefined"), m.run("_equipagesServeur['p-luc'].length")], [true, 1]);
+  const b = m.el('passe-bandeau').innerHTML;
+  eq('le bandeau offre « Débuter » et plus « Terminer »', [b.includes('btn-debuter'), b.includes('btn-terminer')], [true, false]);
+  eq('le message + ⏳ ; PAS de résumé de fin de passe (je l\'ai terminée moi-même)', [m.appels.toasts.some((t) => t.startsWith('■ Passe n° 1 terminée : 0/2 (0 %) · ⏳ envoyé au retour du signal')), m.el('resume-overlay').classList.contains('open')], [true, false]);
+  eq('aucun envoi sans signal ; la bande le dit', [m.appels.envois.length, m.bande().texte.includes('⏳ 1 geste en attente')], [0, true]);
+  await m.run('terminerPasse()');
+  eq('un 2e toucher ne garde rien de plus (plus de passe)', [m.attentes().length, m.appels.toasts[m.appels.toasts.length - 1]], [1, 'Tu n’as pas de passe en cours.']);
+  eq('la copie du serveur est intacte : ma passe y est encore', [m.run('_toursServeur[0].en_cours'), m.run('_toursServeur[0].passes.length')], [true, 1]);
+  m.fin();
+}
+{
+  // Un autre camion fait le même tour : terminer ne ferme QUE mon camion
+  const tourDeux = tourInit({ passes: [{ ...PASSE_LUC }, { ...PASSE_MARC }] });
+  const m = await ouvrir({ tours: [tourDeux], equipes: E1E2 }); coupe(m);
+  await m.run('terminerPasse()');
+  eq('le tour continue pour Camion 2 (la question le disait) : en cours, une seule passe, celle de Marc', [m.appels.confirmations[0][1].includes('Le tour continue pour Camion 2'), m.run('tours[0].en_cours'), m.run('tours[0].passes.map(p=>p.passe_id)'), m.run('maPasse()')], [true, true, ['p-marc'], null]);
+  m.fin();
+}
+
+log('\n=== DÉBUTER PUIS TERMINER, TOUT SANS RÉSEAU : LES DEUX GESTES SONT GARDÉS, DANS L\'ORDRE ===');
+{
+  const m = await ouvrir({ tours: [], equipes: E1E2 }); coupe(m);
+  await debuterHors(m, [{ utilisateur_id: 'u-marc', nom: 'Marc', cle: 'cle-marc', forcer: false }]);
+  const passeId = passeLocale(m);
+  await m.run('terminerPasse()');
+  eq('deux gestes dans l\'ordre, sur la MÊME passe', [m.run('gestesEnAttente().map(g=>g.type)'), m.run('gestesEnAttente()[1].args.passeId') === passeId], [['debuter_passe', 'terminer_passe'], true]);
+  eq('à l\'écran : plus de passe à moi, le tour est terminé, personne à bord de cette passe', [m.run('maPasse()'), m.run('tours[0].en_cours'), m.run(`equipages['${passeId}']===undefined`)], [null, false, true]);
+  m.fin();
+}
+
+log('\n=== UN DÉPART FAIT EN LIGNE DONT LA RÉPONSE SE PERD PASSE PAR LA FILE, PUIS LE SERVEUR A LE DERNIER MOT ===');
+{
+  let casse = true;
+  const serveur = { debuter_passe: (args, n, d) => {
+    if (casse) throw new Error('Failed to fetch');
+    if (!d.tours.some((t) => t.passes.some((p) => p.passe_id === args.p_id))) d.tours = [tourInit({ numero: 7, passes: [{ ...PASSE_LUC, passe_id: args.p_id }] })];
+    return { data: { statut: 'debutee', numero: 7, equipage: [] }, error: null };
+  } };
+  const m = await ouvrir({ tours: [], equipes: E1E2, monde: { serveur } });
+  await debuterHors(m);
+  const passeId = passeLocale(m);
+  eq('la demande échoue par le réseau : le départ est GARDÉ, la passe est en cours à l\'écran (numéro à confirmer), l\'application se sait hors réseau', [m.attentes().length, m.run('maPasse()!==null'), m.run('tours[0].numero_a_confirmer'), m.run('reseau.enLigne')], [1, true, true, false]);
+  const premier = m.appels.envois[0].args;
+  const lecturesAvant = nbLecturesTours(m);
+  casse = false; m.reseau(true);
+  vrai('au retour du signal : le départ part et la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  await attendreQue(() => nbLecturesTours(m) > lecturesAvant);
+  const second = m.appels.envois[1]?.args;
+  eq('le départ rejoué porte le MÊME identifiant de passe, la même route, le même véhicule (le serveur ne crée jamais 2 passes)', [second?.p_id, second?.p_route_id, second?.p_equipe_id, premier.p_id], [passeId, CH, 'e1', passeId]);
+  vrai('… et l\'heure du départ (p_moment)', typeof second?.p_moment === 'string');
+  eq('le serveur a le dernier mot : le VRAI numéro (7), plus « à confirmer », ma passe est encore en cours', [m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('maPasse()!==null'), m.el('passe-bandeau').innerHTML.includes('Passe n° 7')], [7, undefined, true, true]);
+  m.fin();
+}
+
+log('\n=== UN « TERMINER » FAIT EN LIGNE DONT LA RÉPONSE SE PERD PASSE PAR LA FILE (même passe, aucun doublon) ===');
+{
+  let casse = true;
+  const serveur = { terminer_passe: (args, n, d) => {
+    if (casse) throw new Error('Failed to fetch');
+    d.tours[0].passes = []; d.tours[0].en_cours = false;
+    return { data: { statut: 'terminee', faits: 0, total: 2, pourcentage: 0 }, error: null };
+  } };
+  const m = await ouvrir({ monde: { serveur } });
+  await m.run('terminerPasse()');
+  eq('la demande échoue par le réseau : le geste est GARDÉ, la passe est terminée à l\'écran, l\'application se sait hors réseau', [m.attentes().length, m.run('maPasse()'), m.run('reseau.enLigne')], [1, null, false]);
+  eq('message ⏳ (jamais « ❌ Pas de réseau ou erreur »)', m.appels.toasts[m.appels.toasts.length - 1].startsWith('■ Passe n° 1 terminée : 0/2 (0 %) · ⏳'), true);
+  const premier = m.appels.envois[0].args;
+  const lecturesAvant = nbLecturesTours(m);
+  casse = false; m.reseau(true);
+  vrai('au retour du signal : le geste part et la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  await attendreQue(() => nbLecturesTours(m) > lecturesAvant);
+  const second = m.appels.envois[1]?.args;
+  eq('le geste rejoué porte la MÊME passe et l\'heure de la fin (p_moment)', [second?.p_passe_id, premier.p_passe_id, typeof second?.p_moment], ['p-luc', 'p-luc', 'string']);
+  eq('le serveur a le dernier mot : plus de passe à moi, le tour est terminé, plus de ⏳', [m.run('maPasse()'), m.run('tours[0].en_cours'), m.bande().visible], [null, false, false]);
+  m.fin();
+}
+
+log('\n=== SI LE SERVEUR REFUSE LE DÉPART AU RETOUR DU SIGNAL : NOTÉ, ET L\'ÉCRAN REVIENT À LA VÉRITÉ ===');
+{
+  const m = await ouvrir({ tours: [], equipes: E1E2, monde: { serveur: { debuter_passe: () => ({ data: null, error: { code: 'P0001', message: 'route_inactive' } }) } } }); coupe(m);
+  await debuterHors(m);
+  eq('hors réseau : la passe paraît en cours', m.run('maPasse()!==null'), true);
+  const lecturesAvant = nbLecturesTours(m);
+  m.reseau(true);
+  vrai('le départ est refusé et noté dans « non envoyés »', await attendreQue(() => m.refus().length === 1 && m.attentes().length === 0));
+  await attendreQue(() => nbLecturesTours(m) > lecturesAvant);
+  eq('la raison est écrite en français ; l\'écran n\'a plus de passe (le serveur n\'en a pas)', [m.refus()[0].raison, m.run('maPasse()'), m.run('tours.length')], ['Cette route n’est plus active.', null, 0]);
+  m.fin();
+}
+
+log('\n=== SI LE TÉLÉPHONE NE PEUT RIEN GARDER, LE DÉPART N\'EST PAS « DÉBUTÉ » ET L\'ÉCRAN RESTE OUVERT ===');
+{
+  const m = await ouvrir({ tours: [], equipes: E1E2 }); coupe(m);
+  m.run('magasinEcrire=async()=>false');
+  await debuterHors(m);
+  eq('rien n\'est gardé : pas de passe, message d\'erreur, l\'écran de départ reste ouvert et « Démarrer » redevient utilisable', [m.run('maPasse()'), m.attentes().length, m.appels.toasts[m.appels.toasts.length - 1], ecranDebutOuvert(m), m.el('btn-demarrer').disabled], [null, 0, '❌ Le téléphone n’a pas pu garder ce geste. Réessaie.', true, false]);
+  m.fin();
+  const m2 = await ouvrir({ tours: [], equipes: E1E2 }); coupe(m2);
+  await m2.run('terminerPasse()');   // (aucune passe : rien à terminer)
+  m2.fin();
+  const m3 = await ouvrir(); coupe(m3);
+  m3.run('magasinEcrire=async()=>false');
+  await m3.run('terminerPasse()');
+  eq('terminer sans pouvoir garder le geste : la passe reste EN COURS à l\'écran (jamais « terminée »), le bouton redevient utilisable', [m3.run('maPasse()!==null'), m3.appels.toasts[m3.appels.toasts.length - 1], m3.el('passe-bandeau').innerHTML.includes('btn-terminer') && !m3.el('passe-bandeau').innerHTML.includes('disabled')], [true, '❌ Le téléphone n’a pas pu garder ce geste. Réessaie.', true]);
+  m3.fin();
+}
+
+log('\n=== DOUBLE TOUCHER : UN SEUL DÉPART, UNE SEULE FIN ===');
+{
+  const m = await ouvrir({ tours: [], equipes: E1E2 }); coupe(m);
+  await m.run('ouvrirDebut()'); m.run("choisirVehiculeDebut('e1')");
+  await m.run('Promise.all([demarrerPasse(),demarrerPasse()])');
+  eq('deux touchers sur « Démarrer » : UN seul geste', m.run('gestesEnAttente().filter(g=>g.type==="debuter_passe").length'), 1);
+  await m.run('Promise.all([terminerPasse(),terminerPasse()])');
+  eq('deux touchers sur « Terminer » : UN seul geste', m.run('gestesEnAttente().filter(g=>g.type==="terminer_passe").length'), 1);
+  m.fin();
+}
+
+log('\n=== LES SUPERPOSITIONS SONT RÉPÉTABLES POUR LA PASSE AUSSI (le serveur a déjà le geste : aucun doublon) ===');
+{
+  const dejaLa = tourInit({ numero: 5, passes: [{ ...PASSE_LUC, passe_id: 'p-deja' }] });
+  const m = await ouvrir({ tours: [dejaLa], equipes: E1E2 }); coupe(m);
+  await m.enfiler('debuter_passe', { passeId: 'p-deja', routeId: CH, equipeId: 'e1', tache: MEC, equipage: [] });
+  await m.enfiler('debuter_passe', { passeId: 'p-deja', routeId: CH, equipeId: 'e1', tache: MEC, equipage: [] });
+  eq('le serveur a déjà cette passe (et le geste est même gardé 2 fois) : UN tour, UNE passe, le numéro du serveur (5)', [m.run('tours.length'), m.run('tours[0].passes.length'), m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer')], [1, 1, 5, undefined]);
+  await m.enfiler('terminer_passe', { passeId: 'p-inconnue' });
+  eq('terminer une passe qui n\'est plus en cours : rien ne change à l\'écran', [m.run('tours.length'), m.run('tours[0].passes.length')], [1, 1]);
+  m.fin();
+}
+
+log('\n=== DE QUOI DÉBUTER SANS RÉSEAU EST GARDÉ DÈS LE CHARGEMENT (sans ouvrir l\'écran « Débuter »), UNE FOIS PAR 10 MINUTES ===');
+{
+  const m = await ouvrir({ equipes: E1E2 });
+  const cles = m.cles('cache:').map((k) => k.split(':').pop());
+  eq('après le chargement en ligne : véhicules actifs, employés et équipage précédent sont gardés', ['equipesActives', 'employes', 'equipagePrecedent'].map((n) => cles.includes(n)), [true, true, true]);
+  eq('les véhicules actifs gardés sont les bons', m.memoire()['cache:u-luc:equipesActives'].data.map((e) => e.nom), ['Camion 1', 'Camion 2']);
+  const lectures = () => m.appels.lectures.filter((t) => t === 'equipes').length;
+  const avant = lectures();
+  await m.run('loadStops()'); await attendre(80);
+  const apres1 = lectures();
+  eq('un 2e chargement dans les 10 minutes ne relit pas la copie anticipée (une seule lecture des véhicules en plus : celle du chargement lui-même)', apres1 - avant, 1);
+  m.run('_prechargeLe = Date.now() - 11 * 60000');
+  await m.run('loadStops()'); await attendre(80);
+  eq('après 10 minutes : elle est relue', lectures() - apres1, 2);
+  m.run('_prechargePour = "u-quelquun-d-autre"; _prechargeLe = Date.now()');
+  const apres2 = lectures();
+  await m.run('loadStops()'); await attendre(80);
+  eq('un AUTRE employé sur le même téléphone : relue tout de suite (ses propres copies)', lectures() - apres2, 2);
+  coupe(m);
+  m.run('_prechargeLe = 0');
+  const hors = lectures();
+  await m.run('prechargerPourDebuter()');
+  eq('sans signal : aucune tentative', lectures() - hors, 0);
+  m.fin();
+  const seul = await ouvrir({ tours: [], equipes: E1E2 }); coupe(seul);
+  await seul.run('ouvrirDebut()');
+  eq('l\'écran « Débuter » s\'ouvre sans réseau avec ces copies, alors qu\'il n\'a JAMAIS été ouvert en ligne', [ecranDebutOuvert(seul), seul.run('_debut.equipes.map(e=>e.nom)')], [true, ['Camion 1', 'Camion 2']]);
+  seul.fin();
+}
+
+log('\n=== LE CODE : UN SEUL ENDROIT POSE LES ÉQUIPAGES AUSSI ===');
+{
+  const fichiers = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));
+  const poses = [];
+  for (const f of fichiers) lire('js/' + f).split('\n').forEach((l) => { if (/^\s*(let\s+)?equipages\s*=[^=]/.test(l) && !/^\s*\/\//.test(l)) poses.push(f); });
+  eq('« equipages = … » n\'apparaît qu\'à la déclaration et dans poserEquipages (jamais une lecture qui contourne la superposition)', poses, ['vehicules.js', 'vehicules.js']);
+  const passeJs = lire('js/passe.js');
+  vrai('demarrerPasse et terminerPasse n\'appellent le serveur qu\'avec un délai (avecDelai) et passent par la file en cas de panne', /avecDelai\(db\.rpc\('debuter_passe'/.test(passeJs) && /avecDelai\(db\.rpc\('terminer_passe'/.test(passeJs) && passeJs.includes('demarrerSansReseau') && passeJs.includes('terminerSansReseau'));
 }
 
 log('\n=== LE CODE : UN SEUL ENDROIT POSE LES TOURS ===');

@@ -266,7 +266,7 @@ async function restaurerDepuisCache(){
   else installerTours([],Date.now());
   if(lire.vehicules&&lire.vehicules.data){
     nomsVehicules=lire.vehicules.data.noms||{};
-    equipages=lire.vehicules.data.equipages||{};
+    installerEquipages(lire.vehicules.data.equipages||{});
   }
   if(typeof _passeVue!=='undefined') _passeVue=null;   // les tours changent parce qu'on relit une COPIE, pas parce que ma passe s'est fermée : jamais de faux « Passe terminée »
   problemesNonLus=(lire.problemes&&Array.isArray(lire.problemes.data))?lire.problemes.data:[];

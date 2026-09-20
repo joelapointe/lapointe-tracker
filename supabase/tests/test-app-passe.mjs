@@ -231,8 +231,10 @@ log('\n=== OUVRIR L\'ÉCRAN : véhicules à jour, route et véhicule proposés =
   eq('un véhicule mémorisé qui n\'existe plus n\'est pas présélectionné', m.run('_debut.equipeId'), null);
 
   m = await monde().charge();
+  await new Promise((r) => setTimeout(r, 60));   // (la copie anticipée des véhicules, gardée en arrière-plan au chargement, est terminée : elle n'est pas ce qu'on compte ici)
+  const lecturesEquipes = () => m.appels.eq.filter((e) => e[0] === 'equipes').length, avantOuvrir = lecturesEquipes();
   await Promise.all([m.run('ouvrirDebut()'), m.run('ouvrirDebut()'), m.run('ouvrirDebut()')]);
-  eq('trois touchers d\'un coup : UNE seule ouverture (les véhicules ne sont lus qu\'une fois)', m.appels.eq.filter((e) => e[0] === 'equipes').length, 1);
+  eq('trois touchers d\'un coup : UNE seule ouverture (les véhicules ne sont lus qu\'une fois)', lecturesEquipes() - avantOuvrir, 1);
 
   m = await monde({ tours: toursDeLuc() }).charge(); await m.run('ouvrirDebut()');
   eq('quelqu\'un qui a déjà une passe en cours ne peut pas en ouvrir une autre : un message, aucun écran', [m.ouvert(), m.dernierToast()], [false, 'Tu as déjà une passe en cours : termine-la d’abord.']);
@@ -391,27 +393,31 @@ log('\n=== ERREURS ET RENVOI : jamais deux passes, jamais de code technique à l
     eq(`refus « ${code} » : message en français, l'écran reste ouvert avec les choix, on peut réessayer`, [m.dernierToast(), m.ouvert(), m.run('_debut.equipeId'), m.el('btn-demarrer').disabled, m.run('maPasse()')], ['❌ ' + texte, true, 'e1', false, null]);
   }
 
-  // Réseau coupé : même identifiant au nouvel essai
+  // Réseau coupé (étape 16c) : le départ n'est plus refusé, il est GARDÉ sur le téléphone avec le même identifiant, et l'écran montre la passe tout de suite
   let m = await monde({ debuter: { 0: 'reseau' } }).charge(); m.routeActive(SE);
   await m.run('ouvrirDebut()'); m.toucher('Camion 1'); await m.run('demarrerPasse()');
-  eq('réseau coupé : un message, l\'écran reste ouvert', [m.dernierToast(), m.ouvert()], ['❌ Pas de réseau ou erreur. Réessaie.', true]);
+  eq('réseau coupé : le départ est gardé (⏳), l\'écran se ferme, la passe est en cours à l\'écran (numéro à confirmer)', [m.dernierToast().startsWith('▶ Passe n° 1 (à confirmer) débutée · ⏳ envoyé au retour du signal'), m.ouvert(), m.run('maPasse() !== null'), m.run('gestesEnAttente().length')], [true, false, true, 1]);
+  eq('… le geste gardé porte le MÊME identifiant que la demande qui a échoué (un renvoi ne peut pas créer une 2e passe)', [m.run('gestesEnAttente()[0].args.passeId'), m.debuts().map((r) => r.args.p_id)], ['uuid-1', ['uuid-1']]);
+  await m.run('ouvrirDebut()');   // (déjà une passe, même sans que le serveur le sache encore : refusé)
+  eq('… et une 2e passe est refusée tant que celle-ci est en cours', [m.dernierToast(), m.ouvert()], ['Tu as déjà une passe en cours : termine-la d’abord.', false]);
+
+  // Refus du serveur : l'écran reste ouvert et le MÊME identifiant sert au nouvel essai ; un autre choix = une autre passe
+  m = await monde({ debuter: { 0: { erreur: 'passe_deja_en_cours' } } }).charge(); m.routeActive(SE);
+  await m.run('ouvrirDebut()'); m.toucher('Camion 1'); await m.run('demarrerPasse()');
   await m.run('demarrerPasse()');
-  eq('2e essai (réseau revenu) : LE MÊME identifiant (un renvoi ne peut pas créer une 2e passe), et ça marche', [m.debuts().map((r) => r.args.p_id), m.dernierToast()], [['uuid-1', 'uuid-1'], '▶ Passe n° 1 débutée']);
-  await m.run('ouvrirDebut()');   // (déjà une passe : refusé)
+  eq('après un refus, le nouvel essai garde LE MÊME identifiant et réussit', [m.debuts().map((r) => r.args.p_id), m.dernierToast()], [['uuid-1', 'uuid-1'], '▶ Passe n° 1 débutée']);
   m.donnees.tours = []; await m.run('chargerTours()');
   await m.run('ouvrirDebut()'); m.toucher('Camion 1'); await m.run('demarrerPasse()');
   eq('une fois réussi, la passe SUIVANTE a un nouvel identifiant', m.debuts().map((r) => r.args.p_id), ['uuid-1', 'uuid-1', 'uuid-2']);
-
-  // Un autre choix après un échec = une autre passe
-  m = await monde({ debuter: { 0: 'reseau' } }).charge(); m.routeActive(SE);
+  m = await monde({ debuter: { 0: { erreur: 'passe_deja_en_cours' } } }).charge(); m.routeActive(SE);
   await m.run('ouvrirDebut()'); m.toucher('Camion 1'); await m.run('demarrerPasse()');
   m.toucher('Camion 3'); await m.run('demarrerPasse()');
-  eq('après un échec, un AUTRE véhicule : nouvel identifiant', m.debuts().map((r) => r.args.p_id), ['uuid-1', 'uuid-2']);
+  eq('après un refus, un AUTRE véhicule : nouvel identifiant', m.debuts().map((r) => r.args.p_id), ['uuid-1', 'uuid-2']);
 
-  // Réponse perdue : le serveur a créé la passe
+  // Réponse perdue : le serveur a créé la passe, mais on ne le sait pas → le départ est gardé, il sera renvoyé avec le même identifiant (aucun doublon côté serveur)
   m = await monde({ debuter: { 0: 'reponse-perdue' } }).charge(); m.routeActive(SE);
   await m.run('ouvrirDebut()'); m.toucher('Camion 1'); await m.run('demarrerPasse()');
-  eq('la réponse se perd MAIS le serveur avait créé la passe : l\'application la retrouve et réussit (pas de faux échec, pas de 2e passe)', [m.debuts().length, m.dernierToast(), m.ouvert(), m.run('maPasse() !== null')], [1, '▶ Passe n° 1 débutée', false, true]);
+  eq('la réponse se perd (le serveur avait créé la passe) : le départ est gardé, pas de faux échec, la passe est en cours à l\'écran', [m.debuts().length, m.dernierToast().startsWith('▶ Passe n° 1 (à confirmer) débutée · ⏳'), m.ouvert(), m.run('maPasse() !== null'), m.run('gestesEnAttente()[0].args.passeId')], [1, true, false, true, 'uuid-1']);
 
   // Erreur de lecture des tours après le démarrage : la passe est quand même démarrée
   m = await monde().charge(); m.routeActive(SE);
@@ -524,12 +530,13 @@ log('\n=== 14b — LE POURCENTAGE EN GROS ET « TERMINER » ===');
   }
   m = await luc({ confirme: [true], terminer: { 0: 'reseau' } });
   await m.run('terminerPasse()');
-  eq('réseau coupé : un message, la passe reste en cours', [m.dernierToast(), m.run('maPasse() !== null')], ['❌ Pas de réseau ou erreur. Réessaie.', true]);
+  // Étape 16c : sans signal, « Terminer » n'est plus refusé : la passe se ferme à l'écran et le geste est gardé sur le téléphone
+  eq('réseau coupé : la passe se ferme à l\'écran, le geste est gardé (⏳)', [m.dernierToast().startsWith('■ Passe n° 1 terminée : 1/2 (50 %) · ⏳ envoyé au retour du signal'), m.run('maPasse()'), m.run('gestesEnAttente().map(g=>[g.type,g.args.passeId])')], [true, null, [['terminer_passe', 'p-luc']]]);
   await m.run('terminerPasse()');
-  eq('2e essai (réseau revenu) : ça marche', [m.termines().length, m.dernierToast(), m.run('maPasse()')], [2, '■ Passe n° 1 terminée : 1/2 (50 %)', null]);
+  eq('un 2e toucher ne fait rien de plus (plus de passe à terminer, un seul geste gardé)', [m.termines().length, m.dernierToast(), m.run('gestesEnAttente().length')], [1, 'Tu n’as pas de passe en cours.', 1]);
   m = await luc({ confirme: [true], terminer: { 0: 'reponse-perdue' } });
   await m.run('terminerPasse()');
-  eq('la réponse se perd MAIS le serveur avait terminé la passe : l\'application le voit et réussit (pas de faux échec)', [m.termines().length, m.dernierToast(), m.run('maPasse()')], [1, '■ Passe n° 1 terminée : 1/2 (50 %)', null]);
+  eq('la réponse se perd (le serveur avait terminé la passe) : le geste est gardé, pas de faux échec, la passe est terminée à l\'écran', [m.termines().length, m.dernierToast().startsWith('■ Passe n° 1 terminée : 1/2 (50 %) · ⏳'), m.run('maPasse()')], [1, true, null]);
 }
 
 log('\n=== LE CODE : la page, et aucune écriture directe ===');

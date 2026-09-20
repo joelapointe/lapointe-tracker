@@ -139,7 +139,8 @@ log('\n=== EN LIGNE : chaque lecture du serveur laisse une copie sur le téléph
   m.run('planifierRechargementProblemes'); await m.run('chargerEmployes()'); await m.run('lireEquipagePrecedent()');
   await m.run('attendreEcritures()');
   const mem = m.memoire();
-  eq('les copies : arrêts, routes, tours, véhicules et équipages, problèmes, employés, équipage précédent — chacune sous « cache:<employé>:<nom> »', Object.keys(mem).sort(), ['stops', 'routes', 'tours', 'vehicules', 'problemes', 'employes', 'equipagePrecedent'].sort().map((n) => 'cache:u-luc:' + n));
+  // (« equipesActives » : depuis l'étape 16c, gardée dès le chargement pour pouvoir débuter une passe sans réseau, sans attendre qu'on ouvre l'écran « Débuter »)
+  eq('les copies : arrêts, routes, tours, véhicules et équipages, problèmes, employés, équipage précédent, véhicules actifs — chacune sous « cache:<employé>:<nom> »', Object.keys(mem).sort(), ['stops', 'routes', 'tours', 'vehicules', 'problemes', 'employes', 'equipagePrecedent', 'equipesActives'].sort().map((n) => 'cache:u-luc:' + n));
   const t = mem['cache:u-luc:tours'];
   vrai('chaque copie a sa version, son heure et ses données', t.v === 1 && Math.abs(Date.now() - Date.parse(t.le)) < 5000 && Array.isArray(t.data) && t.data[0].numero === 1, JSON.stringify(t).slice(0, 120));
   eq('les copies ne contiennent AUCUN téléphone ni NIP (seulement des noms)', JSON.stringify(mem).match(/telephone|nip|password|jeton/gi), null);

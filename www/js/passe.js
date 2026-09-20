@@ -218,7 +218,30 @@ async function apresDemarrage(passeId,membres,resultats){
 }
 
 // ── L'écran « Débuter la passe » ───────────────────────
-// Lit les véhicules actifs (à jour) et ouvre l'écran. Sans réseau on n'ouvre rien : démarrer une passe demande le serveur (le mode hors réseau vient à l'étape 16).
+// Les véhicules actifs, en ordre alphabétique ; la lecture réussie est gardée en copie sur le téléphone (pour débuter sans réseau)
+async function lireEquipesActives(){
+  const{data,error}=await db.from('equipes').select('id, nom').eq('actif',true).order('nom');
+  if(error) throw error;
+  const equipes=(data||[]).slice().sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
+  lectureReussie('equipesActives',equipes);
+  return equipes;
+}
+// Étape 16c : pour pouvoir DÉBUTER une passe dans une zone morte, ce dont l'écran « Débuter » a besoin (véhicules actifs, employés, équipage de la
+// dernière passe) est gardé dès que l'application se charge AVEC du signal, sans attendre qu'on ouvre l'écran. Au plus une fois par 10 minutes
+// et par employé, en arrière-plan : un échec ne dérange personne.
+let _prechargeLe=0,_prechargePour=null;
+async function prechargerPourDebuter(){
+  if(!currentUser||!reseau.enLigne) return;
+  if(_prechargePour===currentUser.id&&Date.now()-_prechargeLe<600000) return;
+  _prechargePour=currentUser.id;
+  _prechargeLe=Date.now();
+  try{await lireEquipesActives();}catch(e){signalerEchecReseau(e);}
+  try{await chargerEmployes();}catch(e){}
+  try{await lireEquipagePrecedent();}catch(e){}
+}
+
+// Lit les véhicules actifs (à jour) et ouvre l'écran. Sans réseau, l'écran s'ouvre avec les copies gardées sur le téléphone (étape 16a) ;
+// s'il n'y en a aucune, on n'ouvre rien. Le départ lui-même est gardé sur le téléphone puis envoyé au retour du signal (demarrerSansReseau, étape 16c).
 async function ouvrirDebut(){
   if(!currentUser||_ouvertureDebut||_debut) return;
   _ouvertureDebut=true;
@@ -229,10 +252,7 @@ async function ouvrirDebut(){
     if(maPasse()){showSync(false);toast('Tu as déjà une passe en cours : termine-la d’abord.');return;}
     let equipes;
     try{
-      const{data,error}=await db.from('equipes').select('id, nom').eq('actif',true).order('nom');
-      if(error) throw error;
-      equipes=(data||[]).slice().sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
-      lectureReussie('equipesActives',equipes);
+      equipes=await lireEquipesActives();
     }catch(e){
       // Sans signal : les véhicules gardés à la dernière connexion (étape 16a) ; sans copie, on n'ouvre rien
       signalerEchecReseau(e);
@@ -353,7 +373,7 @@ function renderDebut(){
         const v=nomVehiculeDe(p.equipe_id)||'Camion',c=nomChauffeurDe(p.passe_id);
         return esc(v)+(c?' ('+esc(c)+')':'');
       });
-      corps.appendChild(infoDebut('🤝 Cette passe est déjà commencée : n° '+esc(rejoint.numero)+', '+esc(rejoint.faits)+'/'+esc(rejoint.total)+' ('+esc(rejoint.pourcentage)+' %)'+
+      corps.appendChild(infoDebut('🤝 Cette passe est déjà commencée : n° '+esc(numeroPasse(rejoint))+', '+esc(rejoint.faits)+'/'+esc(rejoint.total)+' ('+esc(rejoint.pourcentage)+' %)'+
         (camions.length?' — '+camions.join(', '):'')+'.<br>Tu la rejoins : les arrêts déjà faits restent faits.','debut-rejoint'));
     }
   }
@@ -455,6 +475,28 @@ function messageErreurDebut(e){
   return 'Pas de réseau ou erreur. Réessaie.';
 }
 
+// Débuter SANS RÉSEAU (étape 16c) : le geste est gardé sur le téléphone, puis l'écran montre TOUT DE SUITE la passe en cours (tours.js, vehicules.js).
+// Au retour du signal il part avec l'heure du départ ; le serveur donne le vrai numéro de passe et a le dernier mot. Les équipiers partent avec
+// « forcer » (décision A : un conflit d'équipage s'applique tout seul et est marqué « à vérifier » pour Joé).
+async function demarrerSansReseau(d,passeId,membres,annuler){
+  const rejoint=d.tache?tourARejoindre(d.routeId,d.tache):null;
+  const r=await enfiler('debuter_passe',{passeId,routeId:d.routeId,equipeId:d.equipeId,tache:d.tache,lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null,
+    equipage:membres.map(m=>({utilisateur_id:m.utilisateur_id,cle_client:m.cle,forcer:true,nom:m.nom}))},
+    {libelle:'▶ Passe débutée : '+(nomRoute(d.routeId)||'route')+' · '+d.tache+' · '+(nomVehiculeDe(d.equipeId)||'véhicule')});
+  if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);annuler();return;}   // rien n'est gardé : l'écran reste ouvert, jamais « débutée »
+  _essaiDebut=null;
+  ecrireMemo(CLE_VEHICULE,d.equipeId);
+  ecrireMemo(CLE_ROUTE_DEBUT,d.routeId);
+  if(_debut===d) fermerDebut();
+  routeActive=d.routeId;
+  zone=nomRoute(d.routeId)||zone;
+  ecrireMemo('lp_zone',zone);
+  renderAll();majCarte();
+  const m=maPasse();
+  const num=m?numeroPasse(m.tour):'';
+  toast((rejoint?'🤝 Tu as rejoint la passe n° '+num:'▶ Passe n° '+num+' débutée')+(membres.length?' · '+membres.length+' à bord':'')+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+}
+
 // « Démarrer » : demande une confirmation quand cela affecte quelqu'un d'autre, puis appelle la fonction du serveur
 async function demarrerPasse(){
   const d=_debut;
@@ -488,16 +530,19 @@ async function demarrerPasse(){
   const passeId=_essaiDebut.passeId;
 
   const membres=membresChoisis(d);
+  if(!reseau.enLigne) return demarrerSansReseau(d,passeId,membres,annuler);   // on sait déjà qu'il n'y a pas de signal : le geste est gardé sur le téléphone (étape 16c)
   showSync(true);
   let r;
   try{
     const args={p_id:passeId,p_route_id:d.routeId,p_equipe_id:d.equipeId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null,p_tache:d.tache};
     if(membres.length) args.p_equipage=membres.map(m=>({utilisateur_id:m.utilisateur_id,cle_client:m.cle,forcer:m.forcer}));
-    r=await db.rpc('debuter_passe',args);
+    r=await avecDelai(db.rpc('debuter_passe',args),FILE_DELAI_DIRECT_MS);
   }catch(err){
     r={data:null,error:err};
   }
   showSync(false);
+  // Le signal a disparu (ou la réponse s'est perdue) : le MÊME geste (même identifiant de passe, mêmes clés d'équipage) est gardé sur le téléphone
+  if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return demarrerSansReseau(d,passeId,membres,annuler);}
 
   // Réponse perdue ? Le serveur a peut-être quand même créé la passe : on la cherche avant de dire que ça a échoué
   if(r.error){
@@ -547,7 +592,7 @@ function htmlCartePasse(t,passe,role){
   const pct=pourcentageDe(t);
   const nom=nomVehiculeDe(passe.equipe_id)||'Camion';
   return '<div class="passe-encours"><div class="passe-pct">'+pct+' %</div><div class="passe-infos"><b>'+(role==='bord'?'👤 À bord · ':'🚜 ')+esc(nom)+'</b>'+
-    '<br>Passe n° '+esc(t.numero)+' · '+esc(nomRoute(t.route_id))+'<br>'+esc(t.tache)+' · '+esc(t.faits)+'/'+esc(t.total)+
+    '<br>Passe n° '+esc(numeroPasse(t))+' · '+esc(nomRoute(t.route_id))+'<br>'+esc(t.tache)+' · '+esc(t.faits)+'/'+esc(t.total)+
     '<div class="passe-barre"><i style="width:'+pct+'%"></i></div></div></div>';
 }
 
@@ -588,6 +633,17 @@ function messageErreurTerminer(e){
   return 'Pas de réseau ou erreur. Réessaie.';
 }
 
+// Terminer SANS RÉSEAU (étape 16c) : la passe se ferme tout de suite à l'écran ; le geste part au retour du signal, avec l'heure de la fin.
+// (Les autres camions du tour, eux, continuent : seul mon camion sort du tour.)
+async function terminerSansReseau(t,passeId){
+  const r=await enfiler('terminer_passe',{passeId},{libelle:'■ Passe terminée : n° '+numeroPasse(t)+' · '+(nomRoute(t.route_id)||'route')});
+  _envoiTerminer=false;
+  if(!r.ok){majBandeauPasse();toast(MESSAGE_GESTE_NON_GARDE);return;}   // rien n'est gardé : la passe reste en cours à l'écran
+  _passeVue=null;   // je viens de la terminer moi-même : pas de résumé
+  renderAll();majCarte();
+  toast('■ Passe n° '+numeroPasse(t)+' terminée : '+t.faits+'/'+t.total+' ('+pourcentageDe(t)+' %)'+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+}
+
 async function terminerPasse(){
   if(_envoiTerminer) return;
   const m=maPasse();
@@ -598,7 +654,7 @@ async function terminerPasse(){
   majBandeauPasse();
   const restant=Math.max(0,(Number(t.total)||0)-(Number(t.faits)||0));
   const autres=t.passes.filter(p=>p.passe_id!==passeId).map(p=>nomVehiculeDe(p.equipe_id)||'un autre camion');
-  const texte='Passe n° '+t.numero+' : '+t.faits+'/'+t.total+' ('+pourcentageDe(t)+' %). '+
+  const texte='Passe n° '+numeroPasse(t)+' : '+t.faits+'/'+t.total+' ('+pourcentageDe(t)+' %). '+
     (restant>1?restant+' arrêts ne seront pas faits.':'1 arrêt ne sera pas fait.')+
     (autres.length?' Le tour continue pour '+autres.join(', ')+'.':'');
   if(!(await confirmer('Terminer la passe ?',texte,'Oui, terminer','Continuer'))){
@@ -607,14 +663,16 @@ async function terminerPasse(){
     return;
   }
 
+  if(!reseau.enLigne) return terminerSansReseau(t,passeId);   // pas de signal : le geste est gardé sur le téléphone (étape 16c)
   showSync(true);
   let r;
   try{
-    r=await db.rpc('terminer_passe',{p_passe_id:passeId});
+    r=await avecDelai(db.rpc('terminer_passe',{p_passe_id:passeId}),FILE_DELAI_DIRECT_MS);
   }catch(err){
     r={data:null,error:err};
   }
   showSync(false);
+  if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return terminerSansReseau(t,passeId);}
 
   // Réponse perdue ? Si la passe n'existe plus parmi les passes en cours, elle est bel et bien terminée
   if(r.error){

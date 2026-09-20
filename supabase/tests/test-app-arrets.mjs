@@ -271,10 +271,12 @@ log('\n=== COMPLÉTER UN ARRÊT (appelle la fonction du serveur) ===');
 log('\n=== TEMPS RÉEL ET RÉSEAU COUPÉ ===');
 {
   const m = monde(); await m.run('loadStops()');
-  const avant = m.appels.rpc.length;
+  await attendre(60);   // (la copie anticipée de l'écran « Débuter », en arrière-plan, est terminée : elle n'est pas ce qu'on compte ici)
+  const nbTours = (x) => x.appels.rpc.filter((r) => r.nom === 'tours_en_cours').length;
+  const avant = nbTours(m);
   for (let i = 0; i < 5; i++) m.run('planifierRechargementTours()');
-  await attendre(120); eq('5 changements d\'un coup : pas encore relu (on patiente un instant)', m.appels.rpc.length, avant);
-  await attendre(400); eq('… puis relu UNE seule fois', m.appels.rpc.length, avant + 1);
+  await attendre(120); eq('5 changements d\'un coup : pas encore relu (on patiente un instant)', nbTours(m), avant);
+  await attendre(400); eq('… puis relu UNE seule fois', nbTours(m), avant + 1);
   m.donnees.tours[0].arrets_faits.push('s2'); m.donnees.tours[0].faits = 2;
   m.run('planifierRechargementTours()'); await attendre(450);
   eq('un arrêt complété par l\'autre camion apparaît sans rien toucher (vert, 2/4)', [m.run(`estFait(stops[${idx('s2')}])`), m.couleur(m.marqueurs.slice(-6)[1]), m.el('prog-txt').textContent], [true, '#4ade80', '2/4']);
@@ -286,9 +288,10 @@ log('\n=== TEMPS RÉEL ET RÉSEAU COUPÉ ===');
   eq('une annulation par l\'autre camion remet la fiche ouverte à jour (bouton « Complété » redevenu actif)', [m.el('btn-cmp').textContent, m.el('btn-cmp').disabled], ['✔ Complété', false]);
 
   const deconnecte = monde(); await deconnecte.run('loadStops()');
-  deconnecte.run('currentUser = null'); const n0 = deconnecte.appels.rpc.length;
+  await attendre(60);
+  deconnecte.run('currentUser = null'); const n0 = nbTours(deconnecte);
   deconnecte.run('planifierRechargementTours()'); await attendre(450);
-  eq('personne de connecté : aucune lecture', deconnecte.appels.rpc.length, n0);
+  eq('personne de connecté : aucune lecture', nbTours(deconnecte), n0);
 
   const hors = monde(); await hors.run('loadStops()');
   hors.run(`db = { rpc: async () => { throw new Error('Failed to fetch'); }, from: __fauxDb.from };`);

@@ -26,13 +26,74 @@ async function chargerVehiculesEtEquipages(){
     });
     Object.values(eq).forEach(l=>l.sort((a,b)=>(a.role==='chauffeur'?0:1)-(b.role==='chauffeur'?0:1)||a.nom.localeCompare(b.nom,'fr')));
     nomsVehicules=noms;
-    equipages=eq;
-    lectureReussie('vehicules',{noms,equipages:eq});
+    installerEquipages(eq);
+    lectureReussie('vehicules',{noms,equipages:eq});   // (la copie gardée reste celle du serveur : jamais le résultat superposé)
   }catch(err){
     signalerEchecReseau(err);
     return false;
   }
   return true;
+}
+
+// ── L'équipage à bord : les gestes sans réseau posés par-dessus la copie du serveur (étape 16c) ──
+// Même principe que pour les tours (tours.js) : `equipages` est TOUJOURS la copie du serveur avec les gestes en attente par-dessus.
+let _equipagesServeur={};   // la copie du serveur, telle quelle (jamais modifiée)
+let _equipagesConnus=false;
+function installerEquipages(eq){
+  _equipagesServeur=eq;
+  _equipagesConnus=true;
+  poserEquipages();
+}
+function poserEquipages(){
+  if(!_equipagesConnus) return;   // pas encore lu : rien à superposer
+  equipages=superposerEquipages(_equipagesServeur);
+}
+function idsPassesEnCours(liste){
+  const s=new Set();
+  (liste||[]).forEach(t=>{if(tourEnCours(t)) (t.passes||[]).forEach(p=>s.add(p.passe_id));});
+  return s;
+}
+function trierEquipage(l){
+  l.sort((a,b)=>(a.role==='chauffeur'?0:1)-(b.role==='chauffeur'?0:1)||String(a.nom).localeCompare(String(b.nom),'fr'));
+}
+// Une personne monte à bord (sans doublon) ; elle quitte tout autre camion (le serveur fait le transfert)
+function assurerABord(eq,passeId,userId,role,nom){
+  const l=(eq[passeId]=eq[passeId]||[]);
+  if(!l.some(x=>x.utilisateur_id===userId)) l.push({utilisateur_id:userId,role,nom:nom||''});
+  trierEquipage(l);
+}
+function retirerDesEquipages(eq,userId,sauf){
+  Object.keys(eq).forEach(pid=>{
+    if(pid===sauf) return;
+    eq[pid]=eq[pid].filter(x=>x.utilisateur_id!==userId);
+    if(!eq[pid].length) delete eq[pid];
+  });
+}
+function appliquerGesteAuxEquipages(eq,g){
+  const a=g.args||{};
+  if(g.type==='debuter_passe'){
+    if(currentUser){
+      retirerDesEquipages(eq,currentUser.id,a.passeId);   // débuter ma propre passe me fait quitter l'autre camion
+      assurerABord(eq,a.passeId,currentUser.id,'chauffeur',currentUser.nom);
+    }
+    (a.equipage||[]).forEach(m=>{
+      retirerDesEquipages(eq,m.utilisateur_id,a.passeId);
+      assurerABord(eq,a.passeId,m.utilisateur_id,'passager',m.nom);
+    });
+  }
+}
+// Renvoie la copie du serveur si rien n'attend, sinon une COPIE avec les gestes en attente appliqués (dans l'ordre où ils ont été faits)
+function superposerEquipages(eq){
+  const attente=(typeof gestesEnAttente==='function')?gestesEnAttente():[];
+  if(!attente.length) return eq;
+  const copie=JSON.parse(JSON.stringify(eq));
+  attente.forEach(g=>{try{appliquerGesteAuxEquipages(copie,g);}catch(e){}});
+  // Une passe fermée à l'écran (terminée, ou 100 % atteint) n'a plus personne à bord ; une passe débutée puis terminée sans réseau non plus
+  const affichees=idsPassesEnCours(tours);
+  const fermees=new Set(Array.from(idsPassesEnCours(_toursServeur)).filter(id=>!affichees.has(id)));
+  attente.forEach(g=>{if(g.type==='debuter_passe'&&g.args&&!affichees.has(g.args.passeId)) fermees.add(g.args.passeId);});
+  fermees.forEach(id=>{delete copie[id];});
+  return copie;
 }
 
 // Les camions à dessiner : une passe en cours AVEC une position (une route choisie, ou toutes les routes ensemble)
@@ -67,7 +128,7 @@ function htmlCamion(c,perime){
   const t=c.tour;
   const chauffeur=c.equipage.filter(x=>x.role==='chauffeur').map(x=>esc(x.nom||'?'));
   const abord=c.equipage.filter(x=>x.role!=='chauffeur').map(x=>esc(x.nom||'?'));
-  return '<b>🚜 '+esc(c.nom)+'</b><br>Passe n° '+esc(t.numero)+' · '+esc(t.tache)+
+  return '<b>🚜 '+esc(c.nom)+'</b><br>Passe n° '+esc(numeroPasse(t))+' · '+esc(t.tache)+
     '<br>'+esc(t.faits)+'/'+esc(t.total)+' ('+esc(t.pourcentage)+' %)'+
     '<br>Chauffeur : '+(chauffeur.length?chauffeur.join(', '):'—')+
     '<br>À bord : '+(abord.length?abord.join(', '):'personne d’autre')+

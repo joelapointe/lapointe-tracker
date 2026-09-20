@@ -11,7 +11,7 @@ const COLONNES_PASSE='id, numero, tache, route_id, equipe_id, debut, fin, fin_ty
 // Appelé à chaque dessin du bandeau : si j'avais une passe et que je n'en ai plus, elle vient de se fermer
 function suivreMaPasse(m){
   if(m){
-    _passeVue={passeId:m.passe.passe_id,numero:m.tour.numero,tache:m.tour.tache,route_id:m.tour.route_id,equipe_id:m.passe.equipe_id,
+    _passeVue={passeId:m.passe.passe_id,numero:numeroPasse(m.tour),tache:m.tour.tache,route_id:m.tour.route_id,equipe_id:m.passe.equipe_id,
       faits:m.tour.faits,total:m.tour.total,pourcentage:m.tour.pourcentage};
     return;
   }

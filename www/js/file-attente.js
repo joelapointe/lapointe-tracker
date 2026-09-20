@@ -30,6 +30,11 @@ let _minuterieFile=null;
 let _rejeuEnCours=false,_rejeuDemande=false,_rejeuPromesse=null;
 let _gesteEnEnvoi=null;   // l'identifiant du geste que le rejeu est en train d'envoyer (il ne peut plus être retiré de la file)
 
+// Ce que dit l'écran quand un geste est gardé sur le téléphone au lieu d'être envoyé (étape 16c)
+const TEXTE_ATTENTE=' · ⏳ envoyé au retour du signal';
+const MESSAGE_GESTE_NON_GARDE='❌ Le téléphone n’a pas pu garder ce geste. Réessaie.';   // jamais « fait » si rien n'est gardé
+function texteGardeSeulementEnMemoire(r){return r&&r.durable===false?' · garde l’application ouverte':'';}   // pas d'IndexedDB : le geste ne survivrait pas à la fermeture de l'application
+
 // ── Les raisons des refus, en français ─────────────────
 const RAISONS_GESTE={
   non_autorise:'Ce geste n’était pas permis (ce n’est pas ta passe, ou ton compte est désactivé).',

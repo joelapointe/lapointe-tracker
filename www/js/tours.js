@@ -46,7 +46,10 @@ function poserTours(t){
   tours=t;
   _faitsParTour={};
   tours.forEach(x=>{_faitsParTour[cleTour(x.route_id,x.tache)]=new Set(x.arrets_faits||[]);});
+  if(typeof poserEquipages==='function') poserEquipages();   // l'équipage à bord suit les passes affichées (vehicules.js)
 }
+// Le numéro d'une passe débutée sans réseau est PROVISOIRE (le serveur le donne au retour du signal)
+function numeroPasse(t){return String(t.numero)+(t.numero_a_confirmer?' (à confirmer)':'');}
 
 // ── Les gestes en attente, posés par-dessus la copie du serveur (étape 16c) ──
 // Règles : (1) on ne touche JAMAIS à la copie du serveur (on travaille sur une copie de la copie) ; (2) chaque geste est REPÉTABLE sans doublon :
@@ -95,7 +98,32 @@ function appliquerGesteAuxTours(lus,g,luLe){
     t.arrets_faits=t.arrets_faits.filter(x=>x!==a.stopId);
     if(t.faits_il_y_a) delete t.faits_il_y_a[a.stopId];
     recalculerTour(t);
+  }else if(g.type==='terminer_passe'){
+    const t=tourDeLaPasse(lus,a.passeId);
+    if(!t) return;   // déjà terminée : rien à faire
+    t.passes=t.passes.filter(p=>p.passe_id!==a.passeId);
+    if(!t.passes.length) t.en_cours=false;   // plus aucun camion : le tour reste affiché, terminé (étape 14c) ; les autres camions le continuent
+  }else if(g.type==='debuter_passe'){
+    debuterLocalement(lus,a);
   }
+}
+// « Débuter la passe » : ma passe apparaît, dans le tour déjà en cours (la personne le rejoint) ou dans un nouveau tour.
+// Comme le serveur : ma passe précédente et celle du véhicule sont terminées ; un tour TERMINÉ ne se rejoint pas (il est remplacé).
+function debuterLocalement(lus,a){
+  if(lus.some(t=>(t.passes||[]).some(p=>p.passe_id===a.passeId))) return;   // le serveur l'a déjà (sa réponse s'est perdue) : pas deux fois
+  lus.forEach(t=>{
+    if(!tourEnCours(t)) return;
+    const restent=t.passes.filter(p=>!(p.je_suis_chauffeur||p.equipe_id===a.equipeId));
+    if(restent.length!==t.passes.length){t.passes=restent;if(!restent.length) t.en_cours=false;}
+  });
+  const passe={passe_id:a.passeId,equipe_id:a.equipeId,chauffeur_id:currentUser?currentUser.id:null,je_suis_chauffeur:true,je_suis_a_bord:true};
+  const rejoint=lus.find(x=>tourEnCours(x)&&x.route_id===a.routeId&&x.tache===a.tache);
+  if(rejoint){rejoint.passes.push(passe);return;}
+  const ancien=lus.find(x=>x.route_id===a.routeId&&x.tache===a.tache)||null;   // le dernier tour de cette route et de cette tâche (terminé)
+  const total=stops.filter(s=>s.route_id===a.routeId&&s.actif!==false&&s.service===a.tache).length;
+  const neuf={route_id:a.routeId,tache:a.tache,numero:(ancien&&Number(ancien.numero)>0?Number(ancien.numero):0)+1,numero_a_confirmer:true,en_cours:true,
+    total,faits:0,pourcentage:0,arrets_faits:[],faits_il_y_a:{},mes_passes_annulables:[],passes:[passe]};
+  if(ancien) lus.splice(lus.indexOf(ancien),1,neuf); else lus.push(neuf);
 }
 // Renvoie la copie du serveur si rien n'attend, sinon une COPIE où les gestes en attente sont appliqués, dans l'ordre où ils ont été faits
 function superposerTours(lus,luLe){
@@ -172,8 +200,8 @@ function texteTour(s){
   const t=tourDe(s);
   if(!t) return 'Aucune passe en cours pour ce type de service';
   const attente=arretEnAttente(s)?' · ⏳ en attente d’envoi':'';   // un geste sur cet arrêt attend le retour du signal (étape 16c)
-  if(!tourEnCours(t)) return 'Passe n° '+t.numero+' terminée · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+attente;
-  return 'Passe n° '+t.numero+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)?' · 🚜 camion sur place':'')+attente;
+  if(!tourEnCours(t)) return 'Passe n° '+numeroPasse(t)+' terminée · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+attente;
+  return 'Passe n° '+numeroPasse(t)+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)?' · 🚜 camion sur place':'')+attente;
 }
 
 // ── CLIENT « EN COURS » (étape 13c) ────────────────────

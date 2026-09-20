@@ -34,7 +34,7 @@ function majPanneauEquipage(){
   if(!o||!o.classList.contains('open')) return;
   const p=passeDuPanneau();
   if(!p){fermerEquipage();return;}   // ma passe est terminée, ou je ne suis plus à bord
-  document.getElementById('equipage-sub').textContent='🚜 '+(nomVehiculeDe(p.equipeId)||'Camion')+' · Passe n° '+p.tour.numero;
+  document.getElementById('equipage-sub').textContent='🚜 '+(nomVehiculeDe(p.equipeId)||'Camion')+' · Passe n° '+numeroPasse(p.tour);
   const corps=document.getElementById('equipage-body');
   corps.innerHTML='';
   const liste=(equipages[p.passeId]||[]).slice();

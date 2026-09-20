@@ -108,7 +108,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -475,7 +475,7 @@ log('\n=== PROBLÈMES : plusieurs par arrêt, jamais effacés, rattachés à la 
   // — Lecture et affichage —
   let m = await cas({ problemes: lignes });
   const lecture = m.appels.selects.find((x) => x[0] === 'problemes');
-  eq('les problèmes sont lus avec des colonnes NOMMÉES (jamais « * »)', lecture[1], 'id, stop_id, passe_id, utilisateur_id, note, cree_le, utilisateurs!utilisateur_id(nom)');
+  eq('les problèmes sont lus avec des colonnes NOMMÉES (jamais « * »)', lecture[1], 'id, stop_id, passe_id, utilisateur_id, note, cree_le, photo_chemin, utilisateurs!utilisateur_id(nom)');
   vrai('… seulement les non lus, du plus ancien au plus récent', m.appels.eq.some((e) => e[0] === 'problemes' && e[1] === 'lu' && e[2] === false) && m.appels.orders.some((o) => o[0] === 'problemes' && o[1] === 'cree_le'), JSON.stringify(m.appels.orders));
   eq('DEUX problèmes sur s2, un sur s3, aucun sur s1', [m.run(`problemesDe(stops[${idx('s2')}]).length`), m.run(`problemesDe(stops[${idx('s3')}]).length`), m.run(`problemesDe(stops[${idx('s1')}]).length`)], [2, 1, 0]);
   eq('marqueurs ORANGES pour s2 et s3 ; s1 (fait) reste vert', [couleurDe(m, 's2'), couleurDe(m, 's3'), couleurDe(m, 's1')], ['#fb923c', '#fb923c', '#4ade80']);
@@ -500,7 +500,7 @@ log('\n=== PROBLÈMES : plusieurs par arrêt, jamais effacés, rattachés à la 
   m.el('prob-note').value = '  Entrée bloquée par la neige  ';
   await m.run('envoyerProbleme()');
   const ins = m.appels.ecritures.filter((x) => x.table === 'problemes');
-  eq('UN seul envoi : la note nettoyée, l\'arrêt, la passe du camion de Luc — et RIEN d\'autre (ni « lu », ni nom : c\'est la base qui les met)', [ins.length, ins[0].op, ins[0].valeur], [1, 'insert', [{ stop_id: 's2', passe_id: 'p-luc', note: 'Entrée bloquée par la neige' }]]);
+  eq('UN seul envoi : la note nettoyée, l\'arrêt, la passe du camion de Luc — et RIEN d\'autre (ni « lu », ni nom : c\'est la base qui les met)', [ins.length, ins[0].op, (({ id, ...reste }) => [/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id), reste])(ins[0].valeur[0])], [1, 'insert', [true, { stop_id: 's2', passe_id: 'p-luc', note: 'Entrée bloquée par la neige' }]]);
   eq('aucun problème n\'est jamais effacé (aucun « delete » sur les problèmes)', m.appels.ecritures.filter((x) => x.op === 'delete').length, 0);
   eq('après l\'envoi : relu, l\'arrêt devient ORANGE, message, boîte et fiche fermées', [couleurDe(m, 's2'), m.dernierToast(), m.el('prob-overlay').classList.contains('open'), m.el('stop-card').classList.contains('open')], ['#fb923c', '⚠ Problème signalé !', false, false]);
   m.run(`openCard(${idx('s2')})`); m.run('openProbleme()'); m.el('prob-note').value = 'Deuxième problème, même arrêt'; await m.run('envoyerProbleme()');
@@ -564,7 +564,7 @@ log('\n=== PANNEAU ADMINISTRATEUR : lit les nouvelles colonnes, ne ment jamais =
   const texte = (m) => m.el('admin-body').innerHTML + m.el('admin-body').children.map((c) => c.innerHTML).join('|');
   let m = monde({ utilisateur: admin, problemes: lignes }); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
   const admSel = m.appels.selects.filter((x) => x[0] === 'problemes').pop();
-  eq('la lecture du panneau nomme l\'AUTEUR (« utilisateurs!utilisateur_id », car lu_par pointe aussi vers utilisateurs), la passe et l\'arrêt', admSel[1], 'id, note, cree_le, stops(adresse,service,client), utilisateurs!utilisateur_id(nom), passes(numero,tache)');
+  eq('la lecture du panneau nomme l\'AUTEUR (« utilisateurs!utilisateur_id », car lu_par pointe aussi vers utilisateurs), la passe et l\'arrêt', admSel[1], 'id, note, cree_le, photo_chemin, stops(adresse,service,client), utilisateurs!utilisateur_id(nom), passes(numero,tache)');
   vrai('… triée par « cree_le » (l\'ancienne colonne « created_at » n\'existe plus), le plus récent d\'abord', m.appels.orders.some((o) => o[0] === 'problemes' && o[1] === 'cree_le' && o[2]?.ascending === false), JSON.stringify(m.appels.orders));
   let t = texte(m);
   vrai('le titre compte les problèmes', t.includes('⚠ Problèmes signalés (2)') || m.el('admin-body').children[0].textContent === '⚠ Problèmes signalés (2)', t.slice(0, 200));

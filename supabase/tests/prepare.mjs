@@ -17,6 +17,23 @@ create table auth.users (id uuid primary key default gen_random_uuid(), email te
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 grant usage on schema auth, extensions, public to anon, authenticated;
 
+-- Le stockage de fichiers de Supabase (Storage), imité : mêmes tables, même fonction, mêmes droits (les règles d'accès filtrent)
+create schema storage;
+create table storage.buckets (id text primary key, name text not null, public boolean default false, file_size_limit bigint,
+  allowed_mime_types text[], created_at timestamptz default now());
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text,
+  owner uuid, created_at timestamptz default now(), metadata jsonb, unique (bucket_id, name));
+alter table storage.objects enable row level security;
+create function storage.foldername(name text) returns text[] language plpgsql as $$
+declare _parts text[];
+begin
+  select string_to_array(name, '/') into _parts;
+  return _parts[1:array_length(_parts, 1) - 1];
+end $$;
+grant usage on schema storage to anon, authenticated;
+grant select, insert, update, delete on storage.objects to anon, authenticated;
+grant select on storage.buckets to anon, authenticated;
+
 create table public.equipes (id uuid primary key default gen_random_uuid(), nom text not null, operateur text, couleur text default '#c8e63c', created_at timestamp default now());
 create table public.zones   (id uuid primary key default gen_random_uuid(), nom text not null, equipe_id uuid references public.equipes(id), created_at timestamp default now());
 create table public.routes  (id uuid primary key default gen_random_uuid(), nom text not null, couleur text default '#c8e63c', created_at timestamp default now());

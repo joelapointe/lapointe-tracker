@@ -108,6 +108,7 @@ function majCarte(){
   document.getElementById('sc-cli').textContent=s.client||'';
   document.getElementById('sc-tour').textContent=texteTour(s);
   document.getElementById('sc-prob').innerHTML=htmlProblemes(s);
+  planifierResolutionPhotos();   // les liens des miniatures qui manquent sont demandés ensemble, puis la fiche est redessinée (photos.js)
   const e=etatComplete(s);
   const b=document.getElementById('btn-cmp');
   b.textContent=e.texte;

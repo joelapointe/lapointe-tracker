@@ -367,3 +367,20 @@
 #resume-details{font-size:14px;color:var(--text);line-height:1.5;margin-bottom:16px;overflow-wrap:anywhere;}
 .resume-note{font-size:12px;color:var(--muted);margin-top:8px;}
 .scb.annulable{background:rgba(251,146,60,.15);color:#fb923c;border:1px solid rgba(251,146,60,.4);}
+
+/* Étape 14e : la photo d'un problème (boîte de signalement, fiche de l'arrêt, panneau administrateur, visionneuse) */
+#prob-photo{margin-top:12px;}
+#prob-photo-btn{width:100%;min-height:48px;padding:0 14px;background:rgba(251,146,60,.12);border:1px dashed rgba(251,146,60,.6);border-radius:10px;color:#fb923c;font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;cursor:pointer;}
+#prob-photo-btn:active{filter:brightness(.85);}
+#prob-photo-apercu{margin-top:10px;background:#0f1318;border:1px solid #252d3a;border-radius:10px;padding:8px;}
+#prob-photo-img{display:block;width:100%;max-height:160px;object-fit:contain;border-radius:6px;background:#000;}
+#prob-photo-bas{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font-size:12px;color:#6b7a8d;}
+#prob-photo-bas button{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:13px;padding:8px 12px;min-height:36px;cursor:pointer;}
+.sc-prob-photo{display:block;width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid rgba(251,146,60,.5);margin-top:4px;cursor:pointer;background:#0f1318;}
+.sc-prob-photo.vide{color:#fb923c;font-size:22px;padding:0;}
+.sc-prob-ajout{display:inline-block;margin-top:4px;min-height:36px;padding:0 12px;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.45);border-radius:8px;color:#fb923c;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.admin-prob-photo{display:block;width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid rgba(251,146,60,.5);margin-top:8px;cursor:pointer;background:#0f1318;}
+#photo-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:4500;align-items:center;justify-content:center;padding:12px;}
+#photo-overlay.open{display:flex;}
+#photo-plein{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;}
+#photo-x{position:absolute;top:14px;right:14px;width:48px;height:48px;border:none;border-radius:12px;background:rgba(37,45,58,.95);color:#f0f4f8;font-size:22px;cursor:pointer;}

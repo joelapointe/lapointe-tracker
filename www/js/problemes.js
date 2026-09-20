@@ -9,7 +9,7 @@ let _envoiProbleme=false;
 // Lit les problèmes non lus. En cas d'échec (pas de réseau…), on GARDE ce qu'on savait.
 async function chargerProblemes(){
   try{
-    const{data,error}=await db.from('problemes').select('id, stop_id, passe_id, utilisateur_id, note, cree_le, utilisateurs!utilisateur_id(nom)').eq('lu',false).order('cree_le',{ascending:true});
+    const{data,error}=await db.from('problemes').select('id, stop_id, passe_id, utilisateur_id, note, cree_le, photo_chemin, utilisateurs!utilisateur_id(nom)').eq('lu',false).order('cree_le',{ascending:true});
     if(error) throw error;
     problemesNonLus=Array.isArray(data)?data:[];
   }catch(e){
@@ -60,11 +60,22 @@ function htmlProblemes(s){
   let h='<div class="sc-prob-titre">⚠ '+l.length+' problème'+(l.length>1?'s':'')+' signalé'+(l.length>1?'s':'')+'</div>';
   recents.forEach(p=>{
     const qui=(currentUser&&p.utilisateur_id===currentUser.id)?'vous':(p.utilisateurs&&p.utilisateurs.nom?p.utilisateurs.nom:'');   // « vous » pour les siens, sinon le nom de l'auteur
-    h+='<div class="sc-prob-ligne">'+esc(p.note)+' <span>· '+(qui?esc(qui)+' · ':'')+esc(ilYa(p.cree_le))+'</span></div>';
+    // La photo (étape 14e) : miniature à toucher pour l'agrandir ; sinon, pour MES problèmes, un bouton pour l'ajouter après coup
+    let photo='';
+    if(p.photo_chemin&&cheminPhotoValide(p.photo_chemin)){
+      const u=photoUrl(p.photo_chemin);
+      photo=u?'<img class="sc-prob-photo" alt="Photo du problème" src="'+esc(u)+'" onclick="voirPhoto(\''+esc(p.photo_chemin)+'\')">'
+             :'<button type="button" class="sc-prob-photo vide" onclick="voirPhoto(\''+esc(p.photo_chemin)+'\')">📷</button>';
+    }else if(!p.photo_chemin&&currentUser&&p.utilisateur_id===currentUser.id&&idValide(p.id)){
+      photo='<button type="button" class="sc-prob-ajout" onclick="ajouterPhotoApres(\''+esc(p.id)+'\')">📷 Ajouter une photo</button>';
+    }
+    h+='<div class="sc-prob-ligne">'+esc(p.note)+' <span>· '+(qui?esc(qui)+' · ':'')+esc(ilYa(p.cree_le))+'</span>'+photo+'</div>';
   });
   if(l.length>recents.length) h+='<div class="sc-prob-ligne"><span>… et '+(l.length-recents.length)+' autre'+(l.length-recents.length>1?'s':'')+'</span></div>';
   return h;
 }
+
+let _idProbleme=null;   // l'identifiant du problème en cours de saisie : le MÊME si on renvoie (jamais deux problèmes), et il sert de nom à la photo
 
 function openProbleme(){
   if(activeIdx===null)return;
@@ -73,11 +84,14 @@ function openProbleme(){
   const note=document.getElementById('prob-note');
   note.value='';
   note.setAttribute('maxlength','500');
+  _idProbleme=nouvelId();
+  retirerPhotoProbleme();
   document.getElementById('prob-overlay').classList.add('open');
 }
 
 function closeProbleme(){
   document.getElementById('prob-overlay').classList.remove('open');
+  retirerPhotoProbleme();
 }
 
 function bgClickProb(e){
@@ -96,19 +110,37 @@ async function envoyerProbleme(){
   // elle-même le nom de la personne connectée, et un problème neuf n'est jamais « lu ».
   let error=null;
   try{
-    const r=await db.from('problemes').insert([{stop_id:s.id,passe_id:passePourSignalement(s),note:note}]);
+    const r=await db.from('problemes').insert([{id:_idProbleme,stop_id:s.id,passe_id:passePourSignalement(s),note:note}]);
     error=r.error;
   }catch(e){
     error=e;
   }
+  // Réponse perdue puis renvoi : le problème existe déjà sous ce même identifiant (doublon de clé) : ce n'est pas un échec
+  if(error&&String(error.code)==='23505') error=null;
+
+  if(error){
+    showSync(false);
+    _envoiProbleme=false;
+    toast('❌ Problème non envoyé (pas de réseau ?). Réessaie.');   // la note (et la photo) restent dans la boîte
+    return;
+  }
+
+  // La photo, APRÈS le texte : si elle échoue, le problème est quand même signalé
+  const avecPhoto=!!_photoChoisie;
+  let photoEnvoyee=true;
+  if(avecPhoto){
+    try{
+      await envoyerPhotoProbleme(_idProbleme,_photoChoisie.blob);
+    }catch(e){
+      photoEnvoyee=false;
+    }
+  }
   showSync(false);
   _envoiProbleme=false;
 
-  if(error){toast('❌ Problème non envoyé (pas de réseau ?). Réessaie.');return;}   // la note reste dans la boîte
-
   await chargerProblemes();
   renderAll();
-  toast('⚠ Problème signalé !');
+  toast(!avecPhoto?'⚠ Problème signalé !':(photoEnvoyee?'⚠ Problème signalé avec photo !':'⚠ Problème envoyé, photo non envoyée'));
   closeProbleme();
   closeCard();
   checkProblemes();

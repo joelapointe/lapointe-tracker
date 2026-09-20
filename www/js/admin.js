@@ -23,7 +23,7 @@ async function loadProblemes(){
   let data=null,error=null;
   try{
     const r=await db.from('problemes')
-      .select('id, note, cree_le, stops(adresse,service,client), utilisateurs!utilisateur_id(nom), passes(numero,tache)')
+      .select('id, note, cree_le, photo_chemin, stops(adresse,service,client), utilisateurs!utilisateur_id(nom), passes(numero,tache)')
       .eq('lu',false)
       .order('cree_le',{ascending:false});
     data=r.data;error=r.error;
@@ -59,6 +59,15 @@ async function loadProblemes(){
       '<div style="font-size:13px;color:#fb923c;margin-top:6px;background:rgba(251,146,60,.08);padding:8px;border-radius:6px;">'+
         '💬 '+esc(p.note)+
       '</div>';
+    // La photo du problème (étape 14e) : miniature à toucher pour l'agrandir
+    if(p.photo_chemin&&cheminPhotoValide(p.photo_chemin)){
+      const img=document.createElement('img');
+      img.className='admin-prob-photo';
+      img.alt='Photo du problème';
+      img.onclick=()=>voirPhoto(p.photo_chemin);
+      div.appendChild(img);
+      urlPhotoAsync(p.photo_chemin).then(u=>{if(u) img.src=u;});
+    }
     const btLu=document.createElement('button');
     btLu.style.cssText='margin-top:8px;padding:6px 14px;background:#252d3a;border:none;border-radius:6px;color:#6b7a8d;font-size:12px;font-family:\'Barlow Condensed\',sans-serif;font-weight:700;cursor:pointer;';
     btLu.textContent='✔ Marquer comme lu';

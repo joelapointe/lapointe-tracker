@@ -159,11 +159,26 @@
     <h2>⚠ Signaler un problème</h2>
     <p id="prob-addr-lbl" style="font-size:13px;color:#6b7a8d;margin-bottom:14px;">—</p>
     <textarea id="prob-note" placeholder="Décrivez le problème (ex: entrée bloquée, client absent…)" style="width:100%;padding:12px;background:#0f1318;border:1px solid #252d3a;border-radius:8px;color:#f0f4f8;font-size:15px;font-family:'Barlow',sans-serif;outline:none;resize:none;min-height:100px;"></textarea>
+    <!-- Une photo en plus du texte (photos.js) : l'appareil photo du téléphone, réduite avant l'envoi -->
+    <div id="prob-photo">
+      <input id="prob-photo-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="choisirPhotoProbleme(this)"/>
+      <button id="prob-photo-btn" type="button" onclick="ouvrirAppareilPhoto()">📷 Ajouter une photo</button>
+      <div id="prob-photo-apercu" style="display:none">
+        <img id="prob-photo-img" alt="Photo du problème" src=""/>
+        <div id="prob-photo-bas"><span id="prob-photo-taille"></span><button type="button" onclick="retirerPhotoProbleme()">✕ Retirer</button></div>
+      </div>
+    </div>
     <div id="prob-btns" style="display:flex;gap:8px;margin-top:14px;">
       <button class="mb s" onclick="closeProbleme()">Annuler</button>
       <button class="mb p" style="background:#fb923c;color:#111;" onclick="envoyerProbleme()">Envoyer</button>
     </div>
   </div>
+</div>
+<!-- Photo ajoutée après coup (bouton « 📷 Ajouter une photo » de la fiche) et visionneuse (photos.js) -->
+<input id="prob-photo-apres" type="file" accept="image/*" capture="environment" style="display:none" onchange="photoApresChoisie(this)"/>
+<div id="photo-overlay" role="dialog" aria-modal="true" aria-label="Photo du problème" onclick="fermerPhoto()">
+  <img id="photo-plein" alt="Photo du problème" src=""/>
+  <button id="photo-x" type="button" onclick="fermerPhoto()" aria-label="Fermer">✕</button>
 </div>
 <div id="admin-overlay" onclick="bgClickAdmin(event)">
   <div id="admin-panel">
@@ -272,6 +287,7 @@
 <script src="js/arrets.js"></script>
 <script src="js/routes.js"></script>
 <script src="js/problemes.js"></script>
+<script src="js/photos.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/liste-arrets.js"></script>
 <script src="js/tracking.js"></script>

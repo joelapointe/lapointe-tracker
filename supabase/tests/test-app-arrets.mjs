@@ -617,6 +617,7 @@ log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');
     ['id, nom', 'passe_id, role, utilisateur_id, utilisateurs!utilisateur_id(nom)', true]);
   eq('UN point par camion : 3 camions avec une position = 3 marqueurs', m.camions.length, 3);
   const luc = camionDe(m, 'Camion 1');
+  vrai('le pourcentage du camion (33 %) est écrit sur son étiquette, visible par tout le monde (étape 14b)', html(luc).includes('<strong>33 %</strong>'), html(luc));
   vrai('le point de Camion 1 : son nom et « 👤 3 » (Luc, Lionel, Éric)', html(luc).includes('Camion 1') && html(luc).includes('👤 3') && !html(luc).includes('perime'), html(luc));
   vrai('la bulle : passe, tâche, avancement, chauffeur, personnes à bord (le chauffeur d\'abord, les autres par ordre alphabétique), position récente',
     luc.popup.includes('Passe n° 1 · Déneigement mécanique') && luc.popup.includes('1/3 (33 %)') && luc.popup.includes('Chauffeur : Luc') && luc.popup.includes('À bord : Éric, Lionel') && luc.popup.includes('position à l’instant'), luc.popup);

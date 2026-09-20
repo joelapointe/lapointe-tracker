@@ -322,7 +322,7 @@
 .passe-debuter{pointer-events:all;min-height:56px;padding:0 22px;border:none;border-radius:14px;background:var(--accent);color:#111;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
 .passe-debuter:active{filter:brightness(.85);}
 .passe-encours{pointer-events:all;display:flex;align-items:center;gap:12px;background:rgba(17,20,24,.95);border:2px solid var(--accent);border-radius:14px;padding:8px 14px;box-shadow:0 3px 12px rgba(0,0,0,.5);}
-.passe-pct{font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:800;color:var(--accent);line-height:1;}
+.passe-pct{font-family:'Barlow Condensed',sans-serif;font-size:60px;font-weight:800;color:var(--accent);line-height:1;}
 .passe-infos{font-size:12px;color:var(--text);line-height:1.35;overflow-wrap:anywhere;}
 #debut-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
 #debut-overlay.open{display:flex;}
@@ -346,3 +346,14 @@
 .debut-info.debut-alerte{color:#fdba74;}
 .debut-info.debut-rejoint{margin-top:10px;border:1px solid rgba(96,165,250,.4);color:#bfdbfe;}
 .debut-info.debut-aide{margin-top:14px;background:none;color:var(--muted);text-align:center;font-size:13px;}
+
+/* Étape 14b : le pourcentage en gros, « Terminer », le pourcentage de chaque camion sur la carte */
+.passe-encours{padding:6px 14px 8px;}
+.passe-infos{flex:1;min-width:0;}
+.passe-barre{height:6px;background:#252d3a;border-radius:3px;overflow:hidden;margin-top:6px;}
+.passe-barre i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .5s;}
+.passe-terminer{pointer-events:all;margin-top:8px;min-height:48px;padding:0 20px;border:1px solid rgba(248,113,113,.5);border-radius:12px;background:rgba(58,26,26,.96);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
+.passe-terminer:active{filter:brightness(.85);}
+.passe-terminer:disabled{opacity:.5;cursor:default;}
+.passe-debuter.secondaire{margin-top:8px;min-height:48px;font-size:18px;background:rgba(17,20,24,.95);color:var(--accent);border:2px solid var(--accent);}
+.camion strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:#f0f4f8;}

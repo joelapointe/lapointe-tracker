@@ -54,7 +54,7 @@ function positionPerimee(pos){
 function iconeCamion(c,perime){
   return L.divIcon({
     className:'',
-    html:'<div class="camion'+(perime?' perime':'')+'">🚜<span>'+esc(c.nom)+'</span>'+(c.equipage.length?'<em>👤 '+c.equipage.length+'</em>':'')+'</div>',
+    html:'<div class="camion'+(perime?' perime':'')+'">🚜<span>'+esc(c.nom)+'</span><strong>'+Math.max(0,Math.min(100,Number(c.tour.pourcentage)||0))+' %</strong>'+(c.equipage.length?'<em>👤 '+c.equipage.length+'</em>':'')+'</div>',   // le pourcentage du camion : visible par tout le monde
     iconSize:null,           // la taille de l'étiquette est celle de son contenu (sinon Leaflet l'écrase dans une boîte de 12 px)
     popupAnchor:[0,-16]      // la bulle s'ouvre au-dessus de l'étiquette (centrée sur la position du camion, voir style.css)
   });

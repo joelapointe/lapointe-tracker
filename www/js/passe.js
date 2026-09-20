@@ -334,6 +334,21 @@ async function demarrerPasse(){
 }
 
 // ── Le bandeau du haut ────────────────────────────────
+// Le POURCENTAGE EN GROS (décision de Joé) : le chauffeur le voit en permanence, avec le bouton « Terminer » tant que ce n'est pas 100 %.
+// Un passager voit la même carte, sans « Terminer ». Tout le monde voit aussi le pourcentage de chaque camion sur la carte (vehicules.js).
+let _envoiTerminer=false;   // « Terminer » en cours (le bouton se grise : pas de double geste)
+
+function pourcentageDe(t){return Math.max(0,Math.min(100,Number(t.pourcentage)||0));}
+
+// La carte de l'avancement d'une passe. role : 'chauffeur' (ma passe) ou 'bord' (je suis passager de ce camion)
+function htmlCartePasse(t,passe,role){
+  const pct=pourcentageDe(t);
+  const nom=nomVehiculeDe(passe.equipe_id)||'Camion';
+  return '<div class="passe-encours"><div class="passe-pct">'+pct+' %</div><div class="passe-infos"><b>'+(role==='bord'?'👤 À bord · ':'🚜 ')+esc(nom)+'</b>'+
+    '<br>Passe n° '+esc(t.numero)+' · '+esc(nomRoute(t.route_id))+'<br>'+esc(t.tache)+' · '+esc(t.faits)+'/'+esc(t.total)+
+    '<div class="passe-barre"><i style="width:'+pct+'%"></i></div></div></div>';
+}
+
 // Appelé à chaque redessin de la carte (donc à chaque changement des tours, sur n'importe quel téléphone)
 function majBandeauPasse(){
   const b=document.getElementById('passe-bandeau');
@@ -345,11 +360,72 @@ function majBandeauPasse(){
   }
   b.classList.add('show');
   const m=maPasse();
-  if(!m){
-    b.innerHTML='<button id="btn-debuter" type="button" class="passe-debuter" onclick="ouvrirDebut()">▶ Débuter la passe</button>';
+  if(m){
+    // « Terminer » n'existe que pour une passe pas encore complétée : à 100 % le serveur la ferme lui-même
+    b.innerHTML=htmlCartePasse(m.tour,m.passe,'chauffeur')+(pourcentageDe(m.tour)<100
+      ?'<button id="btn-terminer" type="button" class="passe-terminer" onclick="terminerPasse()"'+(_envoiTerminer?' disabled':'')+'>■ Terminer la passe</button>':'');
     return;
   }
-  const t=m.tour;
-  b.innerHTML='<div class="passe-encours"><div class="passe-pct">'+esc(t.pourcentage)+' %</div><div class="passe-infos"><b>🚜 '+esc(nomVehiculeDe(m.passe.equipe_id)||'Camion')+'</b>'+
-    '<br>Passe n° '+esc(t.numero)+' · '+esc(nomRoute(t.route_id))+'<br>'+esc(t.tache)+' · '+esc(t.faits)+'/'+esc(t.total)+'</div></div>';
+  const bord=monBord();
+  b.innerHTML=(bord?htmlCartePasse(bord.tour,bord.passe,'bord'):'')+
+    '<button id="btn-debuter" type="button" class="passe-debuter'+(bord?' secondaire':'')+'" onclick="ouvrirDebut()">▶ Débuter '+(bord?'ma propre ':'la ')+'passe</button>';
+}
+
+// ── Terminer la passe ─────────────────────────────────
+// Seulement ma passe (ce camion) : le tour continue pour les autres camions. Terminer la passe NE ferme PAS le quart de travail (étape 17).
+function messageErreurTerminer(e){
+  const m=String((e&&e.message)||'');
+  if(m.includes('non_autorise')) return 'Seul le chauffeur de la passe peut la terminer.';
+  if(m.includes('passe_introuvable')) return 'Cette passe n’existe plus.';
+  return 'Pas de réseau ou erreur. Réessaie.';
+}
+
+async function terminerPasse(){
+  if(_envoiTerminer) return;
+  const m=maPasse();
+  if(!m){toast('Tu n’as pas de passe en cours.');return;}
+  const t=m.tour,passeId=m.passe.passe_id;
+  if(pourcentageDe(t)>=100){toast('Cette passe est complétée à 100 %.');return;}
+  _envoiTerminer=true;   // pris tout de suite : un double toucher ne peut pas lancer deux gestes
+  majBandeauPasse();
+  const restant=Math.max(0,(Number(t.total)||0)-(Number(t.faits)||0));
+  const autres=t.passes.filter(p=>p.passe_id!==passeId).map(p=>nomVehiculeDe(p.equipe_id)||'un autre camion');
+  const texte='Passe n° '+t.numero+' : '+t.faits+'/'+t.total+' ('+pourcentageDe(t)+' %). '+
+    (restant>1?restant+' arrêts ne seront pas faits.':'1 arrêt ne sera pas fait.')+
+    (autres.length?' Le tour continue pour '+autres.join(', ')+'.':'');
+  if(!(await confirmer('Terminer la passe ?',texte,'Oui, terminer','Continuer'))){
+    _envoiTerminer=false;
+    majBandeauPasse();
+    return;
+  }
+
+  showSync(true);
+  let r;
+  try{
+    r=await db.rpc('terminer_passe',{p_passe_id:passeId});
+  }catch(err){
+    r={data:null,error:err};
+  }
+  showSync(false);
+
+  // Réponse perdue ? Si la passe n'existe plus parmi les passes en cours, elle est bel et bien terminée
+  if(r.error){
+    const lu=await chargerTours();
+    if(lu&&!tours.some(x=>x.passes.some(p=>p.passe_id===passeId))) r={data:{statut:'terminee'},error:null};
+  }
+  _envoiTerminer=false;
+  if(r.error){
+    majBandeauPasse();
+    toast('❌ '+messageErreurTerminer(r.error));
+    return;
+  }
+
+  await chargerTours();
+  await chargerPositionsVehicules();
+  await chargerVehiculesEtEquipages();
+  renderAll();majCarte();
+  const d=r.data||{};
+  if(d.statut==='deja_terminee'){toast('Cette passe était déjà terminée.');return;}
+  const faits=d.faits!=null?d.faits:t.faits,total=d.total!=null?d.total:t.total,pct=d.pourcentage!=null?d.pourcentage:pourcentageDe(t);
+  toast('■ Passe n° '+t.numero+' terminée : '+faits+'/'+total+' ('+pct+' %)');
 }

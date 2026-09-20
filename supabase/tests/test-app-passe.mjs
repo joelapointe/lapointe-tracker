@@ -66,12 +66,29 @@ function monde(o = {}) {
     donnees.equipage_periodes.push({ passe_id: args.p_id, role: 'chauffeur', utilisateur_id: vuPar().id, utilisateurs: { nom: vuPar().nom } });
     return { data: { statut: 'debutee', passe_id: args.p_id, numero: t.numero, tache: args.p_tache, tour_rejoint: rejoint }, error: null };
   };
-  let nbDebuter = 0;
+  // « Terminer » ne ferme que la passe de CE camion ; le tour continue pour les autres. Une passe qui n'est plus en cours : « deja_terminee ».
+  const terminerServeur = (args) => {
+    const t = donnees.tours.find((x) => x.passes.some((p) => p.passe_id === args.p_passe_id));
+    if (!t) return { data: { statut: 'deja_terminee', fin_type: 'manuelle' }, error: null };
+    t.passes = t.passes.filter((p) => p.passe_id !== args.p_passe_id);
+    const res = { statut: 'terminee', pourcentage: t.pourcentage, faits: t.faits, total: t.total };
+    if (!t.passes.length) donnees.tours = donnees.tours.filter((x) => x !== t);
+    return { data: res, error: null };
+  };
+  let nbDebuter = 0, nbTerminer = 0;
   const fauxDb = {
     rpc: async (nom, args) => {
       appels.rpc.push({ nom, args });
       if (o.toursCoupes && nom === 'tours_en_cours') throw new Error('Failed to fetch');
       if (nom === 'tours_en_cours') return { data: toursVus(), error: null };
+      if (nom === 'terminer_passe') {
+        nbTerminer++;
+        const scenario = o.terminer?.[nbTerminer - 1] ?? o.terminer?.defaut;
+        if (scenario === 'reseau') throw new Error('Failed to fetch');
+        if (scenario === 'reponse-perdue') { terminerServeur(args); throw new Error('Failed to fetch'); }   // le serveur a terminé la passe, mais la réponse ne revient pas
+        if (scenario?.erreur) return { data: null, error: { message: scenario.erreur } };
+        return terminerServeur(args);
+      }
       if (nom === 'debuter_passe') {
         nbDebuter++;
         const scenario = o.debuter?.[nbDebuter - 1] ?? o.debuter?.defaut;
@@ -131,6 +148,7 @@ function monde(o = {}) {
     dernierToast: () => appels.toasts[appels.toasts.length - 1],
     ouvert: () => el('debut-overlay').classList.contains('open'),
     debuts: () => appels.rpc.filter((r) => r.nom === 'debuter_passe'),
+    termines: () => appels.rpc.filter((r) => r.nom === 'terminer_passe'),
     // toucher le bouton dont le texte contient « texte »
     toucher: (texte) => { const b = boutons().find((x) => x.innerHTML.includes(texte)); if (!b) throw new Error('bouton introuvable : ' + texte); return b.onclick(); },
     charge: async () => { await w.run('loadStops()'); return w; },
@@ -416,6 +434,102 @@ log('\n=== TEMPS RÉEL : le bandeau suit les tours ===');
   vrai('le pourcentage suit', m.el('passe-bandeau').innerHTML.includes('100 %'), m.el('passe-bandeau').innerHTML);
   m.donnees.tours = []; m.run('planifierRechargementTours()'); await new Promise((r) => setTimeout(r, 450));
   vrai('la passe se ferme (100 %, fermeture automatique…) : « Débuter la passe » revient', m.el('passe-bandeau').innerHTML.includes('btn-debuter'), m.el('passe-bandeau').innerHTML);
+}
+
+log('\n=== 14b — LE POURCENTAGE EN GROS ET « TERMINER » ===');
+{
+  const luc = (o = {}) => monde({ tours: toursDeLuc(), equipages: [{ passe_id: 'p-luc', role: 'chauffeur', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } }], ...o }).charge();
+  const bandeau = (m) => m.el('passe-bandeau').innerHTML;
+  const avecMarc = () => { const t = toursDeLuc(); t[0].passes.push({ passe_id: 'p-marc', equipe_id: 'e2', chauffeur_id: 'u-marc', abord: [] }); return t; };
+
+  // — Ce que voit le chauffeur —
+  let m = await luc();
+  let h = bandeau(m);
+  vrai('chauffeur : le pourcentage EN GROS (classe « passe-pct »), la barre à 50 %, le camion, la passe, la route, la tâche et 1/2', h.includes('<div class="passe-pct">50 %</div>') && h.includes('<i style="width:50%">') && h.includes('Camion 1') && h.includes('Passe n° 1 · Charette') && h.includes(MEC) && h.includes('1/2'), h);
+  vrai('… et le bouton « ■ Terminer la passe », relié à terminerPasse()', h.includes('id="btn-terminer"') && h.includes('onclick="terminerPasse()"') && h.includes('■ Terminer la passe'), h);
+  vrai('… pas de bouton « Débuter » pendant une passe', !h.includes('btn-debuter'), h);
+  vrai('le pourcentage est vraiment GROS à l\'écran (60 px)', /\.passe-pct\{[^}]*font-size:60px/.test(lire('css/style.css')));
+  m = await luc({ tours: [{ ...toursDeLuc()[0], faits: 0, pourcentage: 0 }] });
+  vrai('0 % : « Terminer » existe encore (on peut renoncer à une passe qu\'on n\'a pas commencée)', bandeau(m).includes('0 %') && bandeau(m).includes('btn-terminer'), bandeau(m));
+  m = await luc({ tours: [{ ...toursDeLuc()[0], faits: 2, pourcentage: 100 }] });
+  vrai('100 % : « Terminer » DISPARAÎT (le serveur ferme la passe tout seul), le 100 % reste affiché', bandeau(m).includes('100 %') && !bandeau(m).includes('btn-terminer'), bandeau(m));
+  m = await luc({ tours: [{ ...toursDeLuc()[0], pourcentage: 250 }] });
+  vrai('un pourcentage absurde du serveur est ramené à 100 (jamais de barre qui déborde)', bandeau(m).includes('100 %') && bandeau(m).includes('width:100%') && !bandeau(m).includes('250'), bandeau(m));
+  m = await luc({ tours: [{ ...toursDeLuc()[0], pourcentage: '<img src=x onerror=alert(1)>' }] });
+  vrai('un pourcentage piégé devient 0 (rien n\'est exécuté)', !bandeau(m).includes('<img') && bandeau(m).includes('0 %'), bandeau(m));
+
+  // — Ce que voit un passager —
+  m = await monde({ tours: [{ ...TOUR_MARC(), passes: [{ passe_id: 'p-marc', equipe_id: 'e2', chauffeur_id: 'u-marc', abord: ['u-luc'] }] }], equipages: EQUIPAGE_MARC() }).charge();
+  h = bandeau(m);
+  vrai('passager : la même carte (50 %, « À bord · Camion 2 », passe n° 1) mais SANS bouton « Terminer »', h.includes('<div class="passe-pct">50 %</div>') && h.includes('👤 À bord · Camion 2') && h.includes('Passe n° 1') && !h.includes('btn-terminer'), h);
+  vrai('… et un bouton « Débuter ma propre passe » plus discret', h.includes('btn-debuter') && h.includes('secondaire') && h.includes('Débuter ma propre passe'), h);
+  m = await monde().charge();
+  vrai('ni chauffeur ni passager : seulement « ▶ Débuter la passe », aucune carte', bandeau(m).includes('▶ Débuter la passe') && !bandeau(m).includes('passe-pct') && !bandeau(m).includes('btn-terminer'), bandeau(m));
+
+  // — Terminer : la question —
+  m = await luc({ confirme: [false] });
+  await m.run('terminerPasse()');
+  eq('la boîte de l\'application dit ce qui reste (1 arrêt ne sera pas fait) et propose « Continuer » par défaut', m.appels.confirmations, [['Terminer la passe ?', 'Passe n° 1 : 1/2 (50 %). 1 arrêt ne sera pas fait.', 'Oui, terminer', 'Continuer']]);
+  eq('« Continuer » : rien n\'est envoyé, la passe continue, le bouton « Terminer » est de nouveau actif', [m.termines().length, m.run('maPasse() !== null'), bandeau(m).includes('btn-terminer') && !bandeau(m).includes('disabled')], [0, true, true]);
+  m = await luc({ tours: [{ ...toursDeLuc()[0], total: 6, faits: 2, pourcentage: 33 }], confirme: [false] });
+  await m.run('terminerPasse()');
+  eq('plusieurs arrêts restants : « 4 arrêts ne seront pas faits »', m.appels.confirmations[0][1], 'Passe n° 1 : 2/6 (33 %). 4 arrêts ne seront pas faits.');
+  m = await luc({ tours: avecMarc(), confirme: [false], equipages: EQUIPAGE_MARC() });
+  await m.run('terminerPasse()');
+  eq('un autre camion dans le même tour : la boîte dit que le tour continue pour lui', m.appels.confirmations[0][1], 'Passe n° 1 : 1/2 (50 %). 1 arrêt ne sera pas fait. Le tour continue pour Camion 2.');
+
+  // — Terminer : le geste —
+  m = await luc({ tours: avecMarc(), confirme: [true], equipages: EQUIPAGE_MARC() });
+  m.run('lastPos = [46.44, -72.92]');
+  await m.run('terminerPasse()');
+  eq('« Oui, terminer » : UN appel terminer_passe avec la passe de SON camion, rien d\'autre', m.termines().map((r) => r.args), [{ p_passe_id: 'p-luc' }]);
+  eq('message avec le résultat', m.dernierToast(), '■ Passe n° 1 terminée : 1/2 (50 %)');
+  eq('SA passe est terminée : le bandeau redevient « Débuter la passe »', [m.run('maPasse()'), bandeau(m).includes('btn-debuter'), bandeau(m).includes('btn-terminer')], [null, true, false]);
+  eq('le tour CONTINUE pour l\'autre camion (la passe de Marc n\'est pas touchée)', m.donnees.tours.map((t) => t.passes.map((p) => p.passe_id)), [['p-marc']]);
+  eq('aucune écriture directe dans les tables', m.appels.ecritures, []);
+  m = await luc({ confirme: [true] });
+  await m.run('terminerPasse()');
+  eq('tour sans autre camion : la passe se termine, plus aucun tour en cours', [m.donnees.tours.length, m.run('tours.length')], [0, 0]);
+
+  // — Double toucher —
+  m = await luc({ confirme: [true] });
+  await Promise.all([m.run('terminerPasse()'), m.run('terminerPasse()'), m.run('terminerPasse()')]);
+  eq('trois touchers sur « Terminer » : UNE seule question, UN seul appel', [m.appels.confirmations.length, m.termines().length], [1, 1]);
+  m = await luc({ confirme: [true] });
+  const enCours = m.run('terminerPasse()');
+  vrai('pendant la question, le bouton « Terminer » est grisé', bandeau(m).includes('id="btn-terminer" type="button" class="passe-terminer" onclick="terminerPasse()" disabled'), bandeau(m));
+  await enCours;
+
+  // — Cas limites —
+  m = await luc({ tours: [{ ...toursDeLuc()[0], faits: 2, pourcentage: 100 }], confirme: [true] });
+  await m.run('terminerPasse()');
+  eq('déjà à 100 % : aucune question, aucun appel, un message', [m.appels.confirmations.length, m.termines().length, m.dernierToast()], [0, 0, 'Cette passe est complétée à 100 %.']);
+  m = await monde().charge();
+  await m.run('terminerPasse()');
+  eq('aucune passe : un message, aucun appel', [m.termines().length, m.dernierToast()], [0, 'Tu n’as pas de passe en cours.']);
+  m = await luc({ confirme: [true] });
+  m.donnees.tours = []; await m.run('chargerTours()');
+  await m.run('terminerPasse()');
+  eq('la passe s\'est fermée entre-temps (autre appareil, fermeture automatique) : « Terminer » n\'a plus rien à faire', [m.appels.confirmations.length, m.dernierToast()], [0, 'Tu n’as pas de passe en cours.']);
+  m = await luc({ confirme: [true] });
+  m.donnees.tours = [];   // le serveur a déjà fermé la passe (100 % par l'autre camion) mais l'application ne le sait pas encore
+  await m.run('terminerPasse()');
+  eq('le serveur répond « déjà terminée » : message adapté', m.dernierToast(), 'Cette passe était déjà terminée.');
+
+  // — Erreurs et réseau —
+  for (const [code, texte] of [['non_autorise', 'Seul le chauffeur de la passe peut la terminer.'], ['passe_introuvable', 'Cette passe n’existe plus.'], ['n\'importe quoi', 'Pas de réseau ou erreur. Réessaie.']]) {
+    const e = await luc({ confirme: [true], terminer: { defaut: { erreur: code } } });
+    await e.run('terminerPasse()');
+    eq(`refus « ${code} » : message en français, la passe reste en cours, on peut réessayer`, [e.dernierToast(), e.run('maPasse() !== null'), bandeau(e).includes('btn-terminer') && !bandeau(e).includes('disabled')], ['❌ ' + texte, true, true]);
+  }
+  m = await luc({ confirme: [true], terminer: { 0: 'reseau' } });
+  await m.run('terminerPasse()');
+  eq('réseau coupé : un message, la passe reste en cours', [m.dernierToast(), m.run('maPasse() !== null')], ['❌ Pas de réseau ou erreur. Réessaie.', true]);
+  await m.run('terminerPasse()');
+  eq('2e essai (réseau revenu) : ça marche', [m.termines().length, m.dernierToast(), m.run('maPasse()')], [2, '■ Passe n° 1 terminée : 1/2 (50 %)', null]);
+  m = await luc({ confirme: [true], terminer: { 0: 'reponse-perdue' } });
+  await m.run('terminerPasse()');
+  eq('la réponse se perd MAIS le serveur avait terminé la passe : l\'application le voit et réussit (pas de faux échec)', [m.termines().length, m.dernierToast(), m.run('maPasse()')], [1, '■ Passe n° 1 terminée : 1/2 (50 %)', null]);
 }
 
 log('\n=== LE CODE : la page, et aucune écriture directe ===');

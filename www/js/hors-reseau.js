@@ -254,6 +254,8 @@ async function apresRetourReseau(){
 // Renvoie true si on a de quoi afficher (au moins les arrêts et les routes)
 async function restaurerDepuisCache(){
   await attendreEcritures();   // les copies écrites à l'instant doivent être lisibles
+  // Les gestes gardés sur ce téléphone (étape 16c) : relus AVANT de poser les copies, pour que l'écran montre leur résultat dès l'ouverture
+  if(typeof assurerChargee==='function'){try{await enSerie(assurerChargee);}catch(e){}}
   const lire={};
   for(const nom of ['stops','routes','tours','vehicules','problemes','employes']) lire[nom]=await cacheLire(nom);
   if(!lire.stops||!lire.routes||!Array.isArray(lire.stops.data)||!Array.isArray(lire.routes.data)) return false;

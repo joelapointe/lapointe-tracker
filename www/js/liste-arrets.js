@@ -42,7 +42,7 @@ function renderListe(){
         '<div class="ci-addr '+(fait?'done':'')+'">'+esc(s.adresse)+'</div>'+
         '<div class="ci-svc">'+(route?esc(route.nom)+' · ':'')+esc(s.service||'')+(s.client?' · '+esc(s.client):'')+'</div>'+
       '</div>'+
-      '<div class="ci-badge '+(fait?'done':'todo')+'">'+(fait?'✔ FAIT':'À FAIRE')+'</div>';
+      '<div class="ci-badge '+(fait?'done':'todo')+'">'+(fait?'✔ FAIT':'À FAIRE')+(arretEnAttente(s)?' ⏳':'')+'</div>';   // ⏳ : un geste sur cet arrêt attend le retour du signal (étape 16c)
     body.appendChild(div);
   });
 }

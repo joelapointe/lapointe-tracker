@@ -247,7 +247,8 @@ log('\n=== ANNULER UN ARRÊT COMPLÉTÉ PAR ERREUR (10 minutes) ===');
   }
   m = await ouvrir({ tours: [tourEC()], rpc: { annuler_arret: () => new Error('Failed to fetch') } });
   await m.run('completeStop()');
-  eq('réseau coupé : message, arrêt toujours fait, aucun plantage', [m.dernierToast(), m.run(`estFait(stops[${idx('s1')}])`)], ['❌ Pas de réseau ou erreur. Réessaie.', true]);
+  // Étape 16c : un geste fait quand le signal disparaît n'est plus refusé, il est GARDÉ sur le téléphone (file-attente.js) et l'écran montre son résultat
+  eq('réseau coupé : le geste est gardé (message ⏳), l\'arrêt est annulé À L\'ÉCRAN, 1 geste en attente, aucun plantage', [m.dernierToast().startsWith('↩ Arrêt annulé · ⏳ envoyé au retour du signal'), m.run(`estFait(stops[${idx('s1')}])`), m.run('gestesEnAttente().length')], [true, false, 1]);
   m = await ouvrir({ tours: [tourEC()], rpc: { annuler_arret: () => ({ data: { statut: 'pas_complete' }, error: null }) } });
   await m.run('completeStop()');
   eq('« pas complété » (annulé ailleurs entre-temps) : message adapté', m.dernierToast(), 'Cet arrêt n’était pas complété.');

@@ -26,12 +26,89 @@ async function chargerTours(){
   lectureReussie('tours',lus);
   return true;
 }
-// Met les tours en place (lecture du serveur, ou copie gardée sur le téléphone : luLe = l'heure de cette lecture)
+// Met les tours en place (lecture du serveur, ou copie gardée sur le téléphone : luLe = l'heure de cette lecture).
+// Étape 16c : les gestes faits sans réseau et pas encore envoyés (file-attente.js) sont posés PAR-DESSUS la copie du serveur : tout l'écran
+// (arrêts faits, pourcentage, ma passe…) montre donc le résultat du geste, et aucune relecture ne peut le défaire tant que le geste attend.
+let _toursServeur=[];    // la copie du serveur, telle quelle (jamais modifiée : c'est elle qu'on garde en copie locale)
+let _toursServeurConnus=false;
 function installerTours(lus,luLe){
-  tours=lus;
+  _toursServeur=lus;
+  _toursServeurConnus=true;
   _toursLusLe=luLe>0?luLe:Date.now();
+  poserTours(superposerTours(lus,_toursLusLe));
+}
+// Un geste vient d'être gardé (ou retiré) : on refait la superposition à partir de la copie du serveur
+function reappliquerGestes(){
+  if(!_toursServeurConnus) return;   // les tours n'ont pas encore été lus : rien à superposer
+  poserTours(superposerTours(_toursServeur,_toursLusLe));
+}
+function poserTours(t){
+  tours=t;
   _faitsParTour={};
-  tours.forEach(t=>{_faitsParTour[cleTour(t.route_id,t.tache)]=new Set(t.arrets_faits||[]);});
+  tours.forEach(x=>{_faitsParTour[cleTour(x.route_id,x.tache)]=new Set(x.arrets_faits||[]);});
+}
+
+// ── Les gestes en attente, posés par-dessus la copie du serveur (étape 16c) ──
+// Règles : (1) on ne touche JAMAIS à la copie du serveur (on travaille sur une copie de la copie) ; (2) chaque geste est REPÉTABLE sans doublon :
+// si le serveur a déjà fait le geste (sa réponse s'est perdue), il ne compte pas deux fois ; (3) on imite ce que ferait le serveur.
+function recalculerTour(t){
+  t.arrets_faits=t.arrets_faits||[];
+  t.faits=t.arrets_faits.length;
+  t.pourcentage=t.total>0?Math.round(100*t.faits/t.total):0;
+}
+function tourDeLaPasse(lus,passeId){
+  return lus.find(t=>tourEnCours(t)&&(t.passes||[]).some(p=>p.passe_id===passeId))||null;
+}
+// Un tour est terminé (100 % atteint) : on garde ce qu'il faut pour le rouvrir si un arrêt est annulé
+function fermerTourLocalement(t,passeId){
+  const p=(t.passes||[]).find(x=>x.passe_id===passeId);
+  t._passesFermees=t.passes;
+  t.en_cours=false;
+  t.passes=[];
+  t.mes_passes_annulables=(p&&p.je_suis_chauffeur)?[passeId]:[];
+}
+function appliquerGesteAuxTours(lus,g,luLe){
+  const a=g.args||{};
+  if(g.type==='completer_arret'){
+    const t=tourDeLaPasse(lus,a.passeId);
+    if(!t) return;   // passe introuvable ou déjà terminée : le serveur tranchera au retour du signal
+    if(!t.arrets_faits.includes(a.stopId)){
+      t.arrets_faits.push(a.stopId);
+      // L'âge de l'arrêt, comme le donne le serveur (en secondes, depuis la lecture) : le délai de 10 minutes se compte depuis l'heure du GESTE
+      t.faits_il_y_a=t.faits_il_y_a||{};
+      t.faits_il_y_a[a.stopId]=(luLe-Date.parse(g.moment))/1000;
+    }
+    recalculerTour(t);
+    if(t.total>0&&t.faits>=t.total) fermerTourLocalement(t,a.passeId);   // 100 % : le serveur ferme la passe, on fait de même
+  }else if(g.type==='annuler_arret'){
+    let t=tourDeLaPasse(lus,a.passeId);
+    if(!t){
+      // Une passe fermée à 100 % (par le serveur ou par nous) : « Annuler » la rouvre, tant que c'est MA passe
+      t=lus.find(x=>!tourEnCours(x)&&(x.mes_passes_annulables||[]).includes(a.passeId))||null;
+      if(!t||!t.arrets_faits.includes(a.stopId)) return;
+      const avant=t._passesFermees||[{passe_id:a.passeId,equipe_id:null,je_suis_chauffeur:true,je_suis_a_bord:true}];
+      t.en_cours=true;
+      t.passes=avant;
+      t.mes_passes_annulables=[];
+      delete t._passesFermees;
+    }
+    t.arrets_faits=t.arrets_faits.filter(x=>x!==a.stopId);
+    if(t.faits_il_y_a) delete t.faits_il_y_a[a.stopId];
+    recalculerTour(t);
+  }
+}
+// Renvoie la copie du serveur si rien n'attend, sinon une COPIE où les gestes en attente sont appliqués, dans l'ordre où ils ont été faits
+function superposerTours(lus,luLe){
+  const attente=(typeof gestesEnAttente==='function')?gestesEnAttente():[];
+  if(!attente.length) return lus;
+  const copie=JSON.parse(JSON.stringify(lus));
+  copie.forEach(t=>{t.arrets_faits=t.arrets_faits||[];t.passes=t.passes||[];});
+  attente.forEach(g=>{try{appliquerGesteAuxTours(copie,g,luLe);}catch(e){}});
+  return copie;
+}
+// Un geste sur cet arrêt attend d'être envoyé ? (pour le petit ⏳ de la fiche et de la liste)
+function arretEnAttente(s){
+  return typeof gestesEnAttente==='function'&&gestesEnAttente().some(g=>(g.type==='completer_arret'||g.type==='annuler_arret')&&g.args&&g.args.stopId===s.id);
 }
 
 // Étape 14c (décision de Joé) : quand une passe est terminée, son tour RESTE affiché (arrêts faits en vert, avancement)
@@ -94,8 +171,9 @@ function etatComplete(s){
 function texteTour(s){
   const t=tourDe(s);
   if(!t) return 'Aucune passe en cours pour ce type de service';
-  if(!tourEnCours(t)) return 'Passe n° '+t.numero+' terminée · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)';
-  return 'Passe n° '+t.numero+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)?' · 🚜 camion sur place':'');
+  const attente=arretEnAttente(s)?' · ⏳ en attente d’envoi':'';   // un geste sur cet arrêt attend le retour du signal (étape 16c)
+  if(!tourEnCours(t)) return 'Passe n° '+t.numero+' terminée · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+attente;
+  return 'Passe n° '+t.numero+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)?' · 🚜 camion sur place':'')+attente;
 }
 
 // ── CLIENT « EN COURS » (étape 13c) ────────────────────

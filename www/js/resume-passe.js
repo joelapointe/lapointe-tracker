@@ -25,12 +25,23 @@ function suivreMaPasse(m){
 // Lit la passe (les miennes sont lisibles) : sa fin, sa raison, sa durée. En cas d'échec de lecture, on montre ce qu'on savait.
 async function afficherResume(v){
   let p=null;
-  try{
-    const r=await db.from('passes').select(COLONNES_PASSE).eq('id',v.passeId).maybeSingle();
-    if(!r.error) p=r.data||null;
-  }catch(e){}
+  if(reseau.enLigne){   // sans signal la lecture ne répondrait pas : on montre ce que l'écran sait déjà
+    try{
+      const r=await db.from('passes').select(COLONNES_PASSE).eq('id',v.passeId).maybeSingle();
+      if(!r.error) p=r.data||null;
+    }catch(e){}
+  }
   if(p&&p.statut==='en_cours') return;   // rouverte entre-temps (un arrêt annulé)
-  ouvrirResume(v,p);
+  // Pas de lecture du serveur : les chiffres sont ceux du tour affiché maintenant (il a pu changer depuis le dernier dessin : un arrêt complété sans réseau, par exemple)
+  let typeLocal=null;
+  if(!p){
+    const t=tours.find(x=>x.route_id===v.route_id&&x.tache===v.tache&&!tourEnCours(x));
+    if(t){
+      v={...v,faits:t.faits,total:t.total,pourcentage:t.pourcentage};
+      if(t.total>0&&t.faits>=t.total) typeLocal='complete';
+    }
+  }
+  ouvrirResume(v,p,typeLocal);
 }
 
 // « 2 h 14 », « 35 min »
@@ -42,10 +53,10 @@ function dureeTexte(debut,fin){
   return Math.floor(min/60)+' h '+String(min%60).padStart(2,'0');
 }
 
-function ouvrirResume(v,p){
+function ouvrirResume(v,p,typeLocal){
   const pct=p?p.pourcentage:v.pourcentage;
   const faits=p?p.nb_arrets_faits:v.faits,total=p?p.nb_arrets_total:v.total;
-  const type=p?p.fin_type:null;
+  const type=p?p.fin_type:(typeLocal||null);
   const titres={complete:'🎉 Passe complétée : 100 %',manuelle:'■ Passe terminée',delai_max:'⏱ Passe fermée automatiquement',
     admin:'■ Passe terminée par l’administrateur',fin_quart:'■ Passe fermée avec ton quart',remplacee:'■ Passe remplacée par une nouvelle passe'};
   document.getElementById('resume-titre').textContent=titres[type]||'■ Passe terminée';

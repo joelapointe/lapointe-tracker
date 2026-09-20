@@ -142,14 +142,17 @@ async function completeStop(){
   const e=etatComplete(s);
   if(!e.actif){toast(e.explication||e.texte);return;}
   if(e.action==='annuler') return annulerArret(s,e);
+  if(!reseau.enLigne) return completerSansReseau(s,e);   // on sait déjà qu'il n'y a pas de signal : le geste est gardé sur le téléphone (étape 16c)
   showSync(true);
   let r;
   try{
-    r=await db.rpc('completer_arret',{p_passe_id:e.passeId,p_stop_id:s.id,p_mode:'manuel',p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null});
+    r=await avecDelai(db.rpc('completer_arret',{p_passe_id:e.passeId,p_stop_id:s.id,p_mode:'manuel',p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null}),FILE_DELAI_DIRECT_MS);
   }catch(err){
     r={data:null,error:err};
   }
   showSync(false);
+  // Le signal a disparu (ou la réponse s'est perdue) : le MÊME geste est gardé sur le téléphone, avec les mêmes identifiants : aucun doublon possible
+  if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return completerSansReseau(s,e);}
   if(r.error){toast('❌ '+messageErreurGeste(r.error));return;}
   await chargerTours();
   renderAll();majCarte();
@@ -159,6 +162,48 @@ async function completeStop(){
   toast(r.data&&r.data.passe_fermee?'🎉 Passe terminée : 100 % !':(st==='deja_complete'?'✔ Déjà complété par un autre camion':'✔ Stop complété !'));
 }
 
+// ── SANS RÉSEAU (étape 16c) ────────────────────────────
+// Le geste est gardé sur le téléphone (file-attente.js) puis l'écran montre TOUT DE SUITE son résultat : les tours affichés sont la copie du
+// serveur avec les gestes en attente posés par-dessus (tours.js). Au retour du signal, le geste part et le serveur a le dernier mot.
+const TEXTE_ATTENTE=' · ⏳ envoyé au retour du signal';
+function texteGardeSeulementEnMemoire(r){return r&&r.durable===false?' · garde l’application ouverte':'';}   // pas d'IndexedDB : le geste ne survivrait pas à la fermeture
+let _gardeEnCours=false;
+async function completerSansReseau(s,e){
+  if(_gardeEnCours) return;
+  _gardeEnCours=true;   // pas de double geste pendant que le téléphone écrit
+  try{
+    const r=await enfiler('completer_arret',{passeId:e.passeId,stopId:s.id,mode:'manuel',lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null},{libelle:'✔ Complété : '+s.adresse});
+    if(!r.ok){toast('❌ Le téléphone n’a pas pu garder ce geste. Réessaie.');return;}   // jamais « fait » si rien n'est gardé
+    renderAll();majCarte();
+    const fermee=!tourEnCours(tourDe(s));   // 100 % atteint : la passe est fermée à l'écran, comme le ferait le serveur
+    closeCard();
+    toast((fermee?'🎉 Passe terminée : 100 % !':'✔ Stop complété !')+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+  }finally{
+    _gardeEnCours=false;
+  }
+}
+// « Annuler » sans réseau. Un « Complété » fait sans réseau et pas encore parti est simplement RETIRÉ de la file (rien à défaire sur le serveur,
+// et pas de délai de 10 minutes à craindre) ; sinon un geste « annuler » est gardé.
+async function annulerSansReseau(s,e){
+  if(_gardeEnCours) return;
+  _gardeEnCours=true;
+  try{
+    const enFile=gestesEnAttente().filter(g=>g.type==='completer_arret'&&g.args.passeId===e.passeId&&g.args.stopId===s.id);
+    const dernier=enFile[enFile.length-1];
+    if(dernier&&await retirerGesteSiPasParti(dernier.id)){
+      renderAll();majCarte();
+      if(!estFait(s)){toast('↩ Arrêt annulé : rien à envoyer');return;}
+      // (le serveur a déjà cet arrêt : un « annuler » doit quand même partir, on continue plus bas)
+    }
+    const r=await enfiler('annuler_arret',{passeId:e.passeId,stopId:s.id},{libelle:'↩ Annulé : '+s.adresse});
+    if(!r.ok){toast('❌ Le téléphone n’a pas pu garder ce geste. Réessaie.');return;}
+    renderAll();majCarte();
+    toast('↩ Arrêt annulé'+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+  }finally{
+    _gardeEnCours=false;
+  }
+}
+
 // Annule un arrêt complété par erreur (10 minutes). Si cet arrêt avait fermé la passe à 100 %, le serveur la rouvre.
 let _envoiAnnulation=false;
 async function annulerArret(s,e){
@@ -166,14 +211,16 @@ async function annulerArret(s,e){
   _envoiAnnulation=true;   // pas de double geste
   try{
     if(!(await confirmer('Annuler ce « Complété » ?',s.adresse+' redeviendra à faire.'+(e.termine?' La passe terminée sera rouverte.':''),'Oui, annuler','Non'))) return;
+    if(!reseau.enLigne) return await annulerSansReseau(s,e);
     showSync(true);
     let r;
     try{
-      r=await db.rpc('annuler_arret',{p_passe_id:e.passeId,p_stop_id:s.id});
+      r=await avecDelai(db.rpc('annuler_arret',{p_passe_id:e.passeId,p_stop_id:s.id}),FILE_DELAI_DIRECT_MS);
     }catch(err){
       r={data:null,error:err};
     }
     showSync(false);
+    if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await annulerSansReseau(s,e);}
     await chargerTours();    // le serveur a le dernier mot : on relit toujours, réussite ou refus
     renderAll();majCarte();
     if(r.error){toast('❌ '+messageErreurGeste(r.error));return;}

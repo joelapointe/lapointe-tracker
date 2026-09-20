@@ -25,8 +25,10 @@ const FILE_ESSAIS_INCONNUS=5;                              // erreur inconnue : 
 let FILE_DELAIS_MS=[5000,15000,45000,120000,300000];       // attente entre deux essais quand le serveur ne répond pas bien
 let FILE_DELAI_APPEL_MS=30000;                             // un envoi qui ne répond pas en 30 s = panne passagère (la photo a le double)
 let fileEtat={pour:null,att:[],ref:[],dernierOrdre:0,palier:0};   // « pour » : à quel employé appartient ce qui est chargé
+let FILE_DELAI_DIRECT_MS=10000;                            // étape 16c : un geste fait EN LIGNE qui ne répond pas en 10 s passe à la file (même identifiant : aucun doublon)
 let _minuterieFile=null;
 let _rejeuEnCours=false,_rejeuDemande=false,_rejeuPromesse=null;
+let _gesteEnEnvoi=null;   // l'identifiant du geste que le rejeu est en train d'envoyer (il ne peut plus être retiré de la file)
 
 // ── Les raisons des refus, en français ─────────────────
 const RAISONS_GESTE={
@@ -215,9 +217,23 @@ function enfiler(type,args,options){
     const item={v:FILE_VERSION,id:nouvelId(),ordre,type,args:args||{},moment:o.moment||new Date().toISOString(),libelle:o.libelle||type,essais:0,photo:o.photo||null};
     if(!(await magasinEcrire(cleFile('att',ordre),item))) return {ok:false};
     fileEtat.att.push(item);
+    if(typeof reappliquerGestes==='function') reappliquerGestes();   // l'écran montre tout de suite le résultat du geste (tours.js)
     majBandeauReseau();
     declencherRejeu();   // (sans attendre) s'il y a du signal, il part tout de suite
     return {ok:true,id:item.id,durable:await magasinDurable()};
+  });
+}
+// Retire un geste qui n'est PAS encore parti (l'employé l'a annulé lui-même) : rien à envoyer au serveur. Renvoie true s'il a été retiré.
+// Un geste en plein envoi ne se retire pas : le serveur l'aura peut-être déjà appliqué.
+function retirerGesteSiPasParti(id){
+  return enSerie(async()=>{
+    const g=fileEtat.att.find(x=>x.id===id);
+    if(!g||_gesteEnEnvoi===id) return false;
+    if(!(await magasinRetirer(cleFile('att',g.ordre)))) return false;
+    fileEtat.att=fileEtat.att.filter(x=>x.id!==id);
+    if(typeof reappliquerGestes==='function') reappliquerGestes();
+    majBandeauReseau();
+    return true;
   });
 }
 async function retirerEnAttente(item){
@@ -314,6 +330,7 @@ async function _passeDeRejeu(){
   while(currentUser&&currentUser.id===uid&&reseau.enLigne){
     const item=fileEtat.att[0];   // le plus ancien
     if(!item) break;
+    _gesteEnEnvoi=item.id;   // (pris tout de suite, sans attendre : à partir d'ici il ne peut plus être retiré par l'employé)
     const v=await essaiGeste(item);
     if(v.genre==='ok'){
       serveurAtteint();
@@ -347,6 +364,7 @@ async function _passeDeRejeu(){
     else planifierReessai();            // le serveur répond mal : nouvel essai espacé
     break;
   }
+  _gesteEnEnvoi=null;
   return bilan;
 }
 // Rejoue la file. UN SEUL rejeu à la fois : une demande arrivée pendant un rejeu en cours le fait repasser une fois de plus (rien ne reste oublié).
@@ -365,6 +383,7 @@ async function rejouerFile(){
       }while(_rejeuDemande&&reseau.enLigne&&_minuterieFile===null);   // (un nouvel essai espacé est déjà prévu : on ne le double pas)
     }finally{
       total.restants=fileEtat.att.length;
+      _gesteEnEnvoi=null;
       _rejeuEnCours=false;
     }
     return total;

@@ -19,13 +19,19 @@ async function chargerTours(){
     if(error) throw error;
     lus=Array.isArray(data)?data:[];
   }catch(e){
+    signalerEchecReseau(e);
     return false;
   }
+  installerTours(lus,Date.now());
+  lectureReussie('tours',lus);
+  return true;
+}
+// Met les tours en place (lecture du serveur, ou copie gardée sur le téléphone : luLe = l'heure de cette lecture)
+function installerTours(lus,luLe){
   tours=lus;
-  _toursLusLe=Date.now();
+  _toursLusLe=luLe>0?luLe:Date.now();
   _faitsParTour={};
   tours.forEach(t=>{_faitsParTour[cleTour(t.route_id,t.tache)]=new Set(t.arrets_faits||[]);});
-  return true;
 }
 
 // Étape 14c (décision de Joé) : quand une passe est terminée, son tour RESTE affiché (arrêts faits en vert, avancement)
@@ -119,8 +125,10 @@ async function chargerPositionsVehicules(){
     const{data,error}=await db.from('positions').select('passe_id, lat, lon, precision_m, maj_le');
     if(error) throw error;
     positionsVehicules=Array.isArray(data)?data:[];
+    serveurAtteint();
     return true;
   }catch(e){
+    signalerEchecReseau(e);
     return false;
   }
 }

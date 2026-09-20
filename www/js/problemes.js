@@ -12,7 +12,9 @@ async function chargerProblemes(){
     const{data,error}=await db.from('problemes').select('id, stop_id, passe_id, utilisateur_id, note, cree_le, photo_chemin, utilisateurs!utilisateur_id(nom)').eq('lu',false).order('cree_le',{ascending:true});
     if(error) throw error;
     problemesNonLus=Array.isArray(data)?data:[];
+    lectureReussie('problemes',problemesNonLus);
   }catch(e){
+    signalerEchecReseau(e);
     return false;
   }
   return true;

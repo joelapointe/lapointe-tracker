@@ -1,0 +1,13 @@
+Bibliothèques copiées DANS l'application (étape 16a) pour qu'elle démarre sans réseau.
+Elles ne changent plus toutes seules : pour en mettre une à jour, remplacer le fichier ET changer cette note.
+
+leaflet.js, leaflet.css, images/*    Leaflet 1.9.4 (licence BSD-2-Clause)   https://leafletjs.com
+                                     source : https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/
+supabase.min.js                      supabase-js 2.116.0, version UMD (licence MIT)   https://github.com/supabase/supabase-js
+                                     source : https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js (téléchargé le 20 septembre 2026)
+
+SHA-256 (début) : leaflet.js 5c9aecfc30e45645 · leaflet.css b570abbda963c60b · supabase.min.js fbde52aab1700a3b
+
+Ce qui reste chargé depuis Internet (l'application marche sans, en moins joli) :
+  • les polices Barlow (Google Fonts) : sans réseau, le téléphone utilise une police de secours ;
+  • le fond de carte satellite / plan (ArcGIS, OpenStreetMap) : sans réseau, le fond est uni ; les clients, zones et camions s'affichent quand même.

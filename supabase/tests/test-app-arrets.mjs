@@ -108,7 +108,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -120,7 +120,7 @@ function monde(o = {}) {
     couleur: (m) => (m.opt.icon.html.match(/background:(#[0-9a-f]+)/) || [])[1],
     elementsListe: () => el('liste-body').children,
     dernierToast: () => appels.toasts[appels.toasts.length - 1],
-    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;', ctx),
+    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;arreterSonde();', ctx),
   };
   tousLesMondes.push(w);
   return w;

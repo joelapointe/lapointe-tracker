@@ -5,8 +5,10 @@ let routes=[];
 let routeActive=null;
 
 async function loadRoutes(){
-  const{data}=await db.from('routes').select('*').order('created_at');
+  const{data,error}=await db.from('routes').select('*').order('created_at');
+  if(error) throw error;
   routes=data||[];
+  lectureReussie('routes',routes);
   restaurerRouteChoisie();
 }
 

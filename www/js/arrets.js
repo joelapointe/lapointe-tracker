@@ -9,18 +9,33 @@ async function loadStops(){
     const{data,error}=await db.from('stops').select('*').eq('actif',true).order('ordre');
     if(error) throw error;
  stops=data||[];
+    lectureReussie('stops',stops);
     await loadRoutes();
     await chargerTours();
     await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
     await chargerVehiculesEtEquipages(); // noms des camions et équipages à bord (étape 13f)
     demarrerRelecturePositions();
     await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
+    if(!reseau.enLigne) await restaurerDepuisCache();   // le signal a disparu pendant le chargement : on prend les copies pour ce qui manque
     renderAll();
     hideLoading();
     updateBar();
 	  checkProblemes();
     resumeAuDemarrage();   // une passe terminée à l'instant (avant un rechargement) : son résumé (passe.js)
   }catch(e){
+    // Pas de signal : on s'ouvre avec ce qu'on savait à la dernière connexion (étape 16a). Un refus du serveur, lui, reste une erreur.
+    if(estErreurReseau(e)){
+      if(await restaurerDepuisCache()){
+        renderAll();
+        hideLoading();
+        updateBar();
+        checkProblemes();
+        demarrerRelecturePositions();
+        return;
+      }
+      showErr('Pas de réseau, et rien n’est encore gardé sur ce téléphone.<br>Ouvre l’application une première fois avec du signal : elle gardera alors de quoi travailler sans réseau.');
+      return;
+    }
     showErr('Impossible de charger les données.<br>Vérifie que les politiques RLS sont activées dans Supabase.<br><br><small>'+esc(e.message)+'</small>');
   }
 }

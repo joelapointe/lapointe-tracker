@@ -53,7 +53,7 @@ function monde(o = {}) {
     console,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/auth.js', 'js/compte.js']) vm.runInContext(lire(f), ctx, { filename: f });
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/auth.js', 'js/compte.js']) vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb;', ctx);
   // La boîte de confirmation est testée à part (plus bas) ; ici on note la question posée et on répond « oui » ou « non »
   vm.runInContext('confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', ctx);

@@ -104,7 +104,7 @@ function monde(o = {}) {
     ...(o.sansBitmap ? {} : { createImageBitmap: async (f, opt) => { if (o.bitmapErreur) throw new Error('decode'); essais.bitmap = [...(essais.bitmap ?? []), [f, opt]]; return { width: f.largeur ?? 4000, height: f.hauteur ?? 3000, close() { fermetures.push(1); } }; } }),
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(user) + ';', ctx);
   vm.runInContext('toast = (m) => { __toasts.push(m); };', ctx);
@@ -116,7 +116,7 @@ function monde(o = {}) {
     fichier: (o2 = {}) => ({ type: 'image/jpeg', name: 'photo.jpg', largeur: 4000, hauteur: 3000, ...o2 }),
     champ: (f) => ({ files: f ? [f] : [], value: 'C:\\fakepath\\photo.jpg' }),
     fiche: (id = 's1') => { w.run(`openCard(${STOPS.findIndex((s) => s.id === id)})`); return el('sc-prob').innerHTML; },
-    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;', ctx),
+    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;arreterSonde();', ctx),
   };
   tousLesMondes.push(w);
   return w;

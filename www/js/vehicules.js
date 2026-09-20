@@ -27,7 +27,9 @@ async function chargerVehiculesEtEquipages(){
     Object.values(eq).forEach(l=>l.sort((a,b)=>(a.role==='chauffeur'?0:1)-(b.role==='chauffeur'?0:1)||a.nom.localeCompare(b.nom,'fr')));
     nomsVehicules=noms;
     equipages=eq;
+    lectureReussie('vehicules',{noms,equipages:eq});
   }catch(err){
+    signalerEchecReseau(err);
     return false;
   }
   return true;

@@ -132,7 +132,7 @@ function monde(o = {}) {
     ...(o.sansCrypto ? {} : { crypto: { randomUUID: (() => { let n = 0; return () => 'uuid-' + (++n); })() } }),
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/problemes.js', 'js/photos.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/problemes.js', 'js/photos.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(user) + ';', ctx);
   // Les messages sont notés ; la boîte de confirmation répond selon la liste « confirme » (une réponse par question, la dernière se répète)
@@ -152,7 +152,7 @@ function monde(o = {}) {
     // toucher le bouton dont le texte contient « texte »
     toucher: (texte) => { const b = boutons().find((x) => x.innerHTML.includes(texte)); if (!b) throw new Error('bouton introuvable : ' + texte); return b.onclick(); },
     charge: async () => { await w.run('loadStops()'); return w; },
-    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;', ctx),
+    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;arreterSonde();', ctx),
   };
   tousLesMondes.push(w);
   return w;

@@ -114,7 +114,7 @@ function monde(o = {}) {
     crypto: { randomUUID: (() => { let n = 0; return () => '00000000-0000-4000-8000-' + String(++n).padStart(12, '0'); })() },
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/problemes.js', 'js/photos.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/problemes.js', 'js/photos.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(LUC) + ';', ctx);
   vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponses.length > 1 ? __reponses.shift() : __reponses[0]; };', ctx);
@@ -137,7 +137,7 @@ function monde(o = {}) {
     texteCorps: () => { const r = []; parcourir(el('debut-body'), (c) => r.push(c.textContent + c.innerHTML)); return r.join(' | '); },
     choixPersonnes: () => { const l = []; parcourir(el('choix-body'), (c) => { if (String(c.className).startsWith('choix-personne')) l.push(c); }); return l; },
     debutOuvert: () => el('debut-overlay').classList.contains('open'),
-    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;', ctx),
+    fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;arreterSonde();', ctx),
   };
   tousLesMondes.push(w);
   return w;

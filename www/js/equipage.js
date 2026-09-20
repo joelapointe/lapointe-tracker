@@ -15,8 +15,10 @@ async function chargerEmployes(){
     const{data,error}=await db.from('utilisateurs').select('id, nom').eq('actif',true).order('nom');
     if(error) throw error;
     employes=(Array.isArray(data)?data:[]).map(x=>({id:x.id,nom:x.nom||'?'})).sort((a,b)=>a.nom.localeCompare(b.nom,'fr'));   // en ordre alphabétique, quoi que réponde le serveur
+    lectureReussie('employes',employes);
     return true;
   }catch(e){
+    signalerEchecReseau(e);
     return false;
   }
 }

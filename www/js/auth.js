@@ -145,6 +145,7 @@ async function ouvrirSession(session){
 
 async function fermerSessionLocale(){
   deconnexionVolontaire=true;
+  await effacerCache();
   currentUser=null;
   effacerProfilLocal();
   try{await db.auth.signOut({scope:'local'});}catch(e){}
@@ -160,6 +161,7 @@ async function restaurerSession(){
     if(event==='SIGNED_OUT'&&!deconnexionVolontaire&&currentUser){
       currentUser=null;
       effacerProfilLocal();
+      effacerCache();
       document.getElementById('btn-deconnexion').style.display='none';
       showLoginScreen('Session terminée. Reconnecte-toi.');
     }
@@ -173,9 +175,39 @@ async function restaurerSession(){
   if(session){
     const ouverte=await ouvrirSession(session);
     if(!ouverte&&!document.getElementById('login-screen').classList.contains('show')) showLoginScreen();
+  } else if(await ouvrirSansSignal()){
+    // ouvert hors réseau avec la session gardée sur le téléphone
   } else {
     showLoginScreen();
   }
+}
+
+// Le téléphone a été hors réseau assez longtemps pour que la session expire (le renouvellement demande du signal) : supabase-js
+// ne rend alors plus de session, mais il GARDE le jeton sur le téléphone. Si le serveur est vraiment injoignable et que ce jeton est
+// bien celui de l'employé gardé ici, on ouvre avec ses copies (aucune requête au serveur). Le signal de retour renouvelle le jeton tout seul ;
+// s'il est refusé, l'application revient à l'écran de connexion. (Le serveur, lui, ne fait confiance qu'au jeton : rien ne se contourne.)
+function jetonGardeSurLeTelephone(){
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&/^sb-.+-auth-token$/.test(k)){
+        const v=JSON.parse(localStorage.getItem(k));
+        const s=v&&(v.currentSession||v);
+        if(s&&s.user&&s.user.id&&s.refresh_token) return s.user.id;
+      }
+    }
+  }catch(e){}
+  return null;
+}
+async function ouvrirSansSignal(){
+  const local=lireProfilLocal();
+  if(!local||jetonGardeSurLeTelephone()!==local.id) return false;
+  if(await serveurJoignable()) return false;   // le serveur répond : la session est vraiment finie, retour à la connexion
+  currentUser=local;
+  cacherLoginScreen();
+  applyRole();
+  await loadStops();
+  return true;
 }
 
 async function doLogout(){
@@ -184,6 +216,7 @@ async function doLogout(){
   deconnexionVolontaire=true;
   try{await arreterTracking();}catch(e){}
   effacerProfilLocal();
+  await effacerCache();   // les copies de l'employé ne restent pas sur le téléphone après sa déconnexion
   currentUser=null;
   try{await db.auth.signOut({scope:'local'});}catch(e){}   // « local » : ne déconnecte pas les autres appareils du même compte
   location.reload();

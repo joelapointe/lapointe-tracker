@@ -107,8 +107,13 @@ async function lireEquipagePrecedent(){
     const r=await db.rpc('equipage_precedent');
     if(r.error) throw r.error;
     const membres=(r.data&&Array.isArray(r.data.membres))?r.data.membres:[];
+    lectureReussie('equipagePrecedent',membres);
     return {indispo:false,precedent:membres.map(m=>({utilisateur_id:m.utilisateur_id,nom:m.nom||'?'})),choix:{},extras:[]};
   }catch(e){
+    // Sans signal : l'équipage gardé à la dernière lecture (il ne change qu'à la fin d'une passe)
+    signalerEchecReseau(e);
+    const c=estErreurReseau(e)?await cacheLire('equipagePrecedent'):null;
+    if(c&&Array.isArray(c.data)) return {indispo:false,precedent:c.data.map(m=>({utilisateur_id:m.utilisateur_id,nom:m.nom||'?'})),choix:{},extras:[]};
     return {indispo:true,precedent:[],choix:{},extras:[]};
   }
 }
@@ -227,10 +232,17 @@ async function ouvrirDebut(){
       const{data,error}=await db.from('equipes').select('id, nom').eq('actif',true).order('nom');
       if(error) throw error;
       equipes=(data||[]).slice().sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr',{numeric:true}));
+      lectureReussie('equipesActives',equipes);
     }catch(e){
-      showSync(false);
-      toast('❌ Pas de réseau. Réessaie.');
-      return;
+      // Sans signal : les véhicules gardés à la dernière connexion (étape 16a) ; sans copie, on n'ouvre rien
+      signalerEchecReseau(e);
+      const c=estErreurReseau(e)?await cacheLire('equipesActives'):null;
+      if(!c||!Array.isArray(c.data)){
+        showSync(false);
+        toast('❌ Pas de réseau. Réessaie.');
+        return;
+      }
+      equipes=c.data;
     }
     const equipage=await lireEquipagePrecedent();   // les personnes qui étaient à bord avec moi (étape 15b)
     await chargerEmployes();                         // pour « ＋ Quelqu'un d'autre »

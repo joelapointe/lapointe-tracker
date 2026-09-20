@@ -101,6 +101,9 @@ function planifierRechargementEquipages(){
   clearTimeout(_tRechargeEquipages);
   _tRechargeEquipages=setTimeout(async()=>{
     if(!currentUser) return;
-    if(await chargerVehiculesEtEquipages()) majVehicules();
+    if(await chargerVehiculesEtEquipages()){
+      majVehicules();
+      majBandeauPasse();       // « 👤 Équipage · N à bord » et le panneau ouvert se mettent à jour (étape 15c)
+    }
   },300);
 }

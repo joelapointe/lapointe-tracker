@@ -552,15 +552,19 @@ function majBandeauPasse(){
   b.classList.add('show');
   const m=maPasse();
   suivreMaPasse(m);
+  // « 👤 Équipage · N à bord » (étape 15c) : ouvre la liste de l'équipage ; le chauffeur y ajoute et retire du monde
+  const boutonEquipage=passeId=>'<button id="btn-equipage" type="button" class="passe-equipage" onclick="ouvrirEquipage()">👤 Équipage'+(nbABord(passeId)?' · '+nbABord(passeId)+' à bord':'')+'</button>';
   if(m){
     // « Terminer » n'existe que pour une passe pas encore complétée : à 100 % le serveur la ferme lui-même
-    b.innerHTML=htmlCartePasse(m.tour,m.passe,'chauffeur')+(pourcentageDe(m.tour)<100
-      ?'<button id="btn-terminer" type="button" class="passe-terminer" onclick="terminerPasse()"'+(_envoiTerminer?' disabled':'')+'>■ Terminer la passe</button>':'');
+    b.innerHTML=htmlCartePasse(m.tour,m.passe,'chauffeur')+'<div class="passe-actions">'+boutonEquipage(m.passe.passe_id)+(pourcentageDe(m.tour)<100
+      ?'<button id="btn-terminer" type="button" class="passe-terminer" onclick="terminerPasse()"'+(_envoiTerminer?' disabled':'')+'>■ Terminer la passe</button>':'')+'</div>';
+    majPanneauEquipage();
     return;
   }
   const bord=monBord();
-  b.innerHTML=(bord?htmlCartePasse(bord.tour,bord.passe,'bord'):'')+
+  b.innerHTML=(bord?htmlCartePasse(bord.tour,bord.passe,'bord')+'<div class="passe-actions">'+boutonEquipage(bord.passe.passe_id)+'</div>':'')+
     '<button id="btn-debuter" type="button" class="passe-debuter'+(bord?' secondaire':'')+'" onclick="ouvrirDebut()">▶ Débuter '+(bord?'ma propre ':'la ')+'passe</button>';
+  majPanneauEquipage();
 }
 
 // ── Terminer la passe ─────────────────────────────────

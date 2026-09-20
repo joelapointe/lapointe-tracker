@@ -131,6 +131,24 @@
   </div>
 </div>
 
+<!-- L'ÉQUIPAGE PENDANT LA PASSE (equipage-panneau.js) : qui est à bord ; le chauffeur ajoute et retire -->
+<div id="equipage-overlay" role="dialog" aria-modal="true" aria-labelledby="equipage-title" onclick="bgClickEquipage(event)">
+  <div id="equipage-panel">
+    <div id="equipage-header">
+      <div>
+        <div id="equipage-title">👤 Équipage</div>
+        <div id="equipage-sub"></div>
+      </div>
+      <button id="equipage-x" type="button" onclick="fermerEquipage()" aria-label="Fermer">✕</button>
+    </div>
+    <div id="equipage-body"></div>
+    <div id="equipage-footer">
+      <button class="lf-btn fermer" type="button" onclick="fermerEquipage()">FERMER</button>
+      <button class="lf-btn nouveau" id="btn-equipage-ajouter" type="button" onclick="ajouterAuVehicule()">＋ AJOUTER</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHOISIR UNE PERSONNE (equipage.js) : qui monte à bord -->
 <div id="choix-overlay" role="dialog" aria-modal="true" aria-labelledby="choix-title" onclick="bgClickChoix(event)">
   <div id="choix-panel">
@@ -294,6 +312,7 @@
 <script src="js/tours.js"></script>
 <script src="js/vehicules.js"></script>
 <script src="js/equipage.js"></script>
+<script src="js/equipage-panneau.js"></script>
 <script src="js/passe.js"></script>
 <script src="js/resume-passe.js"></script>
 <script src="js/arrets.js"></script>

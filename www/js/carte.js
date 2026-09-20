@@ -73,7 +73,7 @@ function initApp(){
     .on('postgres_changes',{event:'*',schema:'public',table:'passe_arrets'},()=>planifierRechargementTours())
     .on('postgres_changes',{event:'*',schema:'public',table:'positions'},()=>planifierRechargementPositions())
     .on('postgres_changes',{event:'*',schema:'public',table:'problemes'},()=>planifierRechargementProblemes())
-    .on('postgres_changes',{event:'*',schema:'public',table:'equipage_periodes'},()=>planifierRechargementEquipages())
+    .on('postgres_changes',{event:'*',schema:'public',table:'equipage_periodes'},()=>{planifierRechargementEquipages();planifierRechargementTours();})   // les tours disent aussi « je suis à bord » (un passager retiré le voit tout de suite)
     .subscribe();
 
   // Session : reprise de celle déjà ouverte sur ce téléphone (Supabase Auth), sinon écran de connexion

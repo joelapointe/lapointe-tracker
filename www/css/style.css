@@ -406,3 +406,26 @@
 .choix-personne small{font-family:'Barlow',sans-serif;font-size:12px;font-weight:500;color:#fdba74;}
 .choix-personne:active{transform:scale(.98);}
 .choix-vide{padding:24px 8px;text-align:center;color:var(--muted);font-size:14px;}
+
+/* Étape 15c : l'équipage pendant la passe (bouton du bandeau et panneau) */
+.passe-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.passe-actions .passe-terminer{margin-top:0;}
+.passe-equipage{pointer-events:all;min-height:48px;padding:0 18px;border:2px solid var(--accent);border-radius:12px;background:rgba(17,20,24,.96);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
+.passe-equipage:active{filter:brightness(.85);}
+#equipage-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1600;align-items:flex-end;}
+#equipage-overlay.open{display:flex;}
+#equipage-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:85vh;display:flex;flex-direction:column;}
+#equipage-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 12px;border-bottom:2px solid #c8e63c;flex-shrink:0;}
+#equipage-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#f0f4f8;}
+#equipage-sub{font-size:12px;color:#6b7a8d;margin-top:2px;}
+#equipage-x{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:18px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#equipage-body{overflow-y:auto;flex:1;padding:10px 16px 8px;}
+#equipage-footer{padding:12px 16px 24px;border-top:1px solid #252d3a;display:flex;gap:8px;flex-shrink:0;}
+#equipage-footer .lf-btn{min-height:52px;font-size:18px;display:flex;align-items:center;justify-content:center;}
+.eq-ligne{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px 10px;background:#161c24;border-radius:12px;min-height:60px;}
+.eq-nom{flex:1;min-width:0;font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;color:#f0f4f8;line-height:1.05;overflow-wrap:anywhere;}
+.eq-role{font-size:13px;color:var(--accent);white-space:nowrap;}
+.eq-retirer{min-height:48px;padding:0 14px;border:2px solid rgba(248,113,113,.5);border-radius:10px;background:rgba(58,26,26,.9);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;cursor:pointer;}
+.eq-retirer:active{filter:brightness(.85);}
+.eq-note{padding:8px 4px;font-size:13px;color:var(--muted);text-align:center;}
+.eq-vide{padding:20px 8px;text-align:center;color:var(--muted);font-size:14px;}

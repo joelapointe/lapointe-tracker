@@ -48,7 +48,8 @@ function questionAvertissements(nom,avertissements){
 // Un geste « ajouter à bord » : la même clé au renvoi = jamais de doublon
 async function appelAjouterEquipier(passeId,userId,cle,forcer){
   try{
-    return await db.rpc('equipage_ajouter',{p_cle_client:cle,p_passe_id:passeId,p_utilisateur_id:userId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null,p_forcer:!!forcer});
+    // (étape 16c : sans réponse en 10 s = panne de réseau ; l'écran garde alors le geste avec la MÊME clé)
+    return await avecDelai(db.rpc('equipage_ajouter',{p_cle_client:cle,p_passe_id:passeId,p_utilisateur_id:userId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null,p_forcer:!!forcer}),FILE_DELAI_DIRECT_MS);
   }catch(e){
     return {data:null,error:e};
   }
@@ -67,7 +68,7 @@ async function conclureAjout(passeId,personne,cle,r){
     const q=questionAvertissements(personne.nom,d.avertissements);
     if(!(await confirmer(q.titre,q.texte,'Oui, le faire monter','Non'))) return {statut:'ignore'};
     const r2=await appelAjouterEquipier(passeId,personne.utilisateur_id,cle,true);
-    if(r2.error) return {statut:'erreur',error:r2.error};
+    if(r2.error) return {statut:'erreur',error:r2.error,confirme:true};   // (confirme : la question a déjà été posée et acceptée : on ne la repose pas)
     const s2=r2.data&&r2.data.statut;
     if(s2==='ajoute'||s2==='transfere') return {statut:s2};
     if(s2==='deja_a_bord') return {statut:'deja'};

@@ -230,9 +230,8 @@ log('\n=== AJOUTER QUELQU\'UN : 3 touchers (« 👤 Équipage », « ＋ AJOUTER
   }
   m = await ouvrir({ ajouter: { 'u-joe': ['reseau'] } });
   await m.run('ajouterAuVehicule()'); await m.choix().find((b) => b.innerHTML === 'Joé').onclick();
-  eq('réseau coupé : message, rien ne change, aucun plantage', [m.dernierToast(), m.lignes().length], ['❌ Pas de réseau ou erreur. Réessaie.', 3]);
-  await m.run('ajouterAuVehicule()'); await m.choix().find((b) => b.innerHTML === 'Joé').onclick();
-  eq('… on réessaie : ça marche', [m.dernierToast(), m.lignes().length], ['👤 Joé est à bord', 4]);
+  // Étape 16c : sans signal le geste n'est plus refusé : Joé est à bord tout de suite à l'écran et le geste est gardé, avec la MÊME clé
+  eq('réseau coupé : Joé est à bord à l\'écran (⏳), le geste est gardé avec la même clé que la demande qui a échoué, aucun plantage', [m.dernierToast().startsWith('👤 Joé est à bord · ⏳ envoyé au retour du signal'), m.lignes().length, m.run('gestesEnAttente().length'), m.run('gestesEnAttente()[0].args.cle') === m.ajouts()[0].args.p_cle_client], [true, 4, 1, true]);
   m = await ouvrir({ ajouter: { 'u-joe': ['deja_a_bord'] } });
   await m.run('ajouterAuVehicule()'); await m.choix().find((b) => b.innerHTML === 'Joé').onclick();
   eq('le serveur répond « déjà à bord » (geste renvoyé) : message adapté', m.dernierToast(), '👤 Joé était déjà à bord');
@@ -276,9 +275,8 @@ log('\n=== RETIRER QUELQU\'UN : une confirmation ===');
   }
   m = await ouvrir({ confirme: [true], retirer: { 'u-eric': ['reseau'] } });
   await m.ligne('Eric').retirer.onclick();
-  eq('réseau coupé : message, Eric reste à bord', [m.dernierToast(), m.lignes().some((l) => l.nom === 'Eric')], ['❌ Pas de réseau ou erreur. Réessaie.', true]);
-  await m.ligne('Eric').retirer.onclick();
-  eq('… on réessaie : ça marche', m.dernierToast(), '👤 Eric est descendu');
+  // Étape 16c : sans signal le geste n'est plus refusé : Eric descend tout de suite à l'écran et le geste est gardé
+  eq('réseau coupé : Eric descend à l\'écran (⏳), le geste est gardé', [m.dernierToast().startsWith('👤 Eric est descendu · ⏳ envoyé au retour du signal'), m.lignes().some((l) => l.nom === 'Eric'), m.run('gestesEnAttente().map(g=>g.type)')], [true, false, ['equipage_retirer']]);
   m = await ouvrir({ confirme: [true] });
   await m.run('retirerDuVehicule("u-luc")');
   eq('le CHAUFFEUR ne peut pas être retiré (aucune question, aucun appel)', [m.appels.confirmations.length, m.retraits().length], [0, 0]);

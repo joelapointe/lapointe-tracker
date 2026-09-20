@@ -80,6 +80,13 @@ function appliquerGesteAuxEquipages(eq,g){
       retirerDesEquipages(eq,m.utilisateur_id,a.passeId);
       assurerABord(eq,a.passeId,m.utilisateur_id,'passager',m.nom);
     });
+  }else if(g.type==='equipage_ajouter'){
+    if(!idsPassesEnCours(tours).has(a.passeId)) return;   // la passe n'est plus en cours : le serveur refusera, on n'affiche rien
+    retirerDesEquipages(eq,a.userId,a.passeId);            // la personne quitte l'autre camion (transfert)
+    assurerABord(eq,a.passeId,a.userId,'passager',a.nom);
+  }else if(g.type==='equipage_retirer'){
+    if(!eq[a.passeId]) return;
+    eq[a.passeId]=eq[a.passeId].filter(x=>x.utilisateur_id!==a.userId||x.role==='chauffeur');   // le chauffeur ne se retire pas
   }
 }
 // Renvoie la copie du serveur si rien n'attend, sinon une COPIE avec les gestes en attente appliqués (dans l'ordre où ils ont été faits)

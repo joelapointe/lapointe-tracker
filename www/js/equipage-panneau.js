@@ -100,17 +100,33 @@ async function ajouterAuVehicule(){
   const exclus=new Set((equipages[p.passeId]||[]).map(x=>x.utilisateur_id));
   ouvrirChoixPersonne('Qui monte avec toi ?',exclus,e=>ajouterPersonneAuVehicule(p.passeId,{utilisateur_id:e.id,nom:e.nom}));
 }
+// « Ajouter » SANS RÉSEAU (étape 16c) : le geste est gardé sur le téléphone, la personne est à bord tout de suite à l'écran (vehicules.js).
+// Sans le serveur on ne connaît pas ses avertissements : la seule question possible est celle de la copie (« à bord de tel véhicule »).
+// Au retour du signal le geste part avec « forcer » (décision A) : un conflit s'applique tout seul et est marqué « à vérifier » pour Joé.
+async function ajouterSansReseau(passeId,personne,cle,avant,dejaConfirme){
+  if(avant&&!dejaConfirme){
+    const dec=await decisionAbord({utilisateur_id:personne.utilisateur_id,nom:personne.nom});   // (passe.js : la même question qu'au départ)
+    if(dec.etat!=='abord') return;   // « Non », ou la personne conduit un autre camion : rien ne change
+  }
+  const vehicule=nomVehiculeDe((passeDuPanneau()||{}).equipeId)||'ce camion';
+  const r=await enfiler('equipage_ajouter',{cle,passeId,userId:personne.utilisateur_id,nom:personne.nom,lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null},{libelle:'👤 Équipage : + '+personne.nom+' ('+vehicule+')'});
+  if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}   // jamais « à bord » si rien n'est gardé
+  renderAll();majCarte();majPanneauEquipage();
+  toast((avant?'👤 '+personne.nom+' transféré depuis '+avant.vehicule:'👤 '+personne.nom+' est à bord')+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+}
 async function ajouterPersonneAuVehicule(passeId,personne){
   if(_equipageOccupe) return;
   _equipageOccupe=true;
   try{
     const avant=ouEstIl(personne.utilisateur_id);   // où elle était (pour dire d'où elle vient)
+    const cle=nouvelId();   // la MÊME clé sert si le geste passe à la file : jamais de doublon
+    if(!reseau.enLigne) return await ajouterSansReseau(passeId,personne,cle,avant,false);
     showSync(true);
-    const cle=nouvelId();
     const r=await appelAjouterEquipier(passeId,personne.utilisateur_id,cle,false);
     showSync(false);
     const c=await conclureAjout(passeId,personne,cle,r);   // un avertissement (déjà à bord ailleurs, quart terminé) devient une question nommée
     if(c.statut==='ignore') return;                          // « Non » : rien ne change
+    if(c.statut==='erreur'&&estErreurReseau(c.error)){signalerEchecReseau(c.error);return await ajouterSansReseau(passeId,personne,cle,avant,!!c.confirme);}
     if(c.statut==='erreur'){toast('❌ '+messageErreurEquipage(c.error));return;}
     if(c.statut==='refuse'||c.statut==='passe_terminee'){toast('⚠ '+messageRefusEquipage(personne.nom,c));return;}
     await actualiserEquipage();
@@ -119,6 +135,24 @@ async function ajouterPersonneAuVehicule(passeId,personne){
     showSync(false);
     _equipageOccupe=false;
   }
+}
+
+// « Retirer » SANS RÉSEAU (étape 16c). Une personne ajoutée sans réseau et dont l'ajout n'est PAS ENCORE PARTI est simplement retirée de la file
+// (rien à envoyer ; si c'était un transfert, elle est de nouveau dans son camion d'origine, comme le ferait le serveur dans les 2 premières minutes) ;
+// sinon un geste « retirer » est gardé.
+async function retirerSansReseau(passeId,membre,cle){
+  const enFile=gestesEnAttente().filter(g=>g.type==='equipage_ajouter'&&g.args.passeId===passeId&&g.args.userId===membre.utilisateur_id);
+  const dernier=enFile[enFile.length-1];
+  if(dernier&&await retirerGesteSiPasParti(dernier.id)){
+    renderAll();majCarte();majPanneauEquipage();
+    if(!(equipages[passeId]||[]).some(x=>x.utilisateur_id===membre.utilisateur_id)){toast('↩ Ajout de '+membre.nom+' annulé : rien à envoyer');return;}
+    // (le serveur l'a déjà à bord : un « retirer » doit quand même partir, on continue plus bas)
+  }
+  const vehicule=nomVehiculeDe((passeDuPanneau()||{}).equipeId)||'ce camion';
+  const r=await enfiler('equipage_retirer',{cle,passeId,userId:membre.utilisateur_id,nom:membre.nom,lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null},{libelle:'👤 Équipage : − '+membre.nom+' ('+vehicule+')'});
+  if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}   // jamais « descendu » si rien n'est gardé
+  renderAll();majCarte();majPanneauEquipage();
+  toast('👤 '+membre.nom+' est descendu'+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
 }
 
 // « ✕ Retirer » : confirmation, puis equipage_retirer. Dans les 2 premières minutes le serveur ANNULE l'ajout (et, si c'était un
@@ -133,14 +167,17 @@ async function retirerDuVehicule(userId){
   if(_equipageOccupe) return;
   _equipageOccupe=true;
   try{
+    const cle=nouvelId();   // la MÊME clé sert si le geste passe à la file : jamais de doublon
+    if(!reseau.enLigne) return await retirerSansReseau(p.passeId,membre,cle);
     showSync(true);
     let r;
     try{
-      r=await db.rpc('equipage_retirer',{p_cle_client:nouvelId(),p_passe_id:p.passeId,p_utilisateur_id:userId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null});
+      r=await avecDelai(db.rpc('equipage_retirer',{p_cle_client:cle,p_passe_id:p.passeId,p_utilisateur_id:userId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null}),FILE_DELAI_DIRECT_MS);
     }catch(err){
       r={data:null,error:err};
     }
     showSync(false);
+    if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await retirerSansReseau(p.passeId,membre,cle);}
     if(r.error){toast('❌ '+messageErreurEquipage(r.error));return;}
     await actualiserEquipage();
     const s=r.data&&r.data.statut;

@@ -149,7 +149,7 @@ async function ouvrir(o = {}) {
   const m = monde(o.monde || {});
   if (o.tours) m.donnees.tours = o.tours;
   if (o.equipes) m.donnees.equipes = o.equipes;
-  if (o.equipages) m.donnees.equipage_periodes = o.equipages;
+  if (o.equipages) m.donnees.equipage_periodes = o.equipages.map((x) => ({ ...x }));   // (une copie : le faux serveur en modifie le contenu, les autres scénarios ne doivent pas le voir)
   await m.run('loadStops()');
   await attendre(80);   // la copie anticipée de l'écran « Débuter » (arrière-plan, passe.js) doit être finie : sinon sa lecture réussie remettrait l'application « en ligne » APRÈS que le test a coupé le signal
   await m.run('attendreEcritures()');
@@ -644,6 +644,217 @@ log('\n=== DE QUOI DÉBUTER SANS RÉSEAU EST GARDÉ DÈS LE CHARGEMENT (sans ouv
   await seul.run('ouvrirDebut()');
   eq('l\'écran « Débuter » s\'ouvre sans réseau avec ces copies, alors qu\'il n\'a JAMAIS été ouvert en ligne', [ecranDebutOuvert(seul), seul.run('_debut.equipes.map(e=>e.nom)')], [true, ['Camion 1', 'Camion 2']]);
   seul.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// MORCEAU 3 : L'ÉQUIPAGE PENDANT LA PASSE (ajouter / retirer quelqu'un)
+// ══════════════════════════════════════════════════════════════════════
+// Deux camions : le mien (Luc, p-luc) et celui d'Eric (p-eric, avec Marc à bord)
+const EQ_DEUX_CAMIONS = [
+  { passe_id: 'p-luc', role: 'chauffeur', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } },
+  { passe_id: 'p-eric', role: 'chauffeur', utilisateur_id: 'u-eric', utilisateurs: { nom: 'Eric' } },
+  { passe_id: 'p-eric', role: 'passager', utilisateur_id: 'u-marc', utilisateurs: { nom: 'Marc' } }];
+const EQ_AVEC_NINA = [...EQ_DEUX_CAMIONS, { passe_id: 'p-luc', role: 'passager', utilisateur_id: 'u-nina', utilisateurs: { nom: 'Nina' } }];
+const toursDeux = () => [tourInit({ passes: [{ ...PASSE_LUC }, { ...PASSE_ERIC }] })];
+const nomsA = (m, passe) => m.run(`(equipages['${passe}']||[]).map(x=>x.nom)`);
+const ajouterEq = (m, id, nom) => m.run(`ajouterPersonneAuVehicule('p-luc',{utilisateur_id:'${id}',nom:'${nom}'})`);
+const retirerEq = (m, id) => m.run(`retirerDuVehicule('${id}')`);
+const panneau = (m) => m.el('equipage-body').children.map((c) => c.children[0].textContent);
+const ouvrirDeux = async (o = {}) => { const m = await ouvrir({ tours: toursDeux(), equipes: E1E2, equipages: o.equipages ?? EQ_DEUX_CAMIONS, monde: o.monde }); return m; };
+
+log('\n=== AJOUTER QUELQU\'UN SANS RÉSEAU : IL EST À BORD TOUT DE SUITE (transfert si à bord ailleurs) ===');
+{
+  const m = await ouvrirDeux(); coupe(m);
+  await m.run('ouvrirEquipage()');
+  await ajouterEq(m, 'u-marc', 'Marc');
+  eq('la question nomme la personne (la copie du téléphone sait où est Marc)', m.appels.confirmations.map((c) => c[0]), ['Faire monter Marc ?']);
+  eq('UN geste gardé : ajouter Marc à MA passe, avec une clé, son nom', m.run('gestesEnAttente().map(g=>[g.type,g.args.passeId,g.args.userId,g.args.nom,typeof g.args.cle])'), [['equipage_ajouter', 'p-luc', 'u-marc', 'Marc', 'string']]);
+  eq('à l\'écran : Marc est à bord de MON camion et a QUITTÉ celui d\'Eric', [nomsA(m, 'p-luc'), nomsA(m, 'p-eric')], [['Luc', 'Marc'], ['Eric']]);
+  eq('le panneau (ouvert) le montre, et le bandeau dit « 2 à bord »', [panneau(m), m.el('passe-bandeau').innerHTML.includes('👤 Équipage · 2 à bord')], [['Luc (toi)', 'Marc'], true]);
+  eq('le message dit d\'où il vient + ⏳', dernier(m).startsWith('👤 Marc transféré depuis Camion 2 · ⏳ envoyé au retour du signal'), true);
+  eq('la copie du serveur est intacte (Marc est toujours dans le camion d\'Eric) ; rien n\'est envoyé', [m.run("_equipagesServeur['p-eric'].map(x=>x.nom)"), m.appels.envois.length], [['Eric', 'Marc'], 0]);
+  eq('la bande : « ⏳ 1 geste en attente »', m.bande().texte.includes('⏳ 1 geste en attente'), true);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux(); coupe(m);
+  await ajouterEq(m, 'u-nina', 'Nina');
+  eq('quelqu\'un de libre : aucune question, à bord tout de suite, message ⏳', [m.appels.confirmations.length, nomsA(m, 'p-luc'), dernier(m).startsWith('👤 Nina est à bord · ⏳ envoyé au retour du signal')], [0, ['Luc', 'Nina'], true]);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux(); coupe(m);
+  await ajouterEq(m, 'u-eric', 'Eric');
+  eq('Eric CONDUIT un autre camion : message clair, rien n\'est gardé, rien ne change (personne n\'est forcé)', [dernier(m), m.attentes().length, nomsA(m, 'p-luc'), m.appels.confirmations.length], ['⚠ Eric conduit déjà « Camion 2 »', 0, ['Luc'], 0]);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux(); coupe(m);
+  m.run('confirmer = async (...a) => { __confirmations.push(a); return false; }');
+  await ajouterEq(m, 'u-marc', 'Marc');
+  eq('« Non » à la question : rien n\'est gardé, Marc reste dans le camion d\'Eric', [m.attentes().length, nomsA(m, 'p-luc'), nomsA(m, 'p-eric'), m.appels.toasts.length], [0, ['Luc'], ['Eric', 'Marc'], 0]);
+  m.fin();
+}
+
+log('\n=== RETIRER QUELQU\'UN SANS RÉSEAU : IL DESCEND TOUT DE SUITE ===');
+{
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA }); coupe(m);
+  await m.run('ouvrirEquipage()');
+  eq('avant : Nina est à bord de mon camion', panneau(m), ['Luc (toi)', 'Nina']);
+  await retirerEq(m, 'u-nina');
+  eq('la question nomme la personne et le camion', m.appels.confirmations.map((c) => [c[0], c[1]]), [['Retirer Nina ?', 'Nina descend de « Camion 1 » maintenant.']]);
+  eq('UN geste gardé : retirer Nina de MA passe, avec une clé', m.run('gestesEnAttente().map(g=>[g.type,g.args.passeId,g.args.userId,g.args.nom,typeof g.args.cle])'), [['equipage_retirer', 'p-luc', 'u-nina', 'Nina', 'string']]);
+  eq('Nina n\'est plus à bord à l\'écran ; le panneau et le bandeau suivent (« 1 à bord »)', [nomsA(m, 'p-luc'), panneau(m), m.el('passe-bandeau').innerHTML.includes('👤 Équipage · 1 à bord')], [['Luc'], ['Luc (toi)'], true]);
+  eq('message ⏳', dernier(m).startsWith('👤 Nina est descendu · ⏳ envoyé au retour du signal'), true);
+  eq('la copie du serveur est intacte (Nina y est encore) ; rien n\'est envoyé', [m.run("_equipagesServeur['p-luc'].map(x=>x.nom)"), m.appels.envois.length], [['Luc', 'Nina'], 0]);
+  m.fin();
+}
+
+log('\n=== RETIRER QUELQU\'UN AJOUTÉ SANS RÉSEAU ET PAS ENCORE PARTI : L\'AJOUT EST RETIRÉ DE LA FILE ===');
+{
+  const m = await ouvrirDeux(); coupe(m);
+  await ajouterEq(m, 'u-nina', 'Nina');
+  await retirerEq(m, 'u-nina');
+  eq('ajouter puis retirer : plus rien dans la file, rien à envoyer, Nina n\'est plus à bord', [m.attentes().length, m.cles('file:').length, nomsA(m, 'p-luc'), dernier(m)], [0, 0, ['Luc'], '↩ Ajout de Nina annulé : rien à envoyer']);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux(); coupe(m);
+  await ajouterEq(m, 'u-marc', 'Marc');
+  await retirerEq(m, 'u-marc');
+  eq('un TRANSFERT annulé : Marc est de nouveau dans le camion d\'Eric (comme le ferait le serveur), plus rien dans la file', [m.attentes().length, nomsA(m, 'p-luc'), nomsA(m, 'p-eric')], [0, ['Luc'], ['Eric', 'Marc']]);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux(); coupe(m);
+  const r = await m.enfiler('equipage_ajouter', { cle: 'c-nina', passeId: 'p-luc', userId: 'u-nina', nom: 'Nina' });
+  m.run(`_gesteEnEnvoi='${r.id}'`);   // (l'ajout est en train de partir : il ne peut plus être retiré)
+  await retirerEq(m, 'u-nina');
+  eq('l\'ajout est en plein envoi : un « retirer » est gardé à la suite (dans l\'ordre) ; Nina n\'est plus à bord à l\'écran', [m.run('gestesEnAttente().map(g=>g.type)'), nomsA(m, 'p-luc')], [['equipage_ajouter', 'equipage_retirer'], ['Luc']]);
+  m.run('_gesteEnEnvoi=null');
+  m.fin();
+}
+{
+  // Une personne choisie au départ (départ gardé, pas encore parti) puis retirée : le retrait est gardé APRÈS le départ
+  const m = await ouvrir({ tours: [], equipes: E1E2 }); coupe(m);
+  await debuterHors(m, [{ utilisateur_id: 'u-marc', nom: 'Marc', cle: 'cle-marc', forcer: false }]);
+  const passeId = passeLocale(m);
+  await retirerEq(m, 'u-marc');
+  eq('Marc était au départ : le retrait est gardé après le départ ; à l\'écran il est descendu', [m.run('gestesEnAttente().map(g=>g.type)'), m.run('gestesEnAttente()[1].args.passeId') === passeId, nomsA(m, passeId)], [['debuter_passe', 'equipage_retirer'], true, ['Luc']]);
+  m.fin();
+}
+
+log('\n=== UN AJOUT OU UN RETRAIT FAIT EN LIGNE DONT LA RÉPONSE SE PERD PASSE PAR LA FILE (même clé : aucun doublon) ===');
+{
+  let casse = true;
+  const serveur = { equipage_ajouter: (args, n, d) => {
+    if (casse) throw new Error('Failed to fetch');
+    if (!d.equipage_periodes.some((p) => p.passe_id === args.p_passe_id && p.utilisateur_id === args.p_utilisateur_id)) d.equipage_periodes.push({ passe_id: args.p_passe_id, role: 'passager', utilisateur_id: args.p_utilisateur_id, utilisateurs: { nom: 'Nina' } });
+    return { data: { statut: 'ajoute' }, error: null };
+  } };
+  const m = await ouvrirDeux({ monde: { serveur } });
+  await ajouterEq(m, 'u-nina', 'Nina');
+  eq('la demande échoue par le réseau : le geste est GARDÉ, Nina est à bord à l\'écran, l\'application se sait hors réseau', [m.attentes().length, nomsA(m, 'p-luc'), m.run('reseau.enLigne')], [1, ['Luc', 'Nina'], false]);
+  eq('message ⏳ (jamais « ❌ Pas de réseau ou erreur »)', dernier(m).startsWith('👤 Nina est à bord · ⏳'), true);
+  const premiere = m.appels.envois[0].args;
+  casse = false; m.reseau(true);
+  vrai('au retour du signal : le geste part et la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  await attendreQue(() => m.appels.lectures.filter((x) => x === 'equipage_periodes').length >= 3);
+  const seconde = m.appels.envois[1]?.args;
+  eq('le geste rejoué porte la MÊME clé, la même passe et la même personne que la première demande', [seconde?.p_cle_client, seconde?.p_passe_id, seconde?.p_utilisateur_id], [premiere.p_cle_client, 'p-luc', 'u-nina']);
+  eq('… avec « forcer » (décision A) et l\'heure du geste (p_moment)', [seconde?.p_forcer, typeof seconde?.p_moment], [true, 'string']);
+  eq('le serveur a le dernier mot : Nina est à bord (une seule fois), plus de ⏳', [nomsA(m, 'p-luc'), m.bande().visible], [['Luc', 'Nina'], false]);
+  m.fin();
+}
+{
+  let casse = true;
+  const serveur = { equipage_retirer: (args, n, d) => {
+    if (casse) throw new Error('Failed to fetch');
+    d.equipage_periodes = d.equipage_periodes.filter((p) => !(p.passe_id === args.p_passe_id && p.utilisateur_id === args.p_utilisateur_id));
+    return { data: { statut: 'retire' }, error: null };
+  } };
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { serveur } });
+  await retirerEq(m, 'u-nina');
+  eq('la demande échoue par le réseau : le geste est GARDÉ, Nina est descendue à l\'écran', [m.attentes().length, nomsA(m, 'p-luc'), m.run('reseau.enLigne'), dernier(m).startsWith('👤 Nina est descendu · ⏳')], [1, ['Luc'], false, true]);
+  const premiere = m.appels.envois[0].args;
+  casse = false; m.reseau(true);
+  vrai('au retour du signal : le geste part et la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  await attendreQue(() => m.appels.lectures.filter((x) => x === 'equipage_periodes').length >= 3);
+  eq('le geste rejoué porte la MÊME clé ; le serveur a le dernier mot : Nina n\'est plus à bord', [m.appels.envois[1]?.args.p_cle_client, premiere.p_cle_client, nomsA(m, 'p-luc')], [premiere.p_cle_client, premiere.p_cle_client, ['Luc']]);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux({ monde: { serveur: { equipage_ajouter: () => new Promise(() => {}) } } });   // le serveur ne répond JAMAIS
+  m.run('FILE_DELAI_DIRECT_MS=60');
+  const t0 = Date.now();
+  await ajouterEq(m, 'u-nina', 'Nina');
+  vrai('une demande qui ne répond pas est abandonnée après le délai : le geste passe à la file', Date.now() - t0 < 1500 && m.attentes().length === 1 && nomsA(m, 'p-luc').includes('Nina'), `${Date.now() - t0} ms`);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { serveur: { equipage_retirer: () => new Promise(() => {}) } } });   // le serveur ne répond JAMAIS
+  m.run('FILE_DELAI_DIRECT_MS=60');
+  const t0 = Date.now();
+  await retirerEq(m, 'u-nina');
+  vrai('un « retirer » qui ne répond pas est abandonné après le délai : le geste passe à la file, Nina est descendue à l\'écran', Date.now() - t0 < 1500 && m.attentes().length === 1 && !nomsA(m, 'p-luc').includes('Nina'), `${Date.now() - t0} ms`);
+  m.fin();
+}
+
+log('\n=== LE SERVEUR AVERTIT, ON RÉPOND « OUI », PUIS LE RÉSEAU TOMBE : LA QUESTION N\'EST PAS REPOSÉE ===');
+{
+  const serveur = { equipage_ajouter: (args, n) => {
+    if (n === 0) return { data: { statut: 'avertissement', avertissements: [{ type: 'conflit_vehicule', vehicule: 'Camion 2' }] }, error: null };
+    throw new Error('Failed to fetch');
+  } };
+  const m = await ouvrirDeux({ monde: { serveur } });
+  await ajouterEq(m, 'u-marc', 'Marc');
+  eq('UNE seule question (celle du serveur, qui nomme le véhicule) ; le 2e essai (avec « forcer ») échoue par le réseau', [m.appels.confirmations.length, m.appels.confirmations[0][1].includes('« Camion 2 »'), m.appels.envois.map((x) => x.args.p_forcer)], [1, true, [false, true]]);
+  eq('le geste est gardé avec la même clé que les deux demandes, Marc est à bord à l\'écran, message ⏳', [m.attentes().length, m.run('gestesEnAttente()[0].args.cle') === m.appels.envois[0].args.p_cle_client, nomsA(m, 'p-luc'), dernier(m).startsWith('👤 Marc transféré depuis Camion 2 · ⏳')], [1, true, ['Luc', 'Marc'], true]);
+  m.fin();
+}
+
+log('\n=== SI LE SERVEUR REFUSE L\'AJOUT AU RETOUR DU SIGNAL : NOTÉ, ET L\'ÉCRAN REVIENT À LA VÉRITÉ ===');
+{
+  const m = await ouvrirDeux({ monde: { serveur: { equipage_ajouter: () => ({ data: { statut: 'refuse', raison: 'chauffeur_ailleurs', vehicule: 'Camion 2' }, error: null }) } } }); coupe(m);
+  await ajouterEq(m, 'u-marc', 'Marc');
+  eq('hors réseau : Marc paraît à bord de mon camion', nomsA(m, 'p-luc'), ['Luc', 'Marc']);
+  m.reseau(true);
+  vrai('l\'ajout est refusé et noté dans « non envoyés », avec la raison', await attendreQue(() => m.refus().length === 1 && m.attentes().length === 0));
+  eq('la raison nomme la personne et le véhicule', m.refus()[0].raison, 'Marc conduit déjà « Camion 2 ».');
+  await attendreQue(() => m.appels.lectures.filter((x) => x === 'equipage_periodes').length >= 3);
+  eq('l\'écran revient à la vérité du serveur : Marc est toujours dans le camion d\'Eric', [nomsA(m, 'p-luc'), nomsA(m, 'p-eric')], [['Luc'], ['Eric', 'Marc']]);
+  m.fin();
+}
+
+log('\n=== SI LE TÉLÉPHONE NE PEUT RIEN GARDER, PERSONNE NE MONTE NI NE DESCEND À L\'ÉCRAN ===');
+{
+  const m = await ouvrirDeux(); coupe(m);
+  m.run('magasinEcrire=async()=>false');
+  await ajouterEq(m, 'u-nina', 'Nina');
+  eq('ajouter sans pouvoir garder : Nina n\'est PAS à bord, message d\'erreur', [nomsA(m, 'p-luc'), m.attentes().length, dernier(m)], [['Luc'], 0, '❌ Le téléphone n’a pas pu garder ce geste. Réessaie.']);
+  m.fin();
+  const n = await ouvrirDeux({ equipages: EQ_AVEC_NINA }); coupe(n);
+  n.run('magasinEcrire=async()=>false');
+  await retirerEq(n, 'u-nina');
+  eq('retirer sans pouvoir garder : Nina est TOUJOURS à bord, message d\'erreur', [nomsA(n, 'p-luc'), n.attentes().length, dernier(n)], [['Luc', 'Nina'], 0, '❌ Le téléphone n’a pas pu garder ce geste. Réessaie.']);
+  n.fin();
+}
+
+log('\n=== DOUBLE TOUCHER, ET SUPERPOSITION RÉPÉTABLE POUR L\'ÉQUIPAGE ===');
+{
+  const m = await ouvrirDeux(); coupe(m);
+  await Promise.all([ajouterEq(m, 'u-nina', 'Nina'), ajouterEq(m, 'u-nina', 'Nina')]);
+  eq('deux touchers presque en même temps : UN seul geste', m.run('gestesEnAttente().filter(g=>g.type==="equipage_ajouter").length'), 1);
+  m.fin();
+  const n = await ouvrirDeux({ equipages: EQ_AVEC_NINA }); coupe(n);
+  await n.enfiler('equipage_ajouter', { cle: 'c1', passeId: 'p-luc', userId: 'u-nina', nom: 'Nina' });
+  await n.enfiler('equipage_ajouter', { cle: 'c2', passeId: 'p-luc', userId: 'u-nina', nom: 'Nina' });
+  eq('le serveur a déjà Nina à bord (réponse perdue) et le geste est même gardé deux fois : Nina n\'est qu\'UNE fois à bord', nomsA(n, 'p-luc'), ['Luc', 'Nina']);
+  await n.enfiler('equipage_ajouter', { cle: 'c3', passeId: 'p-inconnue', userId: 'u-marc', nom: 'Marc' });
+  eq('ajouter à une passe qui n\'est plus en cours : rien ne change à l\'écran', [nomsA(n, 'p-eric'), n.run("equipages['p-inconnue']===undefined")], [['Eric', 'Marc'], true]);
+  await n.enfiler('equipage_retirer', { cle: 'c4', passeId: 'p-luc', userId: 'u-luc', nom: 'Luc' });
+  eq('retirer le CHAUFFEUR : rien ne change (le serveur le refuse aussi)', nomsA(n, 'p-luc'), ['Luc', 'Nina']);
+  n.fin();
 }
 
 log('\n=== LE CODE : UN SEUL ENDROIT POSE LES ÉQUIPAGES AUSSI ===');

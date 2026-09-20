@@ -19,7 +19,7 @@ async function loadStops(){
     hideLoading();
     updateBar();
 	  checkProblemes();
-
+    resumeAuDemarrage();   // une passe terminée à l'instant (avant un rechargement) : son résumé (passe.js)
   }catch(e){
     showErr('Impossible de charger les données.<br>Vérifie que les politiques RLS sont activées dans Supabase.<br><br><small>'+esc(e.message)+'</small>');
   }
@@ -117,12 +117,14 @@ function majCarte(){
 
 function closeCard(){document.getElementById('stop-card').classList.remove('open');activeIdx=null;}
 
-// « Complété » : seul le chauffeur de la passe peut le faire (le serveur le vérifie aussi)
+// « Complété » : seul le chauffeur de la passe peut le faire (le serveur le vérifie aussi).
+// Sur un arrêt déjà fait, le même bouton devient « ↩ Annuler » pendant 10 minutes (étape 14c).
 async function completeStop(){
   if(activeIdx===null)return;
   const s=stops[activeIdx];if(!s)return;
   const e=etatComplete(s);
   if(!e.actif){toast(e.explication||e.texte);return;}
+  if(e.action==='annuler') return annulerArret(s,e);
   showSync(true);
   let r;
   try{
@@ -138,6 +140,31 @@ async function completeStop(){
   if(st==='passe_terminee'){toast('⚠ Cette passe est déjà terminée');return;}
   closeCard();
   toast(r.data&&r.data.passe_fermee?'🎉 Passe terminée : 100 % !':(st==='deja_complete'?'✔ Déjà complété par un autre camion':'✔ Stop complété !'));
+}
+
+// Annule un arrêt complété par erreur (10 minutes). Si cet arrêt avait fermé la passe à 100 %, le serveur la rouvre.
+let _envoiAnnulation=false;
+async function annulerArret(s,e){
+  if(_envoiAnnulation) return;
+  _envoiAnnulation=true;   // pas de double geste
+  try{
+    if(!(await confirmer('Annuler ce « Complété » ?',s.adresse+' redeviendra à faire.'+(e.termine?' La passe terminée sera rouverte.':''),'Oui, annuler','Non'))) return;
+    showSync(true);
+    let r;
+    try{
+      r=await db.rpc('annuler_arret',{p_passe_id:e.passeId,p_stop_id:s.id});
+    }catch(err){
+      r={data:null,error:err};
+    }
+    showSync(false);
+    await chargerTours();    // le serveur a le dernier mot : on relit toujours, réussite ou refus
+    renderAll();majCarte();
+    if(r.error){toast('❌ '+messageErreurGeste(r.error));return;}
+    if(r.data&&r.data.statut==='pas_complete'){toast('Cet arrêt n’était pas complété.');return;}
+    toast(r.data&&r.data.passe_rouverte?'↩ Arrêt annulé : la passe est rouverte':'↩ Arrêt annulé');
+  }finally{
+    _envoiAnnulation=false;
+  }
 }
 
 async function deleteStop(){

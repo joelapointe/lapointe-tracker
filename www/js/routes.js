@@ -58,7 +58,7 @@ function renderRoutes(){
 
   routes.forEach(r=>{
     const count=stops.filter(s=>s.route_id===r.id).length;
-    const nbTours=tours.filter(t=>t.route_id===r.id).length;   // passes en cours sur cette route (une par tâche)
+    const nbTours=tours.filter(t=>t.route_id===r.id&&tourEnCours(t)).length;   // passes en cours sur cette route (une par tâche)
     const div=document.createElement('div');
     div.className='route-item'+(routeActive===r.id?' active':'');
     div.onclick=()=>{

@@ -20,7 +20,7 @@ function renderListe(){
   document.getElementById('liste-sub').textContent=
     tot===0?'Aucun stop pour cette route':
     nb===0?'✔ Tous les stops sont complétés !':
-    nb+' restant'+(nb>1?'s':'')+' · '+done.length+' complété'+(done.length>1?'s':'')+(progression().aucune?' · aucune passe en cours':'');
+    nb+' restant'+(nb>1?'s':'')+' · '+done.length+' complété'+(done.length>1?'s':'')+(progression().aucune?' · aucune passe en cours':(progression().enCours?'':' · passe terminée'));
   const body=document.getElementById('liste-body');
   body.innerHTML='';
   if(tot===0){

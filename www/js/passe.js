@@ -54,9 +54,10 @@ function occupantDe(equipeId){
   }
   return null;
 }
-// Le tour déjà en cours pour cette route ET cette tâche : celui qu'un camion qui démarre REJOINT
+// Le tour déjà en cours pour cette route ET cette tâche : celui qu'un camion qui démarre REJOINT.
+// (Un tour TERMINÉ, resté affiché en vert, ne se rejoint pas : débuter ouvre un nouveau tour et remet tout à zéro.)
 function tourARejoindre(routeId,tache){
-  return tours.find(t=>t.route_id===routeId&&t.tache===tache)||null;
+  return tours.find(t=>tourEnCours(t)&&t.route_id===routeId&&t.tache===tache)||null;
 }
 
 // ── Les choix possibles ────────────────────────────────
@@ -356,10 +357,12 @@ function majBandeauPasse(){
   if(!currentUser){
     b.innerHTML='';
     b.classList.remove('show');
+    _passeVue=null;
     return;
   }
   b.classList.add('show');
   const m=maPasse();
+  suivreMaPasse(m);
   if(m){
     // « Terminer » n'existe que pour une passe pas encore complétée : à 100 % le serveur la ferme lui-même
     b.innerHTML=htmlCartePasse(m.tour,m.passe,'chauffeur')+(pourcentageDe(m.tour)<100
@@ -420,6 +423,7 @@ async function terminerPasse(){
     return;
   }
 
+  _passeVue=null;   // je viens de la terminer moi-même : la boîte de confirmation et le message suffisent (pas de résumé)
   await chargerTours();
   await chargerPositionsVehicules();
   await chargerVehiculesEtEquipages();

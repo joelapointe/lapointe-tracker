@@ -269,7 +269,7 @@ async function restaurerDepuisCache(){
     installerEquipages(lire.vehicules.data.equipages||{});
   }
   if(typeof _passeVue!=='undefined') _passeVue=null;   // les tours changent parce qu'on relit une COPIE, pas parce que ma passe s'est fermée : jamais de faux « Passe terminée »
-  problemesNonLus=(lire.problemes&&Array.isArray(lire.problemes.data))?lire.problemes.data:[];
+  installerProblemes((lire.problemes&&Array.isArray(lire.problemes.data))?lire.problemes.data:[]);
   employes=(lire.employes&&Array.isArray(lire.employes.data))?lire.employes.data:[];
   positionsVehicules=[];   // les positions ne se gardent pas : un point de plus de 3 minutes ne veut plus rien dire
   // Les données affichées valent ce que vaut la plus VIEILLE des copies (honnêteté)

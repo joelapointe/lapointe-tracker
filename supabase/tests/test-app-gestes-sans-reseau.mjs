@@ -857,6 +857,242 @@ log('\n=== DOUBLE TOUCHER, ET SUPERPOSITION RÉPÉTABLE POUR L\'ÉQUIPAGE ===');
   n.fin();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// MORCEAU 4 : LES PROBLÈMES ET LA PHOTO
+// ══════════════════════════════════════════════════════════════════════
+const PB = '11111111-1111-4111-8111-111111111111';
+const probleme = (o = {}) => ({ id: PB, stop_id: 's1', passe_id: 'p-luc', utilisateur_id: 'u-luc', note: 'Vieux problème', cree_le: iso(30), photo_chemin: null, utilisateurs: { nom: 'Luc' }, lu: false, ...o });
+// Un serveur qui enregistre vraiment les problèmes et relie les photos ; « idempotent » : un problème déjà là répond « doublon de clé » (23505)
+const serveurProblemes = (getMonde) => ({
+  'insert:problemes': (row) => {
+    const m = getMonde();
+    if (m.donnees.problemes.some((p) => p.id === row.id)) return { data: null, error: { code: '23505', message: 'duplicate key value' } };
+    m.donnees.problemes.push({ ...row, utilisateur_id: 'u-luc', cree_le: new Date().toISOString(), photo_chemin: null, utilisateurs: { nom: 'Luc' }, lu: false });
+  },
+  probleme_attacher_photo: (args, n, d) => { const p = d.problemes.find((x) => x.id === args.p_probleme_id); if (p) p.photo_chemin = 'u-luc/' + args.p_probleme_id + '.jpg'; return { data: { statut: 'ok' }, error: null }; },
+});
+const ouvrirBoite = (m, note = 'Entrée bloquée', avecPhoto = false) => {
+  m.run(`openCard(${idx('s1')})`); m.run('openProbleme()'); m.el('prob-note').value = note;
+  if (avecPhoto) { m.ctx.__b = new Blob(['photo-du-test']); m.run("_photoChoisie={blob:__b,url:'blob:choisie'}"); }
+};
+const fiche = (m) => { m.run(`openCard(${idx('s1')})`); return m.el('sc-prob').innerHTML; };
+const boiteOuverte = (m) => m.el('prob-overlay').classList.contains('open');
+// Des liens locaux « blob: » pour les miniatures (le faux navigateur n'a pas URL.createObjectURL)
+const avecMiniatures = (m) => m.run('var __n=0, __revoques=[]; URL={createObjectURL:()=>"blob:local-"+(++__n),revokeObjectURL:(u)=>__revoques.push(u)}');
+
+log('\n=== SIGNALER UN PROBLÈME SANS RÉSEAU : IL EST À L\'ÉCRAN TOUT DE SUITE ===');
+{
+  const m = await ouvrir(); coupe(m);
+  ouvrirBoite(m);
+  const id = m.run('_idProbleme');
+  await m.run('envoyerProbleme()');
+  eq('UN geste gardé : le problème, avec SON numéro, l\'arrêt, MA passe et la note', m.run('gestesEnAttente().map(g=>[g.type,g.args.id,g.args.stopId,g.args.passeId,g.args.note])'), [['probleme', id, 's1', 'p-luc', 'Entrée bloquée']]);
+  eq('aucun envoi au serveur ; la boîte et la fiche se ferment', [m.appels.envois.length, boiteOuverte(m), m.run('activeIdx')], [0, false, null]);
+  eq('le message dit « signalé » ET que l\'envoi attend le signal', dernier(m), '⚠ Problème signalé ! · ⏳ envoyé au retour du signal · garde l’application ouverte');
+  eq('l\'arrêt est orange (problème) ; le problème est à moi, marqué « en attente », avec l\'heure du geste', [m.run(`aProbleme(stops[${idx('s1')}])`), m.run('problemesNonLus.map(p=>[p.id,p.utilisateur_id,p.note,p.enAttente,p.photo_chemin])'), Math.abs(Date.now() - Date.parse(m.run('problemesNonLus[0].cree_le'))) < 5000], [true, [[id, 'u-luc', 'Entrée bloquée', true, null]], true]);
+  const h = fiche(m);
+  eq('la fiche : la note, « ⏳ pas encore envoyé », et le bouton « Ajouter une photo » (pour ma photo après coup)', [h.includes('Entrée bloquée'), h.includes('⏳ pas encore envoyé'), h.includes('ajouterPhotoApres')], [true, true, true]);
+  eq('la copie du serveur est intacte (aucun problème), en mémoire ET sur le téléphone', [m.run('_problemesServeur.length'), m.memoire()[m.cles('cache:').find((k) => k.endsWith(':problemes'))]?.data?.length], [0, 0]);
+  eq('la bande : « ⏳ 1 geste en attente »', m.bande().texte.includes('⏳ 1 geste en attente'), true);
+  m.fin();
+}
+
+log('\n=== AVEC UNE PHOTO : DEUX GESTES DANS L\'ORDRE (le problème, puis la photo), MINIATURE LOCALE ===');
+{
+  const m = await ouvrir(); coupe(m); avecMiniatures(m);
+  ouvrirBoite(m, 'Barrière brisée', true);
+  const id = m.run('_idProbleme');
+  await m.run('envoyerProbleme()');
+  eq('deux gestes : le problème PUIS sa photo (même numéro)', m.run('gestesEnAttente().map(g=>[g.type,g.args.id||g.args.problemeId])'), [['probleme', id], ['probleme_photo', id]]);
+  eq('la photo est dans le geste (un vrai fichier), pas seulement son nom', [m.run('gestesEnAttente()[1].photo!==null'), m.run('gestesEnAttente()[1].photo.size')], [true, 'photo-du-test'.length]);
+  eq('message « avec photo » + ⏳ ; la photo choisie est oubliée ; boîte fermée', [dernier(m).startsWith('⚠ Problème signalé ! (avec photo) · ⏳ envoyé au retour du signal'), m.run('_photoChoisie'), boiteOuverte(m)], [true, null, false]);
+  const h = fiche(m);
+  eq('la fiche montre la MINIATURE locale et « 📷 ⏳ photo envoyée au retour du signal », plus de bouton « Ajouter »', [h.includes('src="blob:local-1"'), h.includes('📷 ⏳ photo envoyée au retour du signal'), h.includes('ajouterPhotoApres')], [true, true, false]);
+  eq('la copie du serveur est intacte', m.run('_problemesServeur.length'), 0);
+  m.fin();
+}
+
+log('\n=== AU RETOUR DU SIGNAL : LE PROBLÈME PART (une seule fois), PUIS LA PHOTO ; LE SERVEUR A LE DERNIER MOT ===');
+{
+  let m;
+  m = await ouvrir({ monde: { serveur: serveurProblemes(() => m) } }); coupe(m); avecMiniatures(m);
+  ouvrirBoite(m, 'Barrière brisée', true);
+  const id = m.run('_idProbleme');
+  await m.run('envoyerProbleme()');
+  const lecturesAvant = m.appels.lectures.filter((x) => x === 'problemes').length;
+  m.reseau(true);
+  vrai('le problème part, puis la photo, et la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  await attendreQue(() => m.appels.lectures.filter((x) => x === 'problemes').length > lecturesAvant);
+  eq('l\'ordre des envois : le problème, PUIS la photo (fichier), PUIS la liaison', [m.appels.envois.map((x) => x.nom), m.appels.uploads], [['insert:problemes', 'probleme_attacher_photo'], ['u-luc/' + id + '.jpg']]);
+  eq('le problème est envoyé avec son numéro, l\'arrêt, la passe et la note — rien d\'autre', m.appels.envois[0].args, { id, stop_id: 's1', passe_id: 'p-luc', note: 'Barrière brisée' });
+  eq('le serveur a le dernier mot : UN problème, avec sa photo, plus « en attente », plus de ⏳', [m.donnees.problemes.length, m.run('problemesNonLus.map(p=>[p.id,p.enAttente,p.photoEnAttente,p.photo_chemin])'), m.bande().visible], [1, [[id, undefined, undefined, 'u-luc/' + id + '.jpg']], false]);
+  eq('la miniature locale du geste est libérée une fois la photo partie (et celle de la boîte, à sa fermeture)', [m.run('__revoques.includes("blob:local-1")'), m.run('__revoques.includes("blob:choisie")')], [true, true]);
+  m.fin();
+}
+
+log('\n=== UN PROBLÈME FAIT EN LIGNE DONT LA RÉPONSE SE PERD PASSE PAR LA FILE (même numéro : jamais deux problèmes) ===');
+{
+  let m, casse = true;
+  const base = serveurProblemes(() => m);
+  const serveur = { ...base, 'insert:problemes': (row) => { const r = base['insert:problemes'](row); if (casse) throw new Error('Failed to fetch'); return r; } };   // le serveur ENREGISTRE, mais la réponse ne revient pas
+  m = await ouvrir({ monde: { serveur } });
+  ouvrirBoite(m, 'Trou dans la chaussée', true);
+  const id = m.run('_idProbleme');
+  await m.run('envoyerProbleme()');
+  eq('la demande échoue par le réseau : le problème ET sa photo sont GARDÉS, l\'application se sait hors réseau, la boîte se ferme', [m.run('gestesEnAttente().map(g=>[g.type,g.args.id||g.args.problemeId])'), m.run('reseau.enLigne'), boiteOuverte(m)], [[['probleme', id], ['probleme_photo', id]], false, false]);
+  eq('aucun envoi de photo tant que le texte n\'est pas confirmé ; message ⏳', [m.appels.uploads.length, dernier(m).startsWith('⚠ Problème signalé ! (avec photo) · ⏳')], [0, true]);
+  const premier = m.appels.envois[0].args;
+  casse = false; m.reseau(true);
+  vrai('au retour du signal : la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  eq('le renvoi porte le MÊME numéro ; le serveur répond « doublon de clé » (déjà là) : ce n\'est pas un échec, la photo part quand même', [m.appels.envois[1].args.id, premier.id, m.refus().length, m.appels.uploads], [id, id, 0, ['u-luc/' + id + '.jpg']]);
+  eq('UN SEUL problème sur le serveur', m.donnees.problemes.length, 1);
+  m.fin();
+}
+{
+  let m;
+  const serveur = serveurProblemes(() => m);
+  m = await ouvrir({ monde: { serveur, upload: () => { throw new Error('Failed to fetch'); } } });
+  ouvrirBoite(m, 'Trou dans la chaussée', true);
+  const id = m.run('_idProbleme');
+  await m.run('envoyerProbleme()');
+  eq('le texte est parti, mais la photo échoue par le RÉSEAU : le problème est signalé, la photo est GARDÉE (⏳)', [m.donnees.problemes.length, m.run('gestesEnAttente().map(g=>[g.type,g.args.problemeId])'), dernier(m).startsWith('⚠ Problème signalé ! · 📷 photo · ⏳ envoyé au retour du signal')], [1, [['probleme_photo', id]], true]);
+  eq('la fiche : le problème (serveur) avec « photo en attente », pas de « pas encore envoyé »', [fiche(m).includes('📷 ⏳ photo envoyée au retour du signal'), fiche(m).includes('⏳ pas encore envoyé')], [true, false]);
+  await m.run('attendreEcritures()');
+  const copie = m.memoire()[m.cles('cache:').find((k) => k.endsWith(':problemes'))]?.data ?? [];
+  eq('la copie gardée sur le téléphone ne contient JAMAIS le résultat superposé (ni « en attente », ni miniature)', [copie.length, copie.some((p) => p.photoEnAttente || p.enAttente || p._photoUrl)], [1, false]);
+  m.fin();
+}
+
+log('\n=== UN REFUS AU RETOUR DU SIGNAL : NOTÉ, ET L\'ÉCRAN REVIENT À LA VÉRITÉ ===');
+{
+  const serveur = { 'insert:problemes': () => ({ data: null, error: { code: '23503', message: 'violates foreign key constraint' } }), probleme_attacher_photo: () => ({ data: null, error: { message: 'probleme_introuvable' } }) };
+  const m = await ouvrir({ monde: { serveur } }); coupe(m);
+  ouvrirBoite(m, 'Barrière brisée', true);
+  await m.run('envoyerProbleme()');
+  eq('hors réseau : l\'arrêt paraît orange', m.run(`aProbleme(stops[${idx('s1')}])`), true);
+  const lecturesAvant = m.appels.lectures.filter((x) => x === 'problemes').length;
+  m.reseau(true);
+  vrai('le problème ET sa photo sont refusés, notés dans « non envoyés »', await attendreQue(() => m.refus().length === 2 && m.attentes().length === 0));
+  await attendreQue(() => m.appels.lectures.filter((x) => x === 'problemes').length > lecturesAvant);
+  eq('les raisons sont écrites en français (la photo dit que le problème n\'avait pas été enregistré)', m.refus().map((r) => r.raison.startsWith('Refusé par le serveur') || r.raison), [true, 'Le problème n’avait pas été enregistré : la photo n’a pas pu y être reliée.']);
+  eq('l\'écran revient à la vérité du serveur : plus de problème, arrêt plus orange', [m.run('problemesNonLus.length'), m.run(`aProbleme(stops[${idx('s1')}])`)], [0, false]);
+  m.fin();
+}
+
+log('\n=== AJOUTER UNE PHOTO APRÈS COUP, SANS RÉSEAU ===');
+{
+  let m;
+  m = await ouvrir({ monde: { serveur: serveurProblemes(() => m) } });
+  m.donnees.problemes = [probleme()];
+  await m.run('loadStops()'); await attendre(80); coupe(m); avecMiniatures(m);
+  m.run('reduirePhoto=async(f)=>f');   // (la réduction de la photo est testée ailleurs)
+  eq('avant : mon problème (sans photo) offre « Ajouter une photo »', fiche(m).includes('ajouterPhotoApres'), true);
+  m.run(`ajouterPhotoApres('${PB}')`);
+  m.ctx.__b = new Blob(['ma-photo']); m.ctx.__in = { files: [m.ctx.__b], value: '' };
+  await m.run('photoApresChoisie(__in)');
+  eq('UN geste gardé : la photo de CE problème, avec le fichier', [m.run('gestesEnAttente().map(g=>[g.type,g.args.problemeId])'), m.run('gestesEnAttente()[0].photo.size')], [[['probleme_photo', PB]], 'ma-photo'.length]);
+  eq('message ⏳ ; la fiche montre la miniature locale « en attente » et plus le bouton « Ajouter »', [dernier(m).startsWith('📷 Photo gardée · ⏳ envoyé au retour du signal'), fiche(m).includes('src="blob:local-1"'), fiche(m).includes('📷 ⏳ photo envoyée au retour du signal'), fiche(m).includes('ajouterPhotoApres')], [true, true, true, false]);
+  eq('aucun envoi sans signal', [m.appels.envois.length, m.appels.uploads.length], [0, 0]);
+  m.reseau(true);
+  vrai('au retour du signal : la photo part (bon chemin), est reliée, la file se vide', await attendreQue(() => m.attentes().length === 0 && m.appels.uploads.length === 1));
+  eq('… au chemin « numéro-employé/numéro-problème.jpg », puis la liaison', [m.appels.uploads, m.appels.envois.map((x) => x.nom)], [['u-luc/' + PB + '.jpg'], ['probleme_attacher_photo']]);
+  m.fin();
+}
+{
+  // En ligne, mais la photo n'a pas de réseau : gardée aussi
+  const m = await ouvrir({ monde: { upload: () => { throw new Error('Failed to fetch'); } } });
+  m.donnees.problemes = [probleme()];
+  await m.run('loadStops()'); await attendre(80);
+  m.run('reduirePhoto=async(f)=>f');
+  m.run(`ajouterPhotoApres('${PB}')`);
+  m.ctx.__b = new Blob(['ma-photo']); m.ctx.__in = { files: [m.ctx.__b], value: '' };
+  await m.run('photoApresChoisie(__in)');
+  eq('en ligne, l\'envoi de la photo échoue par le réseau : la photo est GARDÉE (⏳), pas d\'erreur', [m.run('gestesEnAttente().map(g=>g.type)'), dernier(m).startsWith('📷 Photo gardée · ⏳')], [['probleme_photo'], true]);
+  m.fin();
+}
+
+{
+  // La photo après coup, sans pouvoir la garder : jamais « photo gardée », le bouton « Ajouter » reste pour réessayer
+  const m = await ouvrir();
+  m.donnees.problemes = [probleme()];
+  await m.run('loadStops()'); await attendre(80); coupe(m);
+  m.run('reduirePhoto=async(f)=>f; magasinEcrire=async()=>false');
+  m.run(`ajouterPhotoApres('${PB}')`);
+  m.ctx.__b = new Blob(['ma-photo']); m.ctx.__in = { files: [m.ctx.__b], value: '' };
+  await m.run('photoApresChoisie(__in)');
+  eq('rien n\'est gardé : message d\'erreur, aucun geste, la fiche offre toujours « Ajouter une photo »', [dernier(m), m.attentes().length, fiche(m).includes('ajouterPhotoApres')], ['❌ Le téléphone n’a pas pu garder ce geste. Réessaie.', 0, true]);
+  m.fin();
+}
+
+log('\n=== SI LE TÉLÉPHONE NE PEUT RIEN GARDER, LE PROBLÈME N\'EST PAS « SIGNALÉ » ET RIEN N\'EST PERDU DANS LA BOÎTE ===');
+{
+  const m = await ouvrir(); coupe(m);
+  m.run('magasinEcrire=async()=>false');
+  ouvrirBoite(m, 'Entrée bloquée', true);
+  await m.run('envoyerProbleme()');
+  eq('rien n\'est gardé : message d\'erreur, la boîte reste ouverte avec la note ET la photo, l\'arrêt n\'est pas orange', [dernier(m), boiteOuverte(m), m.el('prob-note').value, m.run('_photoChoisie!==null'), m.run(`aProbleme(stops[${idx('s1')}])`)], ['❌ Le téléphone n’a pas pu garder ce geste. Réessaie.', true, 'Entrée bloquée', true, false]);
+  m.fin();
+  // Le problème est gardé, mais pas la photo
+  const n = await ouvrir(); coupe(n);
+  n.run('__ecrire=magasinEcrire; var __k=0; magasinEcrire=async(cle,v)=>(String(cle).startsWith("file:")&&++__k>1)?false:__ecrire(cle,v)');
+  ouvrirBoite(n, 'Entrée bloquée', true);
+  await n.run('envoyerProbleme()');
+  eq('le problème est gardé mais pas la photo : le message le dit, le problème est bien à l\'écran', [dernier(n).startsWith('⚠ Problème signalé ! · 📷 photo non gardée : ajoute-la après · ⏳'), n.run('gestesEnAttente().map(g=>g.type)'), boiteOuverte(n)], [true, ['probleme'], false]);
+  n.fin();
+}
+
+log('\n=== DOUBLE TOUCHER, ET SUPERPOSITION RÉPÉTABLE POUR LES PROBLÈMES ===');
+{
+  const m = await ouvrir(); coupe(m);
+  ouvrirBoite(m);
+  await Promise.all([m.run('envoyerProbleme()'), m.run('envoyerProbleme()'), m.run('envoyerProbleme()')]);
+  eq('trois touchers sur « Envoyer » : UN seul problème gardé', m.run('gestesEnAttente().filter(g=>g.type==="probleme").length'), 1);
+  m.fin();
+  const n = await ouvrir(); coupe(n);
+  n.donnees.problemes = [];
+  await n.enfiler('probleme', { id: PB, stopId: 's1', passeId: 'p-luc', note: 'A' });
+  await n.enfiler('probleme', { id: PB, stopId: 's1', passeId: 'p-luc', note: 'A' });
+  eq('le même problème gardé deux fois : UNE seule ligne à l\'écran', n.run('problemesNonLus.length'), 1);
+  n.fin();
+  const o = await ouvrir({ monde: {} });
+  o.donnees.problemes = [probleme({ note: 'Déjà là' })];
+  await o.run('loadStops()'); await attendre(80); coupe(o);
+  await o.enfiler('probleme', { id: PB, stopId: 's1', passeId: 'p-luc', note: 'Déjà là' });
+  eq('le serveur a déjà ce problème (réponse perdue) et le geste attend : UNE seule ligne, celle du serveur (pas « en attente »)', [o.run('problemesNonLus.length'), o.run('problemesNonLus[0].enAttente')], [1, undefined]);
+  await o.enfiler('probleme_photo', { problemeId: 'inconnu' });
+  eq('une photo pour un problème qu\'on ne connaît pas : rien ne change à l\'écran', o.run('problemesNonLus.filter(p=>p.photoEnAttente).length'), 0);
+  o.fin();
+  const p = await ouvrir();
+  p.donnees.problemes = [probleme({ photo_chemin: 'u-luc/' + PB + '.jpg' })];
+  await p.run('loadStops()'); await attendre(80); coupe(p);
+  await p.enfiler('probleme_photo', { problemeId: PB });
+  eq('le problème a déjà sa photo (sur le serveur) : elle n\'est pas marquée « en attente »', p.run('problemesNonLus[0].photoEnAttente'), undefined);
+  p.fin();
+}
+
+log('\n=== ON ROUVRE L\'APPLICATION SANS RÉSEAU : LE PROBLÈME ET SA PHOTO SONT TOUJOURS À L\'ÉCRAN ===');
+{
+  const a = await ouvrir(); coupe(a);
+  ouvrirBoite(a, 'Barrière brisée', true);
+  await a.run('envoyerProbleme()'); await a.run('attendreEcritures()');
+  const surLeTelephone = a.memoire(); a.fin();
+  const b = monde({ enLigne: false, memoire: surLeTelephone });
+  await b.run('loadStops()');
+  eq('après réouverture hors réseau : l\'arrêt est orange, le problème est « en attente », sa photo aussi, aucune erreur', [b.run(`aProbleme(stops[${idx('s1')}])`), b.run('problemesNonLus.map(p=>[p.note,p.enAttente,p.photoEnAttente])'), b.appels.erreurs.length], [true, [['Barrière brisée', true, true]], 0]);
+  eq('… et rien n\'est envoyé sans signal', b.appels.envois.length, 0);
+  b.fin();
+}
+
+log('\n=== LE CODE : UN SEUL ENDROIT POSE LES PROBLÈMES AUSSI ===');
+{
+  const fichiers = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));
+  const poses = [];
+  for (const f of fichiers) lire('js/' + f).split('\n').forEach((l) => { if (/^\s*(let\s+)?problemesNonLus\s*=[^=]/.test(l) && !/^\s*\/\//.test(l)) poses.push(f); });
+  eq('« problemesNonLus = … » n\'apparaît qu\'à la déclaration et dans poserProblemes', poses, ['problemes.js', 'problemes.js']);
+  const pj = lire('js/problemes.js'), ph = lire('js/photos.js');
+  vrai('envoyerProbleme et l\'ajout de photo n\'appellent le serveur qu\'avec un délai (avecDelai) et passent par la file en cas de panne', /avecDelai\(db\.from\('problemes'\)\.insert/.test(pj) && /avecDelai\(envoyerPhotoProbleme/.test(pj) && /avecDelai\(envoyerPhotoProbleme/.test(ph) && pj.includes('problemeSansReseau') && ph.includes('photoApresSansReseau'));
+}
+
 log('\n=== LE CODE : UN SEUL ENDROIT POSE LES ÉQUIPAGES AUSSI ===');
 {
   const fichiers = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));

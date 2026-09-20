@@ -11,13 +11,59 @@ async function chargerProblemes(){
   try{
     const{data,error}=await db.from('problemes').select('id, stop_id, passe_id, utilisateur_id, note, cree_le, photo_chemin, utilisateurs!utilisateur_id(nom)').eq('lu',false).order('cree_le',{ascending:true});
     if(error) throw error;
-    problemesNonLus=Array.isArray(data)?data:[];
-    lectureReussie('problemes',problemesNonLus);
+    const lus=Array.isArray(data)?data:[];
+    installerProblemes(lus);
+    lectureReussie('problemes',lus);   // (la copie gardée reste celle du serveur : jamais le résultat superposé)
   }catch(e){
     signalerEchecReseau(e);
     return false;
   }
   return true;
+}
+
+// ── Les problèmes signalés sans réseau, posés par-dessus la copie du serveur (étape 16c) ──
+// Même principe que pour les tours (tours.js) : `problemesNonLus` est TOUJOURS la copie du serveur avec, par-dessus, les problèmes (et les photos)
+// qui attendent d'être envoyés. Un problème en attente est marqué `enAttente` (« ⏳ pas encore envoyé ») ; une photo en attente, `photoEnAttente`.
+let _problemesServeur=[];   // la copie du serveur, telle quelle (jamais modifiée)
+let _problemesConnus=false;
+let _urlsPhotosLocales={};  // identifiant du geste -> lien local (miniature de la photo qui attend d'être envoyée)
+function installerProblemes(liste){
+  _problemesServeur=liste;
+  _problemesConnus=true;
+  poserProblemes();
+}
+function poserProblemes(){
+  if(!_problemesConnus) return;   // pas encore lus : rien à superposer
+  problemesNonLus=superposerProblemes(_problemesServeur);
+}
+function urlPhotoLocale(g){
+  if(!g.photo||typeof URL==='undefined'||typeof URL.createObjectURL!=='function') return null;
+  if(!_urlsPhotosLocales[g.id]){
+    try{_urlsPhotosLocales[g.id]=URL.createObjectURL(g.photo);}catch(e){return null;}
+  }
+  return _urlsPhotosLocales[g.id];
+}
+function superposerProblemes(liste){
+  const attente=(typeof gestesEnAttente==='function')?gestesEnAttente():[];
+  const vivants=new Set(attente.map(g=>g.id));
+  Object.keys(_urlsPhotosLocales).forEach(id=>{   // les miniatures des gestes partis ou retirés sont libérées
+    if(!vivants.has(id)){try{URL.revokeObjectURL(_urlsPhotosLocales[id]);}catch(e){}delete _urlsPhotosLocales[id];}
+  });
+  const concernes=attente.filter(g=>g.type==='probleme'||g.type==='probleme_photo');
+  if(!concernes.length) return liste;
+  const copie=liste.map(p=>({...p}));   // copie de chaque ligne : la copie du serveur n'est jamais touchée
+  concernes.forEach(g=>{
+    const a=g.args||{};
+    if(g.type==='probleme'){
+      if(copie.some(p=>p.id===a.id)) return;   // le serveur l'a déjà (sa réponse s'est perdue) : pas deux fois
+      copie.push({id:a.id,stop_id:a.stopId,passe_id:a.passeId||null,utilisateur_id:currentUser?currentUser.id:null,note:a.note,cree_le:g.moment,
+        photo_chemin:null,utilisateurs:{nom:currentUser?currentUser.nom:''},enAttente:true});
+    }else{
+      const p=copie.find(x=>x.id===a.problemeId);
+      if(p&&!p.photo_chemin){p.photoEnAttente=true;p._photoUrl=urlPhotoLocale(g);}
+    }
+  });
+  return copie;
 }
 function problemesDe(s){return problemesNonLus.filter(p=>p.stop_id===s.id);}
 function aProbleme(s){return problemesNonLus.some(p=>p.stop_id===s.id);}
@@ -68,10 +114,14 @@ function htmlProblemes(s){
       const u=photoUrl(p.photo_chemin);
       photo=u?'<img class="sc-prob-photo" alt="Photo du problème" src="'+esc(u)+'" onclick="voirPhoto(\''+esc(p.photo_chemin)+'\')">'
              :'<button type="button" class="sc-prob-photo vide" onclick="voirPhoto(\''+esc(p.photo_chemin)+'\')">📷</button>';
+    }else if(p.photoEnAttente){
+      // Une photo qui attend le retour du signal (étape 16c) : sa miniature vient du téléphone
+      photo=(p._photoUrl?'<img class="sc-prob-photo" alt="Photo du problème (en attente)" src="'+esc(p._photoUrl)+'">':'')+'<span class="sc-prob-attente">📷 ⏳ photo envoyée au retour du signal</span>';
     }else if(!p.photo_chemin&&currentUser&&p.utilisateur_id===currentUser.id&&idValide(p.id)){
       photo='<button type="button" class="sc-prob-ajout" onclick="ajouterPhotoApres(\''+esc(p.id)+'\')">📷 Ajouter une photo</button>';
     }
-    h+='<div class="sc-prob-ligne">'+esc(p.note)+' <span>· '+(qui?esc(qui)+' · ':'')+esc(ilYa(p.cree_le))+'</span>'+photo+'</div>';
+    const attente=p.enAttente?' · ⏳ pas encore envoyé':'';   // un problème signalé sans réseau (étape 16c)
+    h+='<div class="sc-prob-ligne">'+esc(p.note)+' <span>· '+(qui?esc(qui)+' · ':'')+esc(ilYa(p.cree_le))+attente+'</span>'+photo+'</div>';
   });
   if(l.length>recents.length) h+='<div class="sc-prob-ligne"><span>… et '+(l.length-recents.length)+' autre'+(l.length-recents.length>1?'s':'')+'</span></div>';
   return h;
@@ -107,42 +157,72 @@ async function envoyerProbleme(){
   if(!note){toast('⚠ Écris une note');return;}
 
   _envoiProbleme=true;
-  showSync(true);
-  // Rien n'est effacé : un nouveau signalement s'ajoute aux autres. Ni le nom ni « lu » ne sont envoyés : la base met
-  // elle-même le nom de la personne connectée, et un problème neuf n'est jamais « lu ».
-  let error=null;
+  const id=_idProbleme,passeId=passePourSignalement(s),photo=_photoChoisie?_photoChoisie.blob:null;
   try{
-    const r=await db.from('problemes').insert([{id:_idProbleme,stop_id:s.id,passe_id:passePourSignalement(s),note:note}]);
-    error=r.error;
-  }catch(e){
-    error=e;
-  }
-  // Réponse perdue puis renvoi : le problème existe déjà sous ce même identifiant (doublon de clé) : ce n'est pas un échec
-  if(error&&String(error.code)==='23505') error=null;
+    if(!reseau.enLigne) return await problemeSansReseau(s,note,passeId,id,photo);   // pas de signal : le problème est gardé sur le téléphone (étape 16c)
+    showSync(true);
+    // Rien n'est effacé : un nouveau signalement s'ajoute aux autres. Ni le nom ni « lu » ne sont envoyés : la base met
+    // elle-même le nom de la personne connectée, et un problème neuf n'est jamais « lu ».
+    let error=null;
+    try{
+      const r=await avecDelai(db.from('problemes').insert([{id,stop_id:s.id,passe_id:passeId,note:note}]),FILE_DELAI_DIRECT_MS);
+      error=r.error;
+    }catch(e){
+      error=e;
+    }
+    // Réponse perdue puis renvoi : le problème existe déjà sous ce même identifiant (doublon de clé) : ce n'est pas un échec
+    if(error&&String(error.code)==='23505') error=null;
 
-  if(error){
+    // Le signal a disparu (ou la réponse s'est perdue) : le MÊME problème (même identifiant) est gardé sur le téléphone, avec sa photo
+    if(error&&estErreurReseau(error)){signalerEchecReseau(error);showSync(false);return await problemeSansReseau(s,note,passeId,id,photo);}
+    if(error){
+      toast('❌ Problème non envoyé (pas de réseau ?). Réessaie.');   // la note (et la photo) restent dans la boîte
+      return;
+    }
+
+    // La photo, APRÈS le texte : si elle échoue, le problème est quand même signalé. Une panne de RÉSEAU garde la photo pour plus tard (file).
+    const avecPhoto=!!photo;
+    let photoEnvoyee=true,photoGardee=false;
+    if(avecPhoto){
+      try{
+        await avecDelai(envoyerPhotoProbleme(id,photo),FILE_DELAI_DIRECT_MS*2);
+      }catch(e){
+        photoEnvoyee=false;
+        if(estErreurReseau(e)){
+          signalerEchecReseau(e);
+          const g=await enfiler('probleme_photo',{problemeId:id},{libelle:'📷 Photo du problème : '+s.adresse,photo});
+          photoGardee=!!g.ok;
+        }
+      }
+    }
+    showSync(false);
+
+    await chargerProblemes();
+    renderAll();
+    toast(!avecPhoto?'⚠ Problème signalé !':(photoEnvoyee?'⚠ Problème signalé avec photo !':(photoGardee?'⚠ Problème signalé ! · 📷 photo'+TEXTE_ATTENTE:'⚠ Problème envoyé, photo non envoyée')));
+    closeProbleme();
+    closeCard();
+    checkProblemes();
+  }finally{
     showSync(false);
     _envoiProbleme=false;
-    toast('❌ Problème non envoyé (pas de réseau ?). Réessaie.');   // la note (et la photo) restent dans la boîte
-    return;
   }
+}
 
-  // La photo, APRÈS le texte : si elle échoue, le problème est quand même signalé
-  const avecPhoto=!!_photoChoisie;
-  let photoEnvoyee=true;
-  if(avecPhoto){
-    try{
-      await envoyerPhotoProbleme(_idProbleme,_photoChoisie.blob);
-    }catch(e){
-      photoEnvoyee=false;
-    }
+// Signaler un problème SANS RÉSEAU (étape 16c) : le problème, puis sa photo, sont gardés sur le téléphone (deux gestes, dans cet ordre) ; l'arrêt devient
+// orange tout de suite et le problème apparaît dans la fiche avec « ⏳ pas encore envoyé ». Il part au retour du signal, avec le MÊME identifiant :
+// jamais deux problèmes.
+async function problemeSansReseau(s,note,passeId,id,photo){
+  const resume=note.length>40?note.slice(0,40)+'…':note;
+  const r=await enfiler('probleme',{id,stopId:s.id,passeId,note},{libelle:'⚠ Problème : '+s.adresse+' — '+resume});
+  if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}   // la note (et la photo) restent dans la boîte ; jamais « signalé » si rien n'est gardé
+  let photoGardee=true;
+  if(photo){
+    const g=await enfiler('probleme_photo',{problemeId:id},{libelle:'📷 Photo du problème : '+s.adresse,photo});
+    photoGardee=!!g.ok;
   }
-  showSync(false);
-  _envoiProbleme=false;
-
-  await chargerProblemes();
   renderAll();
-  toast(!avecPhoto?'⚠ Problème signalé !':(photoEnvoyee?'⚠ Problème signalé avec photo !':'⚠ Problème envoyé, photo non envoyée'));
+  toast('⚠ Problème signalé !'+(photo?(photoGardee?' (avec photo)':' · 📷 photo non gardée : ajoute-la après'):'')+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
   closeProbleme();
   closeCard();
   checkProblemes();

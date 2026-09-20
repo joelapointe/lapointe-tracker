@@ -39,8 +39,8 @@ function installerTours(lus,luLe){
 }
 // Un geste vient d'être gardé (ou retiré) : on refait la superposition à partir de la copie du serveur
 function reappliquerGestes(){
-  if(!_toursServeurConnus) return;   // les tours n'ont pas encore été lus : rien à superposer
-  poserTours(superposerTours(_toursServeur,_toursLusLe));
+  if(_toursServeurConnus) poserTours(superposerTours(_toursServeur,_toursLusLe));   // (sinon les tours n'ont pas encore été lus : rien à superposer)
+  if(typeof poserProblemes==='function') poserProblemes();   // les problèmes signalés sans réseau (problemes.js)
 }
 function poserTours(t){
   tours=t;

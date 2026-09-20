@@ -378,6 +378,7 @@
 #prob-photo-bas button{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:13px;padding:8px 12px;min-height:36px;cursor:pointer;}
 .sc-prob-photo{display:block;width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid rgba(251,146,60,.5);margin-top:4px;cursor:pointer;background:#0f1318;}
 .sc-prob-photo.vide{color:#fb923c;font-size:22px;padding:0;}
+.sc-prob-attente{display:block;margin-top:4px;font-size:13px;color:#fb923c;}
 .sc-prob-ajout{display:inline-block;margin-top:4px;min-height:36px;padding:0 12px;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.45);border-radius:8px;color:#fb923c;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
 .admin-prob-photo{display:block;width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid rgba(251,146,60,.5);margin-top:8px;cursor:pointer;background:#0f1318;}
 #photo-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:4500;align-items:center;justify-content:center;padding:12px;}

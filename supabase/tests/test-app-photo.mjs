@@ -227,12 +227,19 @@ log('\n=== ENVOYER : le texte d\'abord, la photo ensuite ===');
   eq('SANS photo : aucun envoi de fichier, aucune liaison, message habituel', [m.appels.journal, m.dernierToast()], [['insert'], '⚠ Problème signalé !']);
 
   // La photo échoue : le problème est quand même signalé
-  for (const [nom, opts] of [['réseau coupé pendant l\'envoi de la photo', { upload: { defaut: 'reseau' } }], ['le Storage refuse la photo', { upload: { defaut: { erreur: { message: 'new row violates row-level security policy', statusCode: '403' } } } }],
-    ['la liaison échoue (« photo_introuvable »)', { attacher: { defaut: { erreur: 'photo_introuvable' } } }], ['la liaison échoue (réseau)', { attacher: { defaut: 'reseau' } }]]) {
+  for (const [nom, opts] of [['le Storage refuse la photo', { upload: { defaut: { erreur: { message: 'new row violates row-level security policy', statusCode: '403' } } } }],
+    ['la liaison échoue (« photo_introuvable »)', { attacher: { defaut: { erreur: 'photo_introuvable' } } }]]) {
     const x = await ouvrirAvecPhoto(opts);
     await x.run('envoyerProbleme()');
     eq(`${nom} : le problème est signalé quand même, message honnête, boîte fermée`, [x.appels.insert.length, x.dernierToast(), x.el('prob-overlay').classList.contains('open')], [1, '⚠ Problème envoyé, photo non envoyée', false]);
     vrai('… le problème apparaît sur la fiche (orange)', x.run('problemesNonLus.length') === 1);
+  }
+  // Étape 16c : une panne de RÉSEAU pendant l'envoi de la photo ne perd plus rien : le problème est signalé et la photo est GARDÉE sur le téléphone (envoyée au retour du signal)
+  for (const [nom, opts] of [['réseau coupé pendant l\'envoi de la photo', { upload: { defaut: 'reseau' } }], ['la liaison échoue (réseau)', { attacher: { defaut: 'reseau' } }]]) {
+    const x = await ouvrirAvecPhoto(opts);
+    await x.run('envoyerProbleme()');
+    eq(`${nom} : le problème est signalé, la photo est GARDÉE (⏳), boîte fermée`, [x.appels.insert.length, x.dernierToast().startsWith('⚠ Problème signalé ! · 📷 photo · ⏳ envoyé au retour du signal'), x.el('prob-overlay').classList.contains('open'), x.run('gestesEnAttente().map(g=>g.type)')], [1, true, false, ['probleme_photo']]);
+    vrai('… le problème apparaît sur la fiche (orange), sa photo est « en attente »', x.run('problemesNonLus.length') === 1 && x.run('problemesNonLus[0].photoEnAttente') === true);
   }
   m = await ouvrirAvecPhoto({ upload: { defaut: { erreur: { message: 'The resource already exists', statusCode: '409' } } } });
   await m.run('envoyerProbleme()');
@@ -242,9 +249,9 @@ log('\n=== ENVOYER : le texte d\'abord, la photo ensuite ===');
   m = await ouvrirAvecPhoto({ insert: { 0: 'reseau' } });
   const id2 = m.run('_idProbleme');
   await m.run('envoyerProbleme()');
-  eq('le TEXTE n\'a pas pu partir : aucun envoi de photo, message, la note ET la photo restent dans la boîte', [m.appels.upload.length, m.dernierToast(), m.el('prob-overlay').classList.contains('open'), m.run('_photoChoisie !== null'), m.el('prob-note').value], [0, '❌ Problème non envoyé (pas de réseau ?). Réessaie.', true, true, 'Entrée bloquée']);
-  await m.run('envoyerProbleme()');
-  eq('au renvoi : LE MÊME numéro de problème (jamais deux problèmes), puis la photo', [m.appels.insert.map((v) => v[0].id), m.appels.upload[0].chemin], [[id2, id2], cheminDe(UID_LUC, id2)]);
+  // Étape 16c : le texte ne part pas par le RÉSEAU : le problème ET sa photo sont GARDÉS sur le téléphone (deux gestes, dans cet ordre)
+  eq('le TEXTE n\'a pas pu partir (réseau) : le problème et sa photo sont gardés (⏳), aucun envoi de photo, boîte fermée, photo oubliée', [m.appels.upload.length, m.dernierToast().startsWith('⚠ Problème signalé ! (avec photo) · ⏳ envoyé au retour du signal'), m.el('prob-overlay').classList.contains('open'), m.run('_photoChoisie'), m.run('gestesEnAttente().map(g=>g.type)')], [0, true, false, null, ['probleme', 'probleme_photo']]);
+  eq('… avec LE MÊME numéro de problème (jamais deux problèmes), et la photo est dans le geste', [m.run('gestesEnAttente().map(g=>g.args.id||g.args.problemeId)'), m.run('gestesEnAttente()[1].photo !== null')], [[id2, id2], true]);
   m = await ouvrirAvecPhoto({ insert: { 0: { erreur: { code: '23505', message: 'duplicate key value violates unique constraint' } } } });
   await m.run('envoyerProbleme()');
   eq('le problème existait déjà sous ce numéro (réponse perdue, doublon de clé 23505) : traité comme réussi, la photo part', [m.appels.journal, m.dernierToast()], [['insert', 'upload', 'attacher'], '⚠ Problème signalé avec photo !']);
@@ -301,7 +308,8 @@ log('\n=== LA FICHE D\'UN ARRÊT : miniatures et « Ajouter une photo » ===');
   eq('message ; la fiche montre maintenant la photo (et plus le bouton « Ajouter »)', [m.dernierToast(), m.el('sc-prob').innerHTML.includes('<img class="sc-prob-photo"'), m.el('sc-prob').innerHTML.includes('ajouterPhotoApres')], ['📷 Photo ajoutée !', true, false]);
   m = await monde({ problemes: [miens], upload: { defaut: 'reseau' } }).charge(); m.fiche(); m.run(`ajouterPhotoApres('${U(305)}')`); m.ctx.__c = m.champ(m.fichier());
   await m.run('photoApresChoisie(__c)');
-  eq('l\'envoi échoue : message clair, le bouton « Ajouter » reste pour réessayer', [m.dernierToast(), m.el('sc-prob').innerHTML.includes('ajouterPhotoApres')], ['❌ Photo non envoyée. Réessaie.', true]);
+  // Étape 16c : une panne de RÉSEAU ne refuse plus la photo, elle est GARDÉE sur le téléphone (miniature + « ⏳ photo envoyée au retour du signal ») et il n'y a plus de bouton « Ajouter »
+  eq('l\'envoi échoue par le réseau : la photo est gardée (⏳), la fiche la montre « en attente » et n\'offre plus « Ajouter »', [m.dernierToast().startsWith('📷 Photo gardée · ⏳ envoyé au retour du signal'), m.run('gestesEnAttente().map(g=>[g.type,g.args.problemeId])'), m.el('sc-prob').innerHTML.includes('📷 ⏳ photo envoyée au retour du signal'), m.el('sc-prob').innerHTML.includes('ajouterPhotoApres')], [true, [['probleme_photo', U(305)]], true, false]);
   m = await monde({ problemes: [miens] }).charge(); m.fiche(); m.run(`ajouterPhotoApres('${U(305)}')`); m.ctx.__c = m.champ(m.fichier({ type: 'application/pdf' }));
   await m.run('photoApresChoisie(__c)');
   eq('un fichier qui n\'est pas une photo : message clair, rien n\'est envoyé', [m.dernierToast(), m.appels.upload.length], ['⚠ Ce fichier n’est pas une photo.', 0]);
@@ -364,7 +372,7 @@ log('\n=== LE CODE : la page, aucune adresse publique, aucune écriture directe 
   vrai('AUCUNE adresse publique de photo (l\'espace est privé : seulement des liens signés)', !tous.some(([, s]) => /getPublicUrl|\/object\/public\//.test(s)), tous.filter(([, s]) => /getPublicUrl|\/object\/public\//.test(s)).map(([f]) => f).join());
   vrai('la photo est toujours envoyée SANS remplacement possible (upsert: false) et en JPEG', /upsert:false/.test(sansCommentaires(lire('js/photos.js'))) && /contentType:'image\/jpeg'/.test(sansCommentaires(lire('js/photos.js'))));
   vrai('l\'application n\'écrit jamais photo_chemin elle-même (seulement la fonction du serveur)', !tous.some(([, s]) => /photo_chemin\s*:/.test(s) && /\.(insert|update|upsert)\(/.test(s.slice(Math.max(0, s.search(/photo_chemin\s*:/) - 200), s.search(/photo_chemin\s*:/) + 200))));
-  vrai('la photo est envoyée APRÈS le texte (l\'insertion du problème vient avant l\'envoi du fichier dans envoyerProbleme)', (() => { const s = sansCommentaires(lire('js/problemes.js')); return s.indexOf(".insert([{id:_idProbleme") < s.indexOf('envoyerPhotoProbleme(_idProbleme'); })());
+  vrai('la photo est envoyée APRÈS le texte (l\'insertion du problème vient avant l\'envoi du fichier dans envoyerProbleme)', (() => { const s = sansCommentaires(lire('js/problemes.js')); return s.indexOf(".insert([{id,stop_id") > 0 && s.indexOf(".insert([{id,stop_id") < s.indexOf('envoyerPhotoProbleme(id,photo'); })());
   vrai('la miniature d\'une photo fait au moins 64 px de côté, les boutons au moins 36 px, la visionneuse est au-dessus de tout', /\.sc-prob-photo\{[^}]*width:64px;height:64px/.test(css) && /\.sc-prob-ajout\{[^}]*min-height:36px/.test(css) && /#photo-overlay\{[^}]*z-index:4500/.test(css));
   vrai('la photo réduite est limitée à 1280 px et sous 2 Mo (comme l\'espace privé)', /PHOTO_COTE_MAX=1280/.test(lire('js/photos.js')) && /PHOTO_OCTETS_MAX=1800000/.test(lire('js/photos.js')));
 }

@@ -179,6 +179,16 @@ function fermerPhoto(){
   document.getElementById('photo-plein').src='';
 }
 
+// La photo d'un problème, gardée sur le téléphone (étape 16c) : sa miniature s'affiche tout de suite (« ⏳ photo envoyée au retour du signal »)
+async function photoApresSansReseau(problemeId,blob){
+  const p=problemesNonLus.find(x=>x.id===problemeId);
+  const st=p?stops.find(x=>x.id===p.stop_id):null;
+  const r=await enfiler('probleme_photo',{problemeId},{libelle:'📷 Photo du problème'+(st?' : '+st.adresse:''),photo:blob});
+  if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}   // jamais « photo gardée » si rien n'est gardé
+  renderAll();majCarte();
+  toast('📷 Photo gardée'+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+}
+
 // ── Ajouter la photo APRÈS le signalement (elle n'avait pas pu partir) ──
 function ajouterPhotoApres(problemeId){
   _photoApresCible=problemeId;
@@ -192,8 +202,15 @@ async function photoApresChoisie(input){
   _envoiPhotoApres=true;   // un seul envoi à la fois
   try{
     const blob=await reduirePhoto(f);
+    if(!reseau.enLigne){await photoApresSansReseau(id,blob);return;}   // pas de signal : la photo est gardée sur le téléphone (étape 16c)
     showSync(true);
-    await envoyerPhotoProbleme(id,blob);
+    try{
+      await avecDelai(envoyerPhotoProbleme(id,blob),FILE_DELAI_DIRECT_MS*2);
+    }catch(e){
+      // Le signal a disparu (ou aucune réponse) : la photo est gardée pour plus tard, avec le MÊME problème
+      if(estErreurReseau(e)){showSync(false);signalerEchecReseau(e);await photoApresSansReseau(id,blob);return;}
+      throw e;
+    }
     showSync(false);
     await chargerProblemes();
     renderAll();majCarte();

@@ -76,6 +76,7 @@ function renderAll(){
 	updateBar();
   _sigEnCours=signatureEnCours();   // ce qui est dessiné : on ne redessinera que si ça change
   majVehicules();                   // les camions (un point chacun) avec leur équipage
+  majBandeauPasse();                // « Débuter la passe », ou le résumé de la passe en cours (passe.js)
 }
 
 // Barre du bas : l'avancement de ce qui est affiché (une route, ou toutes les routes ensemble),

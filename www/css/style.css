@@ -315,3 +315,34 @@
 .camion span{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#c8e63c;}
 .camion em{font-style:normal;font-size:11px;color:#9aa8ba;}
 .camion.perime{opacity:.5;border-color:#6b7a8d;}
+
+/* Étape 14a : bandeau de passe (sous la barre du haut) et écran « Débuter la passe » */
+#passe-bandeau{position:absolute;top:74px;left:12px;right:68px;z-index:850;display:none;pointer-events:none;}
+#passe-bandeau.show{display:block;}
+.passe-debuter{pointer-events:all;min-height:56px;padding:0 22px;border:none;border-radius:14px;background:var(--accent);color:#111;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
+.passe-debuter:active{filter:brightness(.85);}
+.passe-encours{pointer-events:all;display:flex;align-items:center;gap:12px;background:rgba(17,20,24,.95);border:2px solid var(--accent);border-radius:14px;padding:8px 14px;box-shadow:0 3px 12px rgba(0,0,0,.5);}
+.passe-pct{font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:800;color:var(--accent);line-height:1;}
+.passe-infos{font-size:12px;color:var(--text);line-height:1.35;overflow-wrap:anywhere;}
+#debut-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
+#debut-overlay.open{display:flex;}
+#debut-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:90vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}
+#debut-header{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 16px 12px;border-bottom:2px solid #c8e63c;flex-shrink:0;}
+#debut-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:#f0f4f8;}
+#debut-sub{font-size:11px;color:#6b7a8d;margin-top:2px;}
+#debut-x{background:#252d3a;border:none;border-radius:6px;color:#f0f4f8;font-size:18px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+#debut-body{overflow-y:auto;flex:1;padding:4px 16px 12px;}
+#debut-footer{padding:12px 16px 24px;border-top:1px solid #252d3a;display:flex;gap:8px;flex-shrink:0;}
+#debut-footer .lf-btn{min-height:52px;font-size:18px;}
+.lf-btn:disabled{opacity:.4;cursor:default;}
+.debut-titre{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:16px 0 8px;}
+.debut-grille{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.debut-choix{min-height:64px;padding:8px 10px;border-radius:12px;border:2px solid #252d3a;background:#161c24;color:#f0f4f8;font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;line-height:1.1;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;text-align:center;overflow-wrap:anywhere;}
+.debut-choix small{font-family:'Barlow',sans-serif;font-size:11px;font-weight:500;color:#9aa8ba;}
+.debut-choix:active{transform:scale(.97);}
+.debut-choix.choisi{border-color:var(--accent);background:rgba(200,230,60,.12);color:var(--accent);}
+.debut-choix.pris{border-style:dashed;}
+.debut-info{font-size:14px;color:var(--text);line-height:1.45;padding:10px 12px;background:#161c24;border-radius:10px;overflow-wrap:anywhere;}
+.debut-info.debut-alerte{color:#fdba74;}
+.debut-info.debut-rejoint{margin-top:10px;border:1px solid rgba(96,165,250,.4);color:#bfdbfe;}
+.debut-info.debut-aide{margin-top:14px;background:none;color:var(--muted);text-align:center;font-size:13px;}

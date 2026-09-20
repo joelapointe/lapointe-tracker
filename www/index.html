@@ -54,6 +54,7 @@
   </div>
 </div>
 <div id="addr-row">📍 <span id="addr-txt">Recherche…</span></div>
+<div id="passe-bandeau"></div>
 <div id="sync">⟳ Sync…</div>
 	<div id="placement-banner">
   <span id="placement-txt">📍 Clique 4 points pour définir la zone</span>
@@ -108,6 +109,24 @@
     <div id="routes-footer">
 		<button class="lf-btn fermer" onclick="closeRoutes()">FERMER</button>
       <button class="lf-btn nouveau" id="btn-nouvelle-route" onclick="openNouvelleRoute()">＋ ROUTE</button>
+    </div>
+  </div>
+</div>
+
+<!-- DÉBUTER LA PASSE : route, tâche, véhicule (passe.js) -->
+<div id="debut-overlay" role="dialog" aria-modal="true" aria-labelledby="debut-title" onclick="bgClickDebut(event)">
+  <div id="debut-panel">
+    <div id="debut-header">
+      <div>
+        <div id="debut-title">▶ Débuter la passe</div>
+        <div id="debut-sub">Choisis ta route, ta tâche et ton véhicule</div>
+      </div>
+      <button id="debut-x" type="button" onclick="fermerDebut()" aria-label="Fermer">✕</button>
+    </div>
+    <div id="debut-body"></div>
+    <div id="debut-footer">
+      <button class="lf-btn fermer" type="button" onclick="fermerDebut()">ANNULER</button>
+      <button class="lf-btn nouveau" id="btn-demarrer" type="button" onclick="demarrerPasse()" disabled>▶ DÉMARRER</button>
     </div>
   </div>
 </div>
@@ -238,6 +257,7 @@
 <script src="js/carte.js"></script>
 <script src="js/tours.js"></script>
 <script src="js/vehicules.js"></script>
+<script src="js/passe.js"></script>
 <script src="js/arrets.js"></script>
 <script src="js/routes.js"></script>
 <script src="js/problemes.js"></script>

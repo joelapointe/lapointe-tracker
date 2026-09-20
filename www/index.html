@@ -131,6 +131,17 @@
   </div>
 </div>
 
+<!-- CHOISIR UNE PERSONNE (equipage.js) : qui monte à bord -->
+<div id="choix-overlay" role="dialog" aria-modal="true" aria-labelledby="choix-title" onclick="bgClickChoix(event)">
+  <div id="choix-panel">
+    <div id="choix-header">
+      <div id="choix-title">Qui monte avec toi ?</div>
+      <button id="choix-x" type="button" onclick="fermerChoixPersonne()" aria-label="Fermer">✕</button>
+    </div>
+    <div id="choix-body"></div>
+  </div>
+</div>
+
 <div id="nouvelle-route-overlay" onclick="bgClickNR(event)">
   <div id="nouvelle-route-modal">
     <h2>＋ Nouvelle route</h2>
@@ -282,6 +293,7 @@
 <script src="js/carte.js"></script>
 <script src="js/tours.js"></script>
 <script src="js/vehicules.js"></script>
+<script src="js/equipage.js"></script>
 <script src="js/passe.js"></script>
 <script src="js/resume-passe.js"></script>
 <script src="js/arrets.js"></script>

@@ -94,7 +94,122 @@ function etatDebut(){
     else if(!d.tache||!t.includes(d.tache)) manque.push('tâche');
   }
   if(!d.equipeId||!d.equipes.some(x=>x.id===d.equipeId)) manque.push('véhicule');
+  // L'équipage précédent n'est JAMAIS pré-coché en silence (décision de Joé) : chaque nom doit être tranché avant de démarrer
+  if(d.equipage&&d.equipage.precedent.some(p=>!d.equipage.choix[p.utilisateur_id])) manque.push('équipage');
   return {pret:manque.length===0&&!sansArret,manque,sansArret};
+}
+
+// ── L'équipage au départ (étape 15b) ───────────────────
+// Les personnes qui étaient à bord avec MOI à ma dernière passe (fonction du serveur equipage_precedent). Sans réseau : on ne bloque pas
+// le départ (l'équipage peut s'ajouter après, pendant la passe).
+async function lireEquipagePrecedent(){
+  try{
+    const r=await db.rpc('equipage_precedent');
+    if(r.error) throw r.error;
+    const membres=(r.data&&Array.isArray(r.data.membres))?r.data.membres:[];
+    return {indispo:false,precedent:membres.map(m=>({utilisateur_id:m.utilisateur_id,nom:m.nom||'?'})),choix:{},extras:[]};
+  }catch(e){
+    return {indispo:true,precedent:[],choix:{},extras:[]};
+  }
+}
+
+// La décision « à bord » pour une personne : si elle est déjà à bord d'un AUTRE véhicule, on demande en nommant le véhicule.
+// Renvoie {etat:'abord'|'pas', forcer}. « Non » = elle reste où elle est.
+async function decisionAbord(p){
+  const ou=ouEstIl(p.utilisateur_id);
+  if(!ou) return {etat:'abord',forcer:false};
+  if(ou.chauffeur){toast('⚠ '+p.nom+' conduit déjà « '+ou.vehicule+' »');return {etat:'pas',forcer:false};}
+  const oui=await confirmer('Faire monter '+p.nom+' ?',p.nom+' est à bord de « '+ou.vehicule+' ». Le faire monter avec toi le fait quitter ce véhicule.','Oui, le faire monter','Non');
+  return oui?{etat:'abord',forcer:true}:{etat:'pas',forcer:false};
+}
+
+let _decisionEnCours=false;   // une seule question à la fois (pas de double toucher)
+async function choisirEquipier(id,etat){
+  const d=_debut;
+  if(!d||d.envoi||_decisionEnCours) return;
+  const p=d.equipage.precedent.find(x=>x.utilisateur_id===id);
+  if(!p) return;
+  _decisionEnCours=true;
+  try{
+    const dec=etat==='pas'?{etat:'pas',forcer:false}:await decisionAbord(p);
+    if(_debut!==d) return;
+    const avant=d.equipage.choix[id];
+    d.equipage.choix[id]={etat:dec.etat,cle:(avant&&avant.cle)||nouvelId(),forcer:dec.forcer};
+    renderDebut();
+  }finally{
+    _decisionEnCours=false;
+  }
+}
+// « Tous à bord » : un bouton distinct (jamais une case cochée d'avance). Les personnes déjà à bord ailleurs sont demandées une à une.
+async function toutesABord(){
+  const d=_debut;
+  if(!d||d.envoi||_decisionEnCours) return;
+  _decisionEnCours=true;
+  try{
+    for(const p of d.equipage.precedent){
+      const dec=await decisionAbord(p);
+      if(_debut!==d) return;
+      const avant=d.equipage.choix[p.utilisateur_id];
+      d.equipage.choix[p.utilisateur_id]={etat:dec.etat,cle:(avant&&avant.cle)||nouvelId(),forcer:dec.forcer};
+    }
+    renderDebut();
+  }finally{
+    _decisionEnCours=false;
+  }
+}
+// « ＋ Quelqu'un d'autre » : n'importe quel employé actif ; ceux déjà à bord ailleurs sont marqués
+function ajouterAutre(){
+  const d=_debut;
+  if(!d||d.envoi) return;
+  const exclus=new Set(d.equipage.precedent.map(x=>x.utilisateur_id).concat(d.equipage.extras.map(x=>x.utilisateur_id)));
+  ouvrirChoixPersonne('Qui monte avec toi ?',exclus,async e=>{
+    if(_decisionEnCours||_debut!==d) return;
+    _decisionEnCours=true;
+    try{
+      const p={utilisateur_id:e.id,nom:e.nom};
+      const dec=await decisionAbord(p);
+      if(_debut!==d) return;
+      if(dec.etat==='abord') d.equipage.extras.push({utilisateur_id:e.id,nom:e.nom,cle:nouvelId(),forcer:dec.forcer});
+      renderDebut();
+    }finally{
+      _decisionEnCours=false;
+    }
+  });
+}
+function retirerExtra(id){
+  const d=_debut;
+  if(!d||d.envoi) return;
+  d.equipage.extras=d.equipage.extras.filter(x=>x.utilisateur_id!==id);
+  renderDebut();
+}
+// Les personnes à faire monter au départ : celles tranchées « à bord » + les autres ajoutées
+function membresChoisis(d){
+  const l=[];
+  d.equipage.precedent.forEach(p=>{
+    const c=d.equipage.choix[p.utilisateur_id];
+    if(c&&c.etat==='abord') l.push({utilisateur_id:p.utilisateur_id,nom:p.nom,cle:c.cle,forcer:!!c.forcer});
+  });
+  d.equipage.extras.forEach(x=>l.push({utilisateur_id:x.utilisateur_id,nom:x.nom,cle:x.cle,forcer:!!x.forcer}));
+  return l;
+}
+// Après le départ : ce que le serveur a répondu pour chacun. Un avertissement (déjà à bord ailleurs, quart terminé depuis peu)
+// devient une question nommée ; si la réponse s'est perdue, on refait le MÊME geste (même clé : jamais de doublon).
+async function apresDemarrage(passeId,membres,resultats){
+  let montes=0;
+  const pasMontes=[];
+  for(const m of membres){
+    const res=Array.isArray(resultats)?resultats.find(x=>x.utilisateur_id===m.utilisateur_id):null;
+    if(res&&(res.statut==='ajoute'||res.statut==='transfere'||res.statut==='deja_a_bord')){montes++;continue;}
+    if(res&&res.statut==='erreur'){pasMontes.push(m.nom);continue;}
+    const r=res?{data:res,error:null}:await appelAjouterEquipier(passeId,m.utilisateur_id,m.cle,m.forcer);
+    const c=await conclureAjout(passeId,m,m.cle,r);
+    if(c.statut==='ajoute'||c.statut==='transfere'||c.statut==='deja') montes++;
+    else{
+      pasMontes.push(m.nom);
+      if(c.statut==='refuse') toast('⚠ '+messageRefusEquipage(m.nom,c));
+    }
+  }
+  return {montes,pasMontes};
 }
 
 // ── L'écran « Débuter la passe » ───────────────────────
@@ -117,6 +232,8 @@ async function ouvrirDebut(){
       toast('❌ Pas de réseau. Réessaie.');
       return;
     }
+    const equipage=await lireEquipagePrecedent();   // les personnes qui étaient à bord avec moi (étape 15b)
+    await chargerEmployes();                         // pour « ＋ Quelqu'un d'autre »
     showSync(false);
     const routeId=routeParDefaut();
     const dernier=lireMemo(CLE_VEHICULE);
@@ -125,6 +242,7 @@ async function ouvrirDebut(){
       tache:routeId?tacheParDefaut(routeId):null,
       equipeId:(dernier&&equipes.some(x=>x.id===dernier))?dernier:null,
       equipes,
+      equipage,
       envoi:false
     };
     renderDebut();
@@ -243,6 +361,66 @@ function renderDebut(){
     corps.appendChild(g);
   }
 
+  // À BORD AVEC TOI (étape 15b) : les noms de l'équipage précédent EN GROS, jamais pré-cochés ; « Démarrer » attend que chacun soit tranché
+  corps.appendChild(titreDebut('À bord avec toi'));
+  const eq=d.equipage;
+  if(eq.indispo){
+    corps.appendChild(infoDebut('Équipage précédent indisponible (pas de réseau). Tu pourras ajouter du monde après le départ.','debut-note'));
+  }else if(eq.precedent.length){
+    corps.appendChild(infoDebut('Ton équipage de la dernière passe : confirme chaque personne.','debut-note'));
+    const tous=document.createElement('button');
+    tous.type='button';
+    tous.className='debut-tous';
+    tous.textContent='✔ Tous à bord';
+    tous.onclick=()=>toutesABord();
+    corps.appendChild(tous);
+    eq.precedent.forEach(p=>{
+      const c=eq.choix[p.utilisateur_id];
+      const ligne=document.createElement('div');
+      ligne.className='debut-personne';
+      const nom=document.createElement('div');
+      nom.className='debut-nom';
+      nom.textContent=p.nom;
+      const oui=document.createElement('button');
+      oui.type='button';
+      oui.className='debut-oui'+(c&&c.etat==='abord'?' choisi':'');
+      oui.textContent='À bord';
+      oui.onclick=()=>choisirEquipier(p.utilisateur_id,'abord');
+      const non=document.createElement('button');
+      non.type='button';
+      non.className='debut-non'+(c&&c.etat==='pas'?' choisi':'');
+      non.textContent='Pas à bord';
+      non.onclick=()=>choisirEquipier(p.utilisateur_id,'pas');
+      ligne.appendChild(nom);ligne.appendChild(oui);ligne.appendChild(non);
+      corps.appendChild(ligne);
+    });
+  }else{
+    corps.appendChild(infoDebut('Personne d’autre à bord de ta dernière passe.','debut-note'));
+  }
+  eq.extras.forEach(x=>{
+    const ligne=document.createElement('div');
+    ligne.className='debut-personne';
+    const nom=document.createElement('div');
+    nom.className='debut-nom';
+    nom.textContent=x.nom;
+    const oui=document.createElement('div');
+    oui.className='debut-oui choisi';
+    oui.textContent='À bord';
+    const ret=document.createElement('button');
+    ret.type='button';
+    ret.className='debut-non';
+    ret.textContent='✕ Retirer';
+    ret.onclick=()=>retirerExtra(x.utilisateur_id);
+    ligne.appendChild(nom);ligne.appendChild(oui);ligne.appendChild(ret);
+    corps.appendChild(ligne);
+  });
+  const autre=document.createElement('button');
+  autre.type='button';
+  autre.className='debut-ajout';
+  autre.textContent='＋ Quelqu’un d’autre';
+  autre.onclick=()=>ajouterAutre();
+  corps.appendChild(autre);
+
   const e=etatDebut();
   if(e.manque.length) corps.appendChild(infoDebut('Choisis encore : '+e.manque.join(', ')+'.','debut-aide'));
   const bouton=document.getElementById('btn-demarrer');
@@ -297,10 +475,13 @@ async function demarrerPasse(){
   if(!_essaiDebut||_essaiDebut.cle!==cle) _essaiDebut={cle,passeId:nouvelId()};
   const passeId=_essaiDebut.passeId;
 
+  const membres=membresChoisis(d);
   showSync(true);
   let r;
   try{
-    r=await db.rpc('debuter_passe',{p_id:passeId,p_route_id:d.routeId,p_equipe_id:d.equipeId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null,p_tache:d.tache});
+    const args={p_id:passeId,p_route_id:d.routeId,p_equipe_id:d.equipeId,p_lat:lastPos?lastPos[0]:null,p_lon:lastPos?lastPos[1]:null,p_tache:d.tache};
+    if(membres.length) args.p_equipage=membres.map(m=>({utilisateur_id:m.utilisateur_id,cle_client:m.cle,forcer:m.forcer}));
+    r=await db.rpc('debuter_passe',args);
   }catch(err){
     r={data:null,error:err};
   }
@@ -331,7 +512,15 @@ async function demarrerPasse(){
   await chargerPositionsVehicules();
   renderAll();majCarte();
   const num=r.data&&r.data.numero!=null?r.data.numero:((maPasse()||{tour:{}}).tour.numero);
-  toast(r.data&&r.data.tour_rejoint?'🤝 Tu as rejoint la passe n° '+num:'▶ Passe n° '+num+' débutée');
+  // L'équipage : un avertissement (déjà à bord ailleurs, quart terminé depuis peu) devient une question nommée, une personne à la fois
+  let bilan={montes:0,pasMontes:[]};
+  if(membres.length){
+    bilan=await apresDemarrage(passeId,membres,r.data&&r.data.equipage);
+    await chargerVehiculesEtEquipages();
+    renderAll();majCarte();
+  }
+  const aBord=bilan.montes?' · '+bilan.montes+' à bord':'';
+  toast((r.data&&r.data.tour_rejoint?'🤝 Tu as rejoint la passe n° '+num:'▶ Passe n° '+num+' débutée')+aBord+(bilan.pasMontes.length?' · ⚠ '+bilan.pasMontes.length+' pas monté'+(bilan.pasMontes.length>1?'s':''):''));
 }
 
 // ── Le bandeau du haut ────────────────────────────────

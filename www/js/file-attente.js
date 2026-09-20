@@ -92,9 +92,12 @@ const EXECUTEURS={
     appeler:(i)=>db.rpc('completer_arret',{p_passe_id:i.args.passeId,p_stop_id:i.args.stopId,p_moment:i.moment,p_mode:i.args.mode||'manuel',...positionArgs(i.args)}),
     juger:(i,d)=>d&&d.statut==='passe_terminee'?{raison:'La passe était déjà terminée : cet arrêt n’a pas été enregistré.'}:null
   },
-  annuler_arret:{   // 16d : l'heure du geste s'ajoutera ici (p_moment) avec le fichier SQL 18
-    appeler:(i)=>db.rpc('annuler_arret',{p_passe_id:i.args.passeId,p_stop_id:i.args.stopId}),
-    juger:()=>null
+  annuler_arret:{   // 16d (SQL 18) : l'heure du GESTE (p_moment) : les 10 minutes se comptent depuis elle, pas depuis le retour du signal
+    appeler:(i)=>db.rpc('annuler_arret',{p_passe_id:i.args.passeId,p_stop_id:i.args.stopId,p_moment:i.moment}),
+    // (SQL 19) L'arrêt a été REFAIT après le geste d'annulation (par un autre camion) : le serveur ignore l'annulation et le dit. Le chauffeur DOIT
+    // le comprendre tout de suite (décision de Joé) : message direct, et la ligne reste dans « Gestes non envoyés ». Une annulation dont il n'y a plus
+    // rien à annuler (déjà faite, réponse perdue) répond « pas_complete » SANS raison : aucun message (il serait faux).
+    juger:(i,d)=>(d&&d.statut==='pas_complete'&&d.raison==='complete_apres')?{raison:'Cet arrêt avait été refait entre-temps, l’annulation a été ignorée.',direct:true}:null
   },
   debuter_passe:{
     appeler:(i)=>{
@@ -120,8 +123,8 @@ const EXECUTEURS={
     appeler:(i)=>db.rpc('equipage_retirer',{p_cle_client:i.args.cle,p_passe_id:i.args.passeId,p_utilisateur_id:i.args.userId,p_moment:i.moment,...positionArgs(i.args)}),
     juger:()=>null
   },
-  probleme:{   // 16d : « cree_le » (l'heure du geste) s'ajoutera ici avec le fichier SQL 18
-    appeler:(i)=>db.from('problemes').insert([{id:i.args.id,stop_id:i.args.stopId,passe_id:i.args.passeId||null,note:i.args.note}]),
+  probleme:{   // 16d (SQL 18) : « cree_le » = l'heure du GESTE (le serveur la borne : futur = maintenant, plus de 3 jours = refusé)
+    appeler:(i)=>db.from('problemes').insert([{id:i.args.id,stop_id:i.args.stopId,passe_id:i.args.passeId||null,note:i.args.note,cree_le:i.moment}]),
     juger:()=>null
   },
   probleme_photo:{
@@ -313,7 +316,7 @@ async function essaiGeste(item){
   }
   const d=r&&r.data;
   const refus=ex.juger(item,d);
-  if(refus) return {genre:'definitif',raison:refus.raison};
+  if(refus) return {genre:'definitif',raison:refus.raison,direct:!!refus.direct};   // direct : la raison elle-même est le message (elle est courte et doit être comprise tout de suite)
   return {genre:'ok',equipiers:item.type==='debuter_passe'?equipiersRefuses(item,d):[]};
 }
 
@@ -350,7 +353,7 @@ async function _passeDeRejeu(){
       serveurAtteint();
       await refuserGeste(item,v.raison);
       bilan.refuses++;
-      toast('⚠ Un geste n’a pas pu être envoyé : touche la bande du haut');
+      toast(v.direct?'⚠ '+v.raison:'⚠ Un geste n’a pas pu être envoyé : touche la bande du haut');
       continue;
     }
     if(v.genre==='inconnu'){

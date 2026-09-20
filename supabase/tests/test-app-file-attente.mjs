@@ -445,7 +445,7 @@ log('\n=== UN PROBLÈME ET SA PHOTO ===');
   await attendre(60);
   eq('problème déjà enregistré (clé en double) = succès ; photo déjà envoyée (409) = succès', [m.attentes().length, m.refus().length], [0, 0]);
   eq('ordre : le problème (texte) d\'abord, puis la photo dans l\'espace privé, puis le lien au problème', [m.envoisGestes(), m.appels.uploads, m.appels.envois.map((x) => x.nom).pop()], [['insert:problemes', 'probleme_attacher_photo'], ['u-luc/pb-1.jpg'], 'probleme_attacher_photo']);
-  eq('le problème part avec son numéro, son arrêt, sa passe, sa note (jamais « lu » ni le nom)', Object.keys(m.appels.envois[0].args).sort(), ['id', 'note', 'passe_id', 'stop_id']);
+  eq('le problème part avec son numéro, son arrêt, sa passe, sa note et l\'heure du GESTE (étape 16d : « cree_le ») — jamais « lu » ni le nom', [Object.keys(m.appels.envois[0].args).sort(), typeof m.appels.envois[0].args.cree_le], [['cree_le', 'id', 'note', 'passe_id', 'stop_id'], 'string']);
   m.fin();
   // Le problème est refusé : la photo l'est aussi (elle n'a rien à quoi se relier), les deux sont dans la liste
   const r = monde({ serveur: { 'insert:problemes': async () => ({ data: null, error: { message: 'new row violates row-level security policy', code: '42501' } }) }, delais: [5000] });
@@ -483,7 +483,7 @@ log('\n=== TOUS LES TYPES DE GESTES APPELLENT LA BONNE FONCTION DU SERVEUR ===')
   eq('les 5 gestes : la bonne fonction, dans l\'ordre', m.appels.envois.map((x) => x.nom), ['completer_arret', 'annuler_arret', 'terminer_passe', 'equipage_ajouter', 'equipage_retirer']);
   eq('terminer et compléter portent l\'heure du geste', [typeof m.appels.envois[0].args.p_moment, typeof m.appels.envois[2].args.p_moment], ['string', 'string']);
   eq('la clé client de l\'équipage est celle du geste (un renvoi ne fait pas de doublon)', m.appels.envois[3].args.p_cle_client, cle);
-  eq('« annuler » n\'envoie PAS encore d\'heure (le fichier SQL 18, étape 16d, ne l\'accepte pas encore : sinon le serveur refuserait)', Object.keys(m.appels.envois[1].args).sort(), ['p_passe_id', 'p_stop_id']);
+  eq('« annuler » porte AUSSI l\'heure du geste (étape 16d : le fichier SQL 18 l\'accepte ; les 10 minutes se comptent depuis le geste)', [Object.keys(m.appels.envois[1].args).sort(), typeof m.appels.envois[1].args.p_moment], [['p_moment', 'p_passe_id', 'p_stop_id'], 'string']);
   eq('tout est parti', [m.attentes().length, m.refus().length], [0, 0]);
   m.fin();
 }

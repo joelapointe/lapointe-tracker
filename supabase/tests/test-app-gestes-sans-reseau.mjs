@@ -920,11 +920,17 @@ log('\n=== AU RETOUR DU SIGNAL : LE PROBLÈME PART (une seule fois), PUIS LA PHO
   const id = m.run('_idProbleme');
   await m.run('envoyerProbleme()');
   const lecturesAvant = m.appels.lectures.filter((x) => x === 'problemes').length;
+  await attendre(40);   // (du temps passe entre le signalement et le retour du signal : l'heure du geste et celle de l'envoi sont différentes)
+  const tRetourP = Date.now();
   m.reseau(true);
   vrai('le problème part, puis la photo, et la file se vide', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
   await attendreQue(() => m.appels.lectures.filter((x) => x === 'problemes').length > lecturesAvant);
   eq('l\'ordre des envois : le problème, PUIS la photo (fichier), PUIS la liaison', [m.appels.envois.map((x) => x.nom), m.appels.uploads], [['insert:problemes', 'probleme_attacher_photo'], ['u-luc/' + id + '.jpg']]);
-  eq('le problème est envoyé avec son numéro, l\'arrêt, la passe et la note — rien d\'autre', m.appels.envois[0].args, { id, stop_id: 's1', passe_id: 'p-luc', note: 'Barrière brisée' });
+  const envoye = { ...m.appels.envois[0].args };
+  const creeLe = Date.parse(envoye.cree_le);
+  delete envoye.cree_le;
+  eq('le problème est envoyé avec son numéro, l\'arrêt, la passe, la note — et l\'heure du GESTE (étape 16d) — rien d\'autre', envoye, { id, stop_id: 's1', passe_id: 'p-luc', note: 'Barrière brisée' });
+  vrai('… l\'heure envoyée (cree_le) est celle où le problème a été SIGNALÉ (avant le retour du signal), pas celle de l\'envoi', creeLe > 0 && creeLe <= tRetourP && tRetourP - creeLe < 60000, `${creeLe} / ${tRetourP}`);
   eq('le serveur a le dernier mot : UN problème, avec sa photo, plus « en attente », plus de ⏳', [m.donnees.problemes.length, m.run('problemesNonLus.map(p=>[p.id,p.enAttente,p.photoEnAttente,p.photo_chemin])'), m.bande().visible], [1, [[id, undefined, undefined, 'u-luc/' + id + '.jpg']], false]);
   eq('la miniature locale du geste est libérée une fois la photo partie (et celle de la boîte, à sa fermeture)', [m.run('__revoques.includes("blob:local-1")'), m.run('__revoques.includes("blob:choisie")')], [true, true]);
   m.fin();
@@ -1157,12 +1163,80 @@ for (const capricieux of [false, true]) {
   const attendus = ['debuter_passe', 'completer_arret', 'equipage_ajouter', 'equipage_retirer', 'insert:problemes', 'probleme_attacher_photo', 'terminer_passe'];
   if (capricieux) attendus.splice(2, 0, 'equipage_ajouter');
   eq(capricieux ? 'l\'ordre des envois (l\'ajout de Nina est retenté après la coupure, puis tout continue)' : 'l\'ordre des envois : celui des gestes', noms, attendus);
-  const moments = m.appels.envois.filter((x) => x.args?.p_moment).map((x) => x.args.p_moment).filter((v, i, t) => i === 0 || v !== t[i - 1]);
+  // (l'heure du problème est « cree_le », depuis l'étape 16d : elle est comptée avec les autres)
+  const moments = m.appels.envois.filter((x) => x.args?.p_moment || x.args?.cree_le).map((x) => x.args.p_moment || x.args.cree_le).filter((v, i, t) => i === 0 || v !== t[i - 1]);
+  eq('les 6 gestes qui portent une heure (débuter, compléter, ajouter, retirer, problème, terminer) l\'envoient tous', m.appels.envois.filter((x) => x.args?.p_moment || x.args?.cree_le).length, 6 + (capricieux ? 1 : 0));
   vrai('les heures envoyées (p_moment) sont celles des gestes : dans l\'ordre, toutes AVANT le retour du signal', moments.every((v, i) => i === 0 || v >= moments[i - 1]) && moments.every((v) => Date.parse(v) <= tRetour), moments.join(' | '));
   eq('le serveur a chaque effet UNE seule fois : un tour terminé 1/2, un problème avec sa photo, plus personne à bord de cette passe', [m.donnees.tours.length, m.donnees.tours[0].en_cours, m.donnees.tours[0].faits, m.donnees.problemes.length, m.donnees.problemes[0].photo_chemin === 'u-luc/' + m.donnees.problemes[0].id + '.jpg', m.donnees.equipage_periodes.length], [1, false, 1, 1, true, 0]);
   eq('rien n\'est refusé, rien n\'attend, la bande est vide, plus aucun ⏳', [m.refus().length, m.attentes().length, m.bande().visible], [0, 0, false]);
   eq('l\'écran (relu du serveur) : le VRAI numéro de passe (plus « à confirmer »), passe terminée 1/2, aucune passe à moi', [m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('tours[0].en_cours'), m.run('tours[0].faits'), m.run('maPasse()')], [1, undefined, false, 1, null]);
   eq('le problème est celui du serveur (plus « en attente »), avec sa photo ; l\'équipage local a disparu', [m.run('problemesNonLus.length'), m.run('problemesNonLus[0].enAttente'), m.run('problemesNonLus[0].photoEnAttente'), typeof m.run('problemesNonLus[0].photo_chemin'), m.run('Object.keys(equipages).length')], [1, undefined, undefined, 'string', 0]);
+  m.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 16d (APPLICATION) : L'HEURE DES ANNULATIONS, ET LE MESSAGE « ANNULATION IGNORÉE »
+// ══════════════════════════════════════════════════════════════════════
+const MESSAGE_IGNOREE = 'Cet arrêt avait été refait entre-temps, l’annulation a été ignorée.';
+log('\n=== UNE ANNULATION FAITE SANS RÉSEAU PART AVEC L\'HEURE DU GESTE ===');
+{
+  const m = await ouvrir({ tours: [tourInit({ faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 60 } })] }); coupe(m);
+  await toucher(m, 's1');
+  await attendre(40);
+  const tRetour = Date.now();
+  const lecturesAvant = nbLecturesTours(m);
+  m.reseau(true);
+  vrai('au retour du signal : l\'annulation part', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  const a = m.appels.envois.find((x) => x.nom === 'annuler_arret')?.args;
+  eq('elle porte la passe, l\'arrêt ET l\'heure du geste (p_moment) : les 10 minutes se comptent depuis le geste', [a?.p_passe_id, a?.p_stop_id, typeof a?.p_moment], ['p-luc', 's1', 'string']);
+  vrai('… l\'heure est celle du geste (avant le retour du signal), pas celle de l\'envoi', Date.parse(a?.p_moment) <= tRetour && tRetour - Date.parse(a?.p_moment) < 60000, `${a?.p_moment} / ${tRetour}`);
+  await attendreQue(() => nbLecturesTours(m) > lecturesAvant);
+  m.fin();
+}
+
+log('\n=== L\'ARRÊT A ÉTÉ REFAIT ENTRE-TEMPS : LE CHAUFFEUR LE COMPREND TOUT DE SUITE ===');
+{
+  // Le serveur ignore l'annulation (arrêt refait par un autre camion après le geste) et le DIT
+  const m = await ouvrir({ tours: [tourInit({ faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 60 } })],
+    monde: { serveur: { annuler_arret: () => ({ data: { statut: 'pas_complete', raison: 'complete_apres' }, error: null }) } } }); coupe(m);
+  await toucher(m, 's1');
+  eq('hors réseau : l\'arrêt paraît annulé (à faire) avec ⏳', [estFait(m, 's1'), m.run('gestesEnAttente().length')], [false, 1]);
+  m.reseau(true);
+  vrai('au retour du signal : l\'annulation est ignorée et notée dans « non envoyés »', await attendreQue(() => m.refus().length === 1 && m.attentes().length === 0));
+  eq('LE MESSAGE À L\'ÉCRAN dit clairement ce qui s\'est passé (pas le message générique « touche la bande du haut »)', m.appels.toasts.filter((t) => t.includes('refait entre-temps')), ['⚠ ' + MESSAGE_IGNOREE]);
+  eq('… la même phrase est dans la liste des gestes non envoyés (il peut la relire), avec le libellé du geste', [m.refus()[0].raison, m.refus()[0].libelle.startsWith('↩ Annulé : ')], [MESSAGE_IGNOREE, true]);
+  eq('… et la bande du haut montre « ⚠ 1 geste non envoyé »', m.bande().texte.includes('⚠ 1 geste non envoyé'), true);
+  await attendreQue(() => m.run(`estFait(stops[${idx('s1')}])`) === true);
+  eq('l\'écran revient à la vérité du serveur : l\'arrêt est FAIT (refait par l\'autre camion)', estFait(m, 's1'), true);
+  m.fin();
+}
+{
+  // « Plus rien à annuler » (l'annulation avait déjà réussi, la réponse s'était perdue) : PAS de raison → aucun message (il serait faux)
+  const m = await ouvrir({ tours: [tourInit({ faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 60 } })],
+    monde: { serveur: { annuler_arret: () => ({ data: { statut: 'pas_complete' }, error: null }) } } }); coupe(m);
+  await toucher(m, 's1');
+  m.reseau(true);
+  vrai('au retour du signal : le geste est traité comme réussi', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  eq('aucun message « refait entre-temps » (ce serait FAUX), rien dans « non envoyés »', [m.appels.toasts.some((t) => t.includes('refait entre-temps')), m.refus().length], [false, 0]);
+  m.fin();
+}
+{
+  // Un serveur qui ne connaît pas encore la précision (SQL 19 pas encore exécuté) : « pas_complete » sans raison → silencieux, jamais de plantage
+  const m = await ouvrir({ tours: [tourInit({ faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 60 } })],
+    monde: { serveur: { annuler_arret: () => ({ data: { statut: 'pas_complete' }, error: null }) } } }); coupe(m);
+  await m.enfiler('annuler_arret', { passeId: 'p-luc', stopId: 's1' });
+  m.reseau(true);
+  vrai('sans la précision du serveur : traité comme réussi (l\'application ne dépend pas du fichier 19)', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne')));
+  m.fin();
+}
+{
+  // Les autres refus gardent leur message général (« touche la bande du haut »), le message direct n'est que pour ce cas
+  const m = await ouvrir({ tours: [tourInit({ faits: 1, pourcentage: 50, arrets_faits: ['s1'], faits_il_y_a: { s1: 60 } })],
+    monde: { serveur: { annuler_arret: () => ({ data: null, error: { code: 'P0001', message: 'delai_depasse' } }) } } }); coupe(m);
+  await toucher(m, 's1');
+  m.reseau(true);
+  vrai('un refus « trop tard »…', await attendreQue(() => m.refus().length === 1 && m.attentes().length === 0));
+  eq('… garde le message général (« touche la bande du haut ») et sa raison dans la liste', [m.appels.toasts.filter((t) => t.startsWith('⚠ Un geste n’a pas pu être envoyé')).length, m.refus()[0].raison], [1, 'Trop tard pour annuler (plus de 10 minutes).']);
   m.fin();
 }
 

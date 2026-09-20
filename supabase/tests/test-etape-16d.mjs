@@ -18,9 +18,11 @@ const FILES17 = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.s
   '16-etape14e-photo-probleme.sql', '17-etape15-equipage-precedent.sql'];
 const FICHIER18 = '18-etape16d-heure-des-gestes-sans-reseau.sql';
 const SQL18 = fs.readFileSync(SQL_DIR + FICHIER18, 'utf8');
+const FICHIER19 = '19-etape16d-annulation-ignoree-precisee.sql';
+const SQL19 = fs.readFileSync(SQL_DIR + FICHIER19, 'utf8');
 const MEC = 'Déneigement mécanique';
 
-const db = await prepare([...FILES17, FICHIER18]);
+const db = await prepare([...FILES17, FICHIER18, FICHIER19]);
 const q = async (sql, p) => (await db.query(sql, p)).rows;
 async function fn(uid, call, params = [], role = 'authenticated') {
   await db.query('reset role');
@@ -76,6 +78,7 @@ log('=== LE FICHIER LUI-MÊME ===');
     (await q(`select md5(coalesce(string_agg(id::text || statut || debut::text, ',' order by id), '')) h from passes`))[0].h];
   const av = await compte();
   await db.exec(SQL18);
+  await db.exec(SQL19);   // (dans l'ordre réel : le 19 remplace ensuite la fonction du 18 par la même, plus précise)
   eq('ré-exécuter le fichier : accepté, aucune donnée n\'est modifiée', await compte(), av);
   eq('une seule version de annuler_arret, avec le paramètre d\'heure', [(await q(`select count(*)::int n from pg_proc where proname = 'annuler_arret'`))[0].n, (await q(`select pg_get_function_arguments(oid) a from pg_proc where proname = 'annuler_arret'`))[0].a.includes('p_moment')], [1, true]);
   await err('un visiteur ne peut pas annuler un arrêt', () => fn(null, `annuler_arret($1::uuid,$2::uuid,null::timestamptz)`, [uuid(), uuid()], 'anon'), 'permission denied');
@@ -88,6 +91,25 @@ log('=== LE FICHIER LUI-MÊME ===');
       verif.declencheur_problemes_present, verif.employe_peut_ecrire_cree_le_a_linsertion, verif.employe_peut_modifier_cree_le, verif.fonctions_appelables_par_un_visiteur], [1, true, false, true, true, 1, true, false, []]);
   const sans = await prepare(FILES17.slice(0, 3));
   await err('sans les fichiers précédents : REFUSÉ, avec un message clair', () => sans.exec(SQL18), 'n\'existe pas');
+}
+
+log('\n=== LE FICHIER 19 : LA RAISON D\'UNE ANNULATION IGNORÉE ===');
+{
+  const compte = async () => [(await q(`select count(*)::int n from passes`))[0].n, (await q(`select count(*)::int n from passe_arrets`))[0].n, (await q(`select count(*)::int n from problemes`))[0].n,
+    (await q(`select md5(coalesce(string_agg(passe_id::text || stop_id::text || complete_le::text, ',' order by passe_id, stop_id), '')) h from passe_arrets`))[0].h];
+  const donnee = await scenario(); await completer(donnee.uid, donnee.passe, donnee.s1, 30);   // (de vraies données : sinon un « update » de trop ne changerait rien)
+  const av = await compte();
+  await db.exec(SQL19);
+  eq('ré-exécuter le fichier 19 : accepté, aucune donnée n\'est modifiée', await compte(), av);
+  eq('une seule version de annuler_arret (même signature qu\'au fichier 18)', [(await q(`select count(*)::int n from pg_proc where proname = 'annuler_arret'`))[0].n, (await q(`select pg_get_function_arguments(oid) a from pg_proc where proname = 'annuler_arret'`))[0].a.includes('p_moment')], [1, true]);
+  await err('un visiteur ne peut toujours pas l\'appeler', () => fn(null, `annuler_arret($1::uuid,$2::uuid,null::timestamptz)`, [uuid(), uuid()], 'anon'), 'permission denied');
+  eq('aucune fonction ouverte au visiteur', (await q(`select count(*)::int n from pg_proc where pronamespace = 'public'::regnamespace and has_function_privilege('anon', oid, 'execute')`))[0].n, 0);
+  vrai('aucune clé secrète ni mot de passe', !/service_role|sb_secret|password/i.test(SQL19));
+  const verif = (await q(SQL19.slice(SQL19.indexOf('select jsonb_build_object(', SQL19.lastIndexOf('-- VÉRIFICATION'))).replace(/;\s*$/, '')))[0].verification;
+  eq('la requête « vérification » du bas : 1 version, précise la raison, visiteur refusé, employé permis, verrouillée, aucune fonction ouverte au visiteur',
+    [verif.annuler_arret_versions, verif.annuler_arret_precise_la_raison, verif.annuler_arret_visiteur_peut_appeler, verif.annuler_arret_employe_peut_appeler, verif.annuler_arret_verrouillee_search_path, verif.fonctions_appelables_par_un_visiteur], [1, true, false, true, true, []]);
+  const sans18 = await prepare(FILES17);
+  await err('sans le fichier 18 : REFUSÉ, avec un message clair', () => sans18.exec(SQL19), 'le fichier 18 n\'a pas été exécuté');
 }
 
 log('\n=== ANNULER UN ARRÊT : SANS L\'HEURE DU GESTE, RIEN NE CHANGE (appel en ligne) ===');
@@ -126,10 +148,15 @@ log('\n=== UNE ANNULATION RENVOYÉE N\'ANNULE JAMAIS UN « COMPLÉTÉ » PLUS R�
   await completer(s.uid, s.passe, s.s1, 20);   // l'arrêt est refait, plus tard
   const r = await annuler(s.uid, s.passe, s.s1, 55);   // la MÊME annulation est renvoyée (réponse perdue)
   eq('la même annulation renvoyée : IGNORÉE (« pas complété »), le « Complété » plus récent reste', [r.statut, await fait(s.passe, s.s1)], ['pas_complete', true]);
+  eq('… et la réponse DIT POURQUOI : « complete_apres » (l\'arrêt a été refait : l\'employé doit en être prévenu)', r.raison, 'complete_apres');
   const t = await scenario();
   await completer(t.uid, t.passe, t.s1, 60);
   await annuler(t.uid, t.passe, t.s1, 55);
-  eq('renvoyée alors que rien n\'a changé : « pas complété », sans erreur (un renvoi est inoffensif)', (await annuler(t.uid, t.passe, t.s1, 55)).statut, 'pas_complete');
+  const r2 = await annuler(t.uid, t.passe, t.s1, 55);
+  eq('renvoyée alors que rien n\'a changé : « pas complété », sans erreur (un renvoi est inoffensif)', r2.statut, 'pas_complete');
+  eq('… SANS raison : il n\'y a plus rien à annuler, aucun message ne doit s\'afficher (il serait faux)', r2.raison, undefined);
+  const t2 = await scenario();
+  eq('un arrêt jamais complété : « pas complété », sans raison non plus', [(await annuler(t2.uid, t2.passe, t2.s1, 5)).statut, (await annuler(t2.uid, t2.passe, t2.s1, 5)).raison], ['pas_complete', undefined]);
   const u = await scenario();
   await completer(u.uid, u.passe, u.s1, 3);
   eq('tolérance de 2 minutes (l\'horloge d\'un autre téléphone peut avancer) : annulation faite 1 min avant le « Complété » : acceptée', (await annuler(u.uid, u.passe, u.s1, 4)).statut, 'annule');

@@ -5,7 +5,7 @@ let _tT;
 function toast(msg){
   const el=document.getElementById('toast');
   el.textContent=msg;el.classList.add('show');
-  clearTimeout(_tT);_tT=setTimeout(()=>el.classList.remove('show'),2500);
+  clearTimeout(_tT);_tT=setTimeout(()=>el.classList.remove('show'),String(msg).length>60?4500:2500);   // un message long (étape 16c : « … ⏳ envoyé au retour du signal ») reste plus longtemps
 }
 
 // ── SÉCURITÉ : insertion de texte dans du HTML ─────────

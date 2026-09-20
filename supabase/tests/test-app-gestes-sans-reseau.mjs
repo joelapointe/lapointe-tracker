@@ -1083,6 +1083,116 @@ log('\n=== ON ROUVRE L\'APPLICATION SANS RÉSEAU : LE PROBLÈME ET SA PHOTO SONT
   b.fin();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// MORCEAU 5 : L'ESSAI D'ENSEMBLE — UNE JOURNÉE SANS RÉSEAU, PUIS LE RETOUR DU SIGNAL
+// ══════════════════════════════════════════════════════════════════════
+// Un serveur qui applique TOUS les gestes pour de vrai (tours, équipage, problèmes) : on voit ce que l'écran devient quand il a le dernier mot.
+const serveurComplet = (getMonde, o = {}) => {
+  const NOM = { 'u-marc': 'Marc', 'u-nina': 'Nina', 'u-eric': 'Eric' };
+  const ligne = (passeId, role, id) => ({ passe_id: passeId, role, utilisateur_id: id, utilisateurs: { nom: id === 'u-luc' ? 'Luc' : NOM[id] } });
+  return {
+    ...serveurProblemes(getMonde),
+    debuter_passe: (args, n, d) => {
+      if (!d.tours.some((t) => t.passes.some((p) => p.passe_id === args.p_id))) {
+        d.tours = [tourInit({ numero: 1, passes: [{ ...PASSE_LUC, passe_id: args.p_id }] })];
+        d.equipage_periodes.push(ligne(args.p_id, 'chauffeur', 'u-luc'));
+        (args.p_equipage || []).forEach((x) => d.equipage_periodes.push(ligne(args.p_id, 'passager', x.utilisateur_id)));
+      }
+      return { data: { statut: 'debutee', numero: 1, equipage: (args.p_equipage || []).map((x) => ({ utilisateur_id: x.utilisateur_id, statut: 'ajoute' })) }, error: null };
+    },
+    completer_arret: appliquerCompleter,
+    equipage_ajouter: (args, n, d) => {
+      if (o.echecsAjout > 0) { o.echecsAjout--; throw new Error('Failed to fetch'); }   // le signal saute en plein milieu de la file
+      if (!d.equipage_periodes.some((p) => p.passe_id === args.p_passe_id && p.utilisateur_id === args.p_utilisateur_id)) d.equipage_periodes.push(ligne(args.p_passe_id, 'passager', args.p_utilisateur_id));
+      return { data: { statut: 'ajoute' }, error: null };
+    },
+    equipage_retirer: (args, n, d) => { d.equipage_periodes = d.equipage_periodes.filter((p) => !(p.passe_id === args.p_passe_id && p.utilisateur_id === args.p_utilisateur_id)); return { data: { statut: 'retire' }, error: null }; },
+    terminer_passe: (args, n, d) => {
+      const t = d.tours[0];
+      t.passes = t.passes.filter((p) => p.passe_id !== args.p_passe_id); t.en_cours = false;
+      d.equipage_periodes = d.equipage_periodes.filter((p) => p.passe_id !== args.p_passe_id);
+      return { data: { statut: 'terminee', faits: t.faits, total: t.total, pourcentage: t.pourcentage }, error: null };
+    },
+  };
+};
+const LIBELLES_JOURNEE = ['▶ Passe débutée : Charette · ' + MEC + ' · Camion 1', '✔ Complété : 304 rue de l\'Église', '👤 Équipage : + Nina (Camion 1)', '👤 Équipage : − Marc (Camion 1)',
+  '⚠ Problème : 220 rue du Moulin — Barrière brisée', '📷 Photo du problème : 220 rue du Moulin', '■ Passe terminée : n° 1 (à confirmer) · Charette'];
+
+for (const capricieux of [false, true]) {
+  log(`\n=== UNE JOURNÉE COMPLÈTE SANS RÉSEAU, PUIS LE RETOUR DU SIGNAL${capricieux ? ' (LE SIGNAL SAUTE EN PLEIN MILIEU DE LA FILE)' : ''} : TOUT PART DANS L'ORDRE, UNE SEULE FOIS ===`);
+  let m;
+  const o = { echecsAjout: capricieux ? 1 : 0 };
+  m = await ouvrir({ tours: [], equipes: E1E2, equipages: [], monde: { serveur: serveurComplet(() => m, o) } }); coupe(m); avecMiniatures(m);
+  // — la journée, avec les vrais écrans —
+  await debuterHors(m, [{ utilisateur_id: 'u-marc', nom: 'Marc', cle: 'cle-marc', forcer: false }]);
+  const passeId = passeLocale(m);
+  await toucher(m, 's1');
+  await m.run(`ajouterPersonneAuVehicule('${passeId}',{utilisateur_id:'u-nina',nom:'Nina'})`);
+  await retirerEq(m, 'u-marc');
+  m.run(`openCard(${idx('s2')})`); m.run('openProbleme()'); m.el('prob-note').value = 'Barrière brisée';
+  m.ctx.__b = new Blob(['photo']); m.run("_photoChoisie={blob:__b,url:'blob:choisie'}");
+  await m.run('envoyerProbleme()');
+  await m.run('terminerPasse()');
+  // — ce que voit l'employé, sans réseau —
+  eq('les 7 gestes sont gardés, dans l\'ordre, avec un libellé lisible', m.attentes(), LIBELLES_JOURNEE);
+  eq('la liste « en attente » les montre tous avec « Sera envoyé dès que le signal revient. »', [m.run('htmlListeGestes()').includes('En attente (7)'), LIBELLES_JOURNEE.every((l) => m.run('htmlListeGestes()').includes(l.replace(/'/g, '&#39;').replace(/—/g, '—'))), (m.run('htmlListeGestes()').match(/Sera envoyé dès que le signal revient\./g) || []).length], [true, true, 7]);
+  eq('la bande : « Hors réseau · ⏳ 7 gestes en attente »', [m.bande().texte.includes('📴 Hors réseau'), m.bande().texte.includes('⏳ 7 gestes en attente')], [true, true]);
+  eq('à l\'écran : ma passe est terminée (1/2), numéro « à confirmer », personne à bord de cette passe, l\'arrêt 2 est orange (problème), l\'arrêt 1 est fait', [m.run('maPasse()'), m.run('tours[0].en_cours'), m.run('tours[0].faits'), m.run('tours[0].numero_a_confirmer'), m.run(`equipages['${passeId}']===undefined`), m.run(`aProbleme(stops[${idx('s2')}])`), estFait(m, 's1')], [null, false, 1, true, true, true, true]);
+  eq('rien n\'a été envoyé sans signal', m.appels.envois.length, 0);
+  await m.run('attendreEcritures()');
+  const surLeTelephone = m.memoire();
+  // — le téléphone est éteint puis rallumé sans réseau : rien n'est perdu —
+  const b = monde({ enLigne: false, memoire: surLeTelephone });
+  await b.run('loadStops()');
+  eq('après extinction/rallumage sans réseau : les 7 gestes sont toujours là (photo comprise) et l\'écran montre le même résultat', [b.attentes(), b.run('gestesEnAttente().filter(g=>g.photo!==null).length'), b.run('maPasse()'), b.run('tours[0].faits'), b.run(`aProbleme(stops[${idx('s2')}])`)], [LIBELLES_JOURNEE, 1, null, 1, true]);
+  b.fin();
+  // — le signal revient —
+  const lecturesAvant = nbLecturesTours(m);
+  const tRetour = Date.now();
+  m.reseau(true);
+  vrai('la file se vide (chaque geste part, dans l\'ordre)', await attendreQue(() => m.attentes().length === 0 && m.run('reseau.enLigne'), 6000));
+  await attendreQue(() => nbLecturesTours(m) > lecturesAvant);
+  await attendre(250);
+  const noms = m.appels.envois.map((x) => x.nom);
+  const attendus = ['debuter_passe', 'completer_arret', 'equipage_ajouter', 'equipage_retirer', 'insert:problemes', 'probleme_attacher_photo', 'terminer_passe'];
+  if (capricieux) attendus.splice(2, 0, 'equipage_ajouter');
+  eq(capricieux ? 'l\'ordre des envois (l\'ajout de Nina est retenté après la coupure, puis tout continue)' : 'l\'ordre des envois : celui des gestes', noms, attendus);
+  const moments = m.appels.envois.filter((x) => x.args?.p_moment).map((x) => x.args.p_moment).filter((v, i, t) => i === 0 || v !== t[i - 1]);
+  vrai('les heures envoyées (p_moment) sont celles des gestes : dans l\'ordre, toutes AVANT le retour du signal', moments.every((v, i) => i === 0 || v >= moments[i - 1]) && moments.every((v) => Date.parse(v) <= tRetour), moments.join(' | '));
+  eq('le serveur a chaque effet UNE seule fois : un tour terminé 1/2, un problème avec sa photo, plus personne à bord de cette passe', [m.donnees.tours.length, m.donnees.tours[0].en_cours, m.donnees.tours[0].faits, m.donnees.problemes.length, m.donnees.problemes[0].photo_chemin === 'u-luc/' + m.donnees.problemes[0].id + '.jpg', m.donnees.equipage_periodes.length], [1, false, 1, 1, true, 0]);
+  eq('rien n\'est refusé, rien n\'attend, la bande est vide, plus aucun ⏳', [m.refus().length, m.attentes().length, m.bande().visible], [0, 0, false]);
+  eq('l\'écran (relu du serveur) : le VRAI numéro de passe (plus « à confirmer »), passe terminée 1/2, aucune passe à moi', [m.run('tours[0].numero'), m.run('tours[0].numero_a_confirmer'), m.run('tours[0].en_cours'), m.run('tours[0].faits'), m.run('maPasse()')], [1, undefined, false, 1, null]);
+  eq('le problème est celui du serveur (plus « en attente »), avec sa photo ; l\'équipage local a disparu', [m.run('problemesNonLus.length'), m.run('problemesNonLus[0].enAttente'), m.run('problemesNonLus[0].photoEnAttente'), typeof m.run('problemesNonLus[0].photo_chemin'), m.run('Object.keys(equipages).length')], [1, undefined, undefined, 'string', 0]);
+  m.fin();
+}
+
+log('\n=== LE TITRE DE LA LISTE DES GESTES DIT LA VÉRITÉ ===');
+{
+  const m = await ouvrir(); coupe(m);
+  await m.completer('s1');
+  m.run('ouvrirListeGestes()');
+  eq('des gestes qui attendent seulement le signal : « Gestes en attente »', m.el('gestes-h').textContent, 'Gestes en attente');
+  m.run('fermerListeGestes()');
+  m.run(`refuserGeste(gestesEnAttente()[0],'Refusé pour l\\'essai')`); await attendre(30);
+  m.run('ouvrirListeGestes()');
+  eq('dès qu\'un geste est REFUSÉ par le serveur : « Gestes non envoyés »', m.el('gestes-h').textContent, 'Gestes non envoyés');
+  m.fin();
+}
+
+log('\n=== LES MESSAGES LONGS RESTENT LISIBLES SUR UN TÉLÉPHONE ===');
+{
+  const css = lire('css/style.css'), bloc = css.slice(css.indexOf('#toast{'), css.indexOf('#toast.show'));
+  vrai('le message flottant passe à la ligne (plus de « nowrap ») et ne dépasse jamais la largeur de l\'écran', !/white-space:\s*nowrap/.test(bloc) && /max-width:\s*calc\(100vw\s*-\s*32px\)/.test(bloc), bloc);
+  const m = monde();
+  const durees = [];
+  m.ctx.setTimeout = (fn, ms) => { durees.push(ms); return 0; };
+  vm.runInContext('_tT=null;', m.ctx);
+  vm.runInContext(lire('js/utilitaires.js').match(/function toast\(msg\)\{[\s\S]*?\n\}/)[0].replace('function toast', 'globalThis.__toast = function'), m.ctx);
+  m.ctx.__toast('✔ Stop complété !'); m.ctx.__toast('⚠ Problème signalé ! (avec photo) · ⏳ envoyé au retour du signal · garde l’application ouverte');
+  eq('un message court reste 2,5 s, un message long (offline) 4,5 s', durees, [2500, 4500]);
+  m.fin();
+}
+
 log('\n=== LE CODE : UN SEUL ENDROIT POSE LES PROBLÈMES AUSSI ===');
 {
   const fichiers = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));

@@ -15,7 +15,8 @@
 //   • L'heure du geste est celle où il a été FAIT (p_moment), pas celle de l'envoi. Le serveur refuse un geste de plus de 3 jours.
 //   • Conflit d'équipage au retour du signal (décision A) : le geste part avec « forcer » ; le serveur le marque « à vérifier » pour Joé.
 //
-// Types de gestes et leurs arguments (l'étape 16c en fera des écrans) :
+// Types de gestes et leurs arguments (chacun est gardé par un écran : arrets.js, passe.js, equipage-panneau.js, problemes.js, photos.js ; et posé
+// par-dessus la copie du serveur par tours.js, vehicules.js et problemes.js, pour que l'écran montre tout de suite son résultat) :
 //   completer_arret {passeId, stopId, mode, lat, lon}        annuler_arret {passeId, stopId}
 //   debuter_passe {passeId, routeId, equipeId, tache, lat, lon, equipage:[{utilisateur_id, cle_client, forcer, nom}]}
 //   terminer_passe {passeId}                                  equipage_ajouter / equipage_retirer {cle, passeId, userId, nom, lat, lon}
@@ -443,6 +444,8 @@ function majListeGestes(){
   const corps=document.getElementById('gestes-corps');
   const fond=document.getElementById('gestes-overlay');
   if(!corps||!fond) return;
+  const titre=document.getElementById('gestes-h');
+  if(titre) titre.textContent=gestesNonEnvoyes().length?'Gestes non envoyés':'Gestes en attente';   // « non envoyés » = refusés par le serveur ; sinon ils attendent seulement le signal
   corps.innerHTML=htmlListeGestes();
   if(!fileAGestes()) fond.classList.remove('open');   // plus rien à montrer
 }

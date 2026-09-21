@@ -55,6 +55,7 @@ const RAISONS_GESTE={
   utilisateur_inactif:'Cette personne n’est plus active.',
   probleme_introuvable:'Le problème n’avait pas été enregistré : la photo n’a pas pu y être reliée.',
   photo_introuvable:'La photo n’a pas pu être envoyée.',
+  quart_introuvable:'Ce quart n’existe plus ou n’est pas à toi : la fin du quart n’a pas été enregistrée.',
   mode_invalide:'Le serveur a refusé ce geste (mode invalide).',
   tour_incoherent:'Le serveur a refusé ce geste (le tour n’est plus cohérent).'
 };
@@ -82,6 +83,7 @@ function classerErreurGeste(e){
 // ── Ce que chaque geste appelle, et comment on juge la réponse ──
 // juger(item, données) : null = réussi ; {raison} = le serveur a répondu, mais le geste n'a pas été appliqué
 function positionArgs(a){return {p_lat:a.lat!=null?a.lat:null,p_lon:a.lon!=null?a.lon:null};}
+function positionPrecisionArgs(a){return {...positionArgs(a),p_precision:a.precision!=null?a.precision:null};}   // (le punch garde aussi la précision du GPS)
 function raisonEquipier(nom,d){
   if(d&&d.raison==='chauffeur_ailleurs') return (nom||'Cette personne')+' conduit déjà « '+(d.vehicule||'un autre camion')+' ».';
   if(d&&d.statut==='passe_terminee') return 'La passe était déjà terminée.';
@@ -126,6 +128,17 @@ const EXECUTEURS={
   probleme:{   // 16d (SQL 18) : « cree_le » = l'heure du GESTE (le serveur la borne : futur = maintenant, plus de 3 jours = refusé)
     appeler:(i)=>db.from('problemes').insert([{id:i.args.id,stop_id:i.args.stopId,passe_id:i.args.passeId||null,note:i.args.note,cree_le:i.moment}]),
     juger:()=>null
+  },
+  // Étape 17 : le punch. « quart_commencer » porte le numéro du quart fabriqué par le téléphone (un renvoi ne crée jamais deux quarts) ;
+  // « quart_terminer » vise un quart précis (quartId) ou, sans numéro, MON quart ouvert.
+  quart_commencer:{
+    appeler:(i)=>db.rpc('quart_commencer',{p_id:i.args.id,p_moment:i.moment,...positionPrecisionArgs(i.args)}),
+    // « deja_en_quart » : il est déjà en service à cette heure-là (quart ouvert par sa passe, ou punch fait sur un autre appareil) : ce n'est pas un échec
+    juger:(i,d)=>d&&d.statut==='chevauchement'?{raison:'Ce quart chevauchait un autre de tes quarts : il n’a pas été enregistré.'}:null
+  },
+  quart_terminer:{
+    appeler:(i)=>db.rpc('quart_terminer',{p_quart_id:i.args.quartId||null,p_moment:i.moment,...positionPrecisionArgs(i.args)}),
+    juger:()=>null   // « deja_termine » (renvoi) est un succès
   },
   probleme_photo:{
     appeler:async(i)=>{

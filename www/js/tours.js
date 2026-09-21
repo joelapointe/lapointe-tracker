@@ -41,6 +41,7 @@ function installerTours(lus,luLe){
 function reappliquerGestes(){
   if(_toursServeurConnus) poserTours(superposerTours(_toursServeur,_toursLusLe));   // (sinon les tours n'ont pas encore été lus : rien à superposer)
   if(typeof poserProblemes==='function') poserProblemes();   // les problèmes signalés sans réseau (problemes.js)
+  if(typeof poserQuart==='function') poserQuart();            // mon quart (punch) fait sans réseau (quart.js)
 }
 function poserTours(t){
   tours=t;
@@ -272,7 +273,10 @@ async function rafraichirEnCours(){
   if(!currentUser) return;
   await chargerPositionsVehicules();
   _tickRelecture++;
-  if(_tickRelecture%4===0) await chargerVehiculesEtEquipages();   // relecture de secours des équipages : une fois par minute
+  if(_tickRelecture%4===0){
+    await chargerVehiculesEtEquipages();   // relecture de secours des équipages : une fois par minute
+    if(typeof chargerMonQuart==='function') await chargerMonQuart();   // mon quart : l'administrateur ou le serveur (fermeture automatique) a pu le fermer
+  }
   if(signatureEnCours()!==_sigEnCours){ renderAll(); majCarte(); }
   else majVehicules();   // les camions bougent même quand aucun client ne change d'état
   if(activeIdx!==null) majCarte();   // le délai d'annulation d'un arrêt fait avance : le bouton « Annuler » disparaît de lui-même après 10 minutes

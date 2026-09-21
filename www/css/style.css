@@ -55,6 +55,11 @@
       pointer-events:all;
     }
     #topbar-droite{display:flex;align-items:center;gap:8px;margin-left:auto;}
+    /* La pastille « En service » (étape 17) : à la place du logo, à gauche */
+    #quart-pastille{align-items:center;min-height:32px;padding:0 12px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;white-space:nowrap;pointer-events:none;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}
+    #quart-pastille.quart-on{border-color:rgba(74,222,128,.6);background:rgba(20,60,36,.92);color:#bbf7d0;}
+    #quart-pastille.quart-off{color:var(--muted);}
+    @media (max-width:359px){#quart-pastille{padding:0 9px;font-size:14px;}}
     /* Bouton de déconnexion : visible seulement quand quelqu'un est connecté (auth.js), zone de toucher d'au moins 44 px de haut */
     #btn-deconnexion{
       display:none;align-items:center;min-height:44px;padding:0 13px;

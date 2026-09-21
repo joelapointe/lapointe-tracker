@@ -15,6 +15,7 @@ async function loadStops(){
     await chargerTours();
     await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
     await chargerVehiculesEtEquipages(); // noms des camions et équipages à bord (étape 13f)
+    if(typeof chargerMonQuart==='function') await chargerMonQuart();   // suis-je en service ? (étape 17, quart.js)
     demarrerRelecturePositions();
     await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
     if(!reseau.enLigne) await restaurerDepuisCache();   // le signal a disparu pendant le chargement : on prend les copies pour ce qui manque
@@ -94,6 +95,7 @@ function renderAll(){
   _sigEnCours=signatureEnCours();   // ce qui est dessiné : on ne redessinera que si ça change
   majVehicules();                   // les camions (un point chacun) avec leur équipage
   majBandeauPasse();                // « Débuter la passe », ou le résumé de la passe en cours (passe.js)
+  if(typeof majPastilleQuart==='function') majPastilleQuart();   // la pastille « En service » (étape 17, quart.js)
 }
 
 // Barre du bas : l'avancement de ce qui est affiché (une route, ou toutes les routes ensemble),

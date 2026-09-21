@@ -257,7 +257,7 @@ async function restaurerDepuisCache(){
   // Les gestes gardés sur ce téléphone (étape 16c) : relus AVANT de poser les copies, pour que l'écran montre leur résultat dès l'ouverture
   if(typeof assurerChargee==='function'){try{await enSerie(assurerChargee);}catch(e){}}
   const lire={};
-  for(const nom of ['stops','routes','tours','vehicules','problemes','employes']) lire[nom]=await cacheLire(nom);
+  for(const nom of ['stops','routes','tours','vehicules','problemes','employes','quart']) lire[nom]=await cacheLire(nom);
   if(!lire.stops||!lire.routes||!Array.isArray(lire.stops.data)||!Array.isArray(lire.routes.data)) return false;
   stops=lire.stops.data;
   routes=lire.routes.data;
@@ -271,6 +271,7 @@ async function restaurerDepuisCache(){
   if(typeof _passeVue!=='undefined') _passeVue=null;   // les tours changent parce qu'on relit une COPIE, pas parce que ma passe s'est fermée : jamais de faux « Passe terminée »
   installerProblemes((lire.problemes&&Array.isArray(lire.problemes.data))?lire.problemes.data:[]);
   employes=(lire.employes&&Array.isArray(lire.employes.data))?lire.employes.data:[];
+  if(lire.quart&&typeof installerQuart==='function') installerQuart(lire.quart.data||null);   // suis-je en service ? (la copie « null » = pas en service)
   positionsVehicules=[];   // les positions ne se gardent pas : un point de plus de 3 minutes ne veut plus rien dire
   // Les données affichées valent ce que vaut la plus VIEILLE des copies (honnêteté)
   const dates=Object.values(lire).filter(Boolean).map(c=>Date.parse(c.le)).filter(t=>t>0);

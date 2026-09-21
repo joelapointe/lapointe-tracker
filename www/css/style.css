@@ -276,7 +276,19 @@
 #bb-op{flex:0 0 auto;flex-direction:row;gap:9px;padding:0 14px;}
 #op-dot{width:10px;height:10px;border-radius:50%;background:#4ade80;box-shadow:0 0 7px #4ade80;flex-shrink:0;}
 #op-name{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;color:#f0f4f8;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#bb-zone{flex:1;}
+#bb-zone{flex:1;min-width:0;overflow:hidden;}
+/* Un nom de route long passe sur DEUX lignes puis se coupe avec « … » (il repoussait « 2/6 », ADMIN et STOP hors de la barre : essai du 21 sept.) */
+#zone-val{max-width:100%;white-space:normal;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:16px;line-height:1.05;text-align:center;overflow-wrap:anywhere;}
+/* Petits téléphones : les autres cases se serrent pour laisser de la place au nom de la route (l'administrateur voit 5 cases, un employé 3) */
+@media (max-width:420px){
+  .bb{padding:0 8px;}
+  #bb-op{padding:0 8px;gap:6px;}
+  #op-name{font-size:17px;max-width:64px;}
+  #bb-prog{padding:0 8px;}
+  #prog-bg{width:52px;}
+  #bb-admin{flex-basis:50px;}
+  #bb-add{flex-basis:54px;}
+}
 #bb-prog{flex:0 0 auto;padding:0 14px;cursor:pointer;}
 #prog-bg{width:68px;height:5px;background:#252d3a;border-radius:3px;overflow:hidden;margin-top:3px;}
 #prog-fill{height:100%;background:#c8e63c;border-radius:3px;transition:width .5s;}
@@ -332,8 +344,8 @@
 .passe-debuter{pointer-events:all;min-height:56px;padding:0 22px;border:none;border-radius:14px;background:var(--accent);color:#111;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
 .passe-debuter:active{filter:brightness(.85);}
 .passe-encours{pointer-events:all;display:flex;align-items:center;gap:12px;background:rgba(17,20,24,.95);border:2px solid var(--accent);border-radius:14px;padding:8px 14px;box-shadow:0 3px 12px rgba(0,0,0,.5);}
-.passe-pct{font-family:'Barlow Condensed',sans-serif;font-size:60px;font-weight:800;color:var(--accent);line-height:1;}
-.passe-infos{font-size:12px;color:var(--text);line-height:1.35;overflow-wrap:anywhere;}
+.passe-pct{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:800;color:var(--accent);line-height:1;flex-shrink:0;}   /* 60 px avant l'essai sur téléphone du 21 sept. : trop gros, il cachait le tiers de l'écran */
+.passe-infos{font-size:12px;color:var(--text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}   /* chaque ligne se coupe avec « … » : un nom de route long ne fait plus grandir le bandeau */
 #debut-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1500;align-items:flex-end;}
 #debut-overlay.open{display:flex;}
 #debut-panel{background:#0c1117;border:1px solid #252d3a;border-radius:18px 18px 0 0;width:100%;max-height:90vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}
@@ -358,9 +370,14 @@
 .debut-info.debut-aide{margin-top:14px;background:none;color:var(--muted);text-align:center;font-size:13px;}
 
 /* Étape 14b : le pourcentage en gros, « Terminer », le pourcentage de chaque camion sur la carte */
-.passe-encours{padding:6px 14px 8px;}
+.passe-encours{padding:5px 10px 6px;gap:10px;cursor:pointer;}
 .passe-infos{flex:1;min-width:0;}
-.passe-barre{height:6px;background:#252d3a;border-radius:3px;overflow:hidden;margin-top:6px;}
+.passe-barre{height:4px;background:#252d3a;border-radius:2px;overflow:hidden;margin-top:4px;}
+/* Le bandeau se réduit d'un toucher sur la carte (le chauffeur voit alors seulement le pourcentage) ; le choix est gardé sur le téléphone */
+.passe-chevron{flex-shrink:0;font-size:16px;color:var(--muted);line-height:1;}
+.passe-chevron::before{content:'▾';}
+#passe-bandeau.reduit .passe-chevron::before{content:'▸';}
+#passe-bandeau.reduit .passe-actions{display:none;}
 .passe-barre i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .5s;}
 .passe-terminer{pointer-events:all;margin-top:8px;min-height:48px;padding:0 20px;border:1px solid rgba(248,113,113,.5);border-radius:12px;background:rgba(58,26,26,.96);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
 .passe-terminer:active{filter:brightness(.85);}
@@ -419,8 +436,10 @@
 .choix-vide{padding:24px 8px;text-align:center;color:var(--muted);font-size:14px;}
 
 /* Étape 15c : l'équipage pendant la passe (bouton du bandeau et panneau) */
-.passe-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.passe-actions{display:flex;gap:6px;margin-top:6px;}
 .passe-actions .passe-terminer{margin-top:0;}
+/* « Équipage » et « Terminer la passe » côte à côte, sur une seule ligne (44 px de haut : encore un doigt) ; un libellé trop long se coupe avec « … » */
+.passe-actions .passe-equipage,.passe-actions .passe-terminer{flex:1 1 0;min-width:0;min-height:44px;padding:0 8px;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .passe-equipage{pointer-events:all;min-height:48px;padding:0 18px;border:2px solid var(--accent);border-radius:12px;background:rgba(17,20,24,.96);color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
 .passe-equipage:active{filter:brightness(.85);}
 #equipage-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:1600;align-items:flex-end;}

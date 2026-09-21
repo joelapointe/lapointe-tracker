@@ -1,0 +1,17 @@
+[
+  { "nom": "le pourcentage redevient énorme (60 px)", "fichier": "css/style.css", "de": "font-size:36px;font-weight:800;color:var(--accent);line-height:1;flex-shrink:0;}", "vers": "font-size:60px;font-weight:800;color:var(--accent);line-height:1;flex-shrink:0;}" },
+  { "nom": "les lignes du bandeau ne se coupent plus avec « … »", "fichier": "css/style.css", "de": "line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}", "vers": "line-height:1.3;overflow-wrap:anywhere;}" },
+  { "nom": "« Équipage » et « Terminer » repassent sur plusieurs lignes", "fichier": "css/style.css", "de": ".passe-actions{display:flex;gap:6px;margin-top:6px;}", "vers": ".passe-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}" },
+  { "nom": "les libellés des deux boutons ne se coupent plus", "fichier": "css/style.css", "de": "min-height:44px;padding:0 8px;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}", "vers": "min-height:44px;padding:0 8px;font-size:16px;}" },
+  { "nom": "la case « zone » repousse de nouveau le reste de la barre du bas", "fichier": "css/style.css", "de": "#bb-zone{flex:1;min-width:0;overflow:hidden;}", "vers": "#bb-zone{flex:1;}" },
+  { "nom": "le nom de la route n'a plus qu'une ligne", "fichier": "css/style.css", "de": "display:-webkit-box;-webkit-line-clamp:2;", "vers": "display:-webkit-box;-webkit-line-clamp:1;" },
+  { "nom": "sur un petit téléphone, la case STOP ne se serre plus", "fichier": "css/style.css", "de": "#bb-add{flex-basis:54px;}", "vers": "#bb-add{flex-basis:68px;}" },
+  { "nom": "réduit : les boutons restent affichés", "fichier": "css/style.css", "de": "#passe-bandeau.reduit .passe-actions{display:none;}", "vers": "#passe-bandeau.reduit .passe-actions{display:flex;}" },
+  { "nom": "le chevron ne change pas de sens", "fichier": "css/style.css", "de": "#passe-bandeau.reduit .passe-chevron::before{content:'▸';}", "vers": "#passe-bandeau.reduit .passe-chevron::before{content:'▾';}" },
+  { "nom": "toucher la carte du pourcentage ne fait plus rien", "fichier": "js/passe.js", "de": "<div class=\"passe-encours\" onclick=\"basculerBandeauPasse()\">", "vers": "<div class=\"passe-encours\">" },
+  { "nom": "le choix « réduit » n'est pas gardé sur le téléphone", "fichier": "js/passe.js", "de": "  ecrireMemo(CLE_BANDEAU_REDUIT,_bandeauReduit?'1':'0');\n", "vers": "" },
+  { "nom": "l'application rouverte oublie que le bandeau était réduit", "fichier": "js/passe.js", "de": "let _bandeauReduit=lireMemo(CLE_BANDEAU_REDUIT)==='1';", "vers": "let _bandeauReduit=false;" },
+  { "nom": "un redessin de la carte rouvre le bandeau", "fichier": "js/passe.js", "de": "  b.classList.add('show');\n  appliquerBandeauReduit();", "vers": "  b.classList.add('show');" },
+  { "nom": "un deuxième toucher ne rouvre pas le bandeau", "fichier": "js/passe.js", "de": "  _bandeauReduit=!_bandeauReduit;", "vers": "  _bandeauReduit=true;" },
+  { "nom": "la classe « reduit » n'est jamais posée", "fichier": "js/passe.js", "de": "if(b) b.classList[_bandeauReduit?'add':'remove']('reduit');", "vers": "if(b) b.classList.remove('reduit');" }
+]

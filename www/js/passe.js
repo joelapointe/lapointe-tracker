@@ -592,9 +592,22 @@ function pourcentageDe(t){return Math.max(0,Math.min(100,Number(t.pourcentage)||
 function htmlCartePasse(t,passe,role){
   const pct=pourcentageDe(t);
   const nom=nomVehiculeDe(passe.equipe_id)||'Camion';
-  return '<div class="passe-encours"><div class="passe-pct">'+pct+' %</div><div class="passe-infos"><b>'+(role==='bord'?'👤 À bord · ':'🚜 ')+esc(nom)+'</b>'+
+  return '<div class="passe-encours" onclick="basculerBandeauPasse()"><div class="passe-pct">'+pct+' %</div><div class="passe-infos"><b>'+(role==='bord'?'👤 À bord · ':'🚜 ')+esc(nom)+'</b>'+
     '<br>Passe n° '+esc(numeroPasse(t))+' · '+esc(nomRoute(t.route_id))+'<br>'+esc(t.tache)+' · '+esc(t.faits)+'/'+esc(t.total)+
-    '<div class="passe-barre"><i style="width:'+pct+'%"></i></div></div></div>';
+    '<div class="passe-barre"><i style="width:'+pct+'%"></i></div></div><span class="passe-chevron" aria-hidden="true"></span></div>';
+}
+// Le bandeau se réduit d'un toucher sur la carte du pourcentage (retouche après l'essai sur téléphone du 21 sept. : il cachait trop de l'écran) ; le choix est
+// gardé sur le téléphone. Réduit : seulement la carte (pourcentage, camion, route, barre) ; les boutons « Équipage » et « Terminer la passe » reviennent au toucher suivant.
+const CLE_BANDEAU_REDUIT='lp_bandeau_passe_reduit';
+let _bandeauReduit=lireMemo(CLE_BANDEAU_REDUIT)==='1';
+function appliquerBandeauReduit(){
+  const b=document.getElementById('passe-bandeau');
+  if(b) b.classList[_bandeauReduit?'add':'remove']('reduit');
+}
+function basculerBandeauPasse(){
+  _bandeauReduit=!_bandeauReduit;
+  ecrireMemo(CLE_BANDEAU_REDUIT,_bandeauReduit?'1':'0');
+  appliquerBandeauReduit();
 }
 
 // Appelé à chaque redessin de la carte (donc à chaque changement des tours, sur n'importe quel téléphone)
@@ -608,6 +621,7 @@ function majBandeauPasse(){
     return;
   }
   b.classList.add('show');
+  appliquerBandeauReduit();
   const m=maPasse();
   suivreMaPasse(m);
   // « 👤 Équipage · N à bord » (étape 15c) : ouvre la liste de l'équipage ; le chauffeur y ajoute et retire du monde

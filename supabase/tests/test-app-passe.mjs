@@ -4,7 +4,8 @@
 import vm from 'vm';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-const WWW = fileURLToPath(new URL('../../www/', import.meta.url));
+// WWW_TEST : un autre dossier « www » (les erreurs volontaires modifient une COPIE du code, jamais le vrai)
+const WWW = process.env.WWW_TEST ? process.env.WWW_TEST.split('\\').join('/').replace(/\/?$/, '/') : fileURLToPath(new URL('../../www/', import.meta.url));
 
 let ok = 0, ko = 0;
 const log = (s) => console.log(s);
@@ -454,7 +455,14 @@ log('\n=== 14b — LE POURCENTAGE EN GROS ET « TERMINER » ===');
   vrai('chauffeur : le pourcentage EN GROS (classe « passe-pct »), la barre à 50 %, le camion, la passe, la route, la tâche et 1/2', h.includes('<div class="passe-pct">50 %</div>') && h.includes('<i style="width:50%">') && h.includes('Camion 1') && h.includes('Passe n° 1 · Charette') && h.includes(MEC) && h.includes('1/2'), h);
   vrai('… et le bouton « ■ Terminer la passe », relié à terminerPasse()', h.includes('id="btn-terminer"') && h.includes('onclick="terminerPasse()"') && h.includes('■ Terminer la passe'), h);
   vrai('… pas de bouton « Débuter » pendant une passe', !h.includes('btn-debuter'), h);
-  vrai('le pourcentage est vraiment GROS à l\'écran (60 px)', /\.passe-pct\{[^}]*font-size:60px/.test(lire('css/style.css')));
+  // (Joé, 21 sept. après l'essai sur téléphone : « l'espace en haut avec le gros pourcentage est beaucoup trop gros et cache trop de l'écran » : 60 px -> 36 px, une seule ligne de boutons)
+  const cssBandeau = lire('css/style.css');
+  vrai('le pourcentage reste bien visible (36 px, et non plus 60 px : il cachait le tiers de l\'écran)', /\.passe-pct\{[^}]*font-size:36px/.test(cssBandeau) && !/\.passe-pct\{[^}]*font-size:60px/.test(cssBandeau));
+  vrai('chaque ligne d\'information du bandeau se coupe avec « … » (un nom de route long ne le fait plus grandir)', /\.passe-infos\{[^}]*white-space:nowrap[^}]*text-overflow:ellipsis/.test(cssBandeau));
+  vrai('« Équipage » et « Terminer la passe » sont côte à côte, sur UNE ligne, et se coupent avec « … » (44 px de haut : encore un doigt)', /\.passe-actions\{display:flex;gap:6px/.test(cssBandeau) && !/\.passe-actions\{[^}]*flex-wrap/.test(cssBandeau) && /\.passe-actions \.passe-equipage,\.passe-actions \.passe-terminer\{[^}]*flex:1 1 0[^}]*min-height:44px[^}]*text-overflow:ellipsis/.test(cssBandeau));
+  vrai('la barre du bas : un nom de route long se coupe avec « … » et ne repousse plus « 2/6 », ADMIN et STOP', /#bb-zone\{flex:1;min-width:0;overflow:hidden;\}/.test(cssBandeau) && /#zone-val\{[^}]*overflow:hidden;text-overflow:ellipsis/.test(cssBandeau));
+  vrai('… le nom passe sur DEUX lignes avant d\'être coupé (16 px), pour rester lisible', /#zone-val\{[^}]*white-space:normal[^}]*-webkit-line-clamp:2[^}]*font-size:16px/.test(cssBandeau));
+  vrai('… et sur un petit téléphone (375 px) les autres cases se serrent pour lui laisser de la place (Mon compte, avancement, ADMIN, STOP)', /@media \(max-width:420px\)\{[^@]*#bb-op\{padding:0 8px;[^@]*#prog-bg\{width:52px;\}[^@]*#bb-admin\{flex-basis:50px;\}[^@]*#bb-add\{flex-basis:54px;\}/.test(cssBandeau));
   m = await luc({ tours: [{ ...toursDeLuc()[0], faits: 0, pourcentage: 0 }] });
   vrai('0 % : « Terminer » existe encore (on peut renoncer à une passe qu\'on n\'a pas commencée)', bandeau(m).includes('0 %') && bandeau(m).includes('btn-terminer'), bandeau(m));
   m = await luc({ tours: [{ ...toursDeLuc()[0], faits: 2, pourcentage: 100 }] });
@@ -463,6 +471,31 @@ log('\n=== 14b — LE POURCENTAGE EN GROS ET « TERMINER » ===');
   vrai('un pourcentage absurde du serveur est ramené à 100 (jamais de barre qui déborde)', bandeau(m).includes('100 %') && bandeau(m).includes('width:100%') && !bandeau(m).includes('250'), bandeau(m));
   m = await luc({ tours: [{ ...toursDeLuc()[0], pourcentage: '<img src=x onerror=alert(1)>' }] });
   vrai('un pourcentage piégé devient 0 (rien n\'est exécuté)', !bandeau(m).includes('<img') && bandeau(m).includes('0 %'), bandeau(m));
+
+  // — Les services (demande de Joé, 21 sept. : « ajouter les services coupe de gazon, engrais, ramassage de feuilles ») —
+  {
+    const page = lire('index.html');
+    const options = [...page.matchAll(/<select id="f-svc">([^]*?)<\/select>/g)][0]?.[1].match(/<option>([^<]*)<\/option>/g)?.map((x) => x.replace(/<\/?option>/g, '')) ?? [];
+    eq('le formulaire « ＋ STOP » propose les services d\'hiver ET ceux de l\'été (coupe de gazon, engrais, ramassage de feuilles), « Autre » en dernier', options, ['Déneigement mécanique', 'Déneigement manuel', 'Épandage de sel', 'Entretien paysager', 'Coupe de gazon', 'Engrais', 'Ramassage de feuilles', 'Autre']);
+    vrai('… et « Débuter la passe » propose comme tâches les services des arrêts de la route (donc les nouveaux services dès qu\'un arrêt les utilise)', lire('js/passe.js').includes('stops.forEach(s=>{if(s.route_id===routeId&&s.actif!==false&&s.service) vus.add(s.service);});'));
+  }
+
+  // — Réduire le bandeau d'un toucher sur la carte (retouche du 21 sept.) —
+  m = await luc();
+  h = bandeau(m);
+  vrai('la carte du pourcentage se touche pour réduire le bandeau (chevron ▾), les boutons restent dans le bandeau', h.includes('<div class="passe-encours" onclick="basculerBandeauPasse()">') && h.includes('passe-chevron') && h.includes('btn-terminer') && h.includes('btn-equipage'), h);
+  eq('au départ le bandeau est complet (ni « reduit » ni rien de gardé)', [m.el('passe-bandeau').classList.contains('reduit'), m.memo.lp_bandeau_passe_reduit ?? null], [false, null]);
+  m.run('basculerBandeauPasse()');
+  eq('un toucher : le bandeau se RÉDUIT (classe « reduit ») et le choix est gardé sur le téléphone', [m.el('passe-bandeau').classList.contains('reduit'), m.memo.lp_bandeau_passe_reduit], [true, '1']);
+  await m.run('majBandeauPasse()');
+  eq('un redessin de la carte (chaque changement des passes) NE le rouvre PAS', m.el('passe-bandeau').classList.contains('reduit'), true);
+  m.run('basculerBandeauPasse()');
+  eq('un deuxième toucher le rouvre, et le choix est gardé', [m.el('passe-bandeau').classList.contains('reduit'), m.memo.lp_bandeau_passe_reduit], [false, '0']);
+  m = await monde({ tours: toursDeLuc(), equipages: [{ passe_id: 'p-luc', role: 'chauffeur', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } }], memo: { lp_bandeau_passe_reduit: '1' } }).charge();
+  eq('l\'application rouverte se souvient : le bandeau reste réduit', m.el('passe-bandeau').classList.contains('reduit'), true);
+  vrai('la règle CSS : réduit = seulement la carte (les boutons sont cachés)', /#passe-bandeau\.reduit \.passe-actions\{display:none;\}/.test(cssBandeau));
+  vrai('le chevron change de sens (▾ ouvert, ▸ réduit)', cssBandeau.includes(".passe-chevron::before{content:'▾';}") && cssBandeau.includes("#passe-bandeau.reduit .passe-chevron::before{content:'▸';}"));
+  m = await luc();   // (la suite reprend avec un chauffeur ordinaire)
 
   // — Ce que voit un passager —
   m = await monde({ tours: [{ ...TOUR_MARC(), passes: [{ passe_id: 'p-marc', equipe_id: 'e2', chauffeur_id: 'u-marc', abord: ['u-luc'] }] }], equipages: EQUIPAGE_MARC() }).charge();

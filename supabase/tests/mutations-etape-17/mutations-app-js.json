@@ -134,8 +134,8 @@
   {
     "nom": "« Je commence » : à la panne, la file reçoit un NOUVEAU numéro de quart (deux quarts possibles)",
     "fichier": "js/quart-ecrans.js",
-    "de": "signalerEchecReseau(r.error);return await commencerQuartSansReseau(args,moment);",
-    "vers": "signalerEchecReseau(r.error);return await commencerQuartSansReseau({...args,id:nouvelId()},moment);"
+    "de": "signalerEchecReseau(r.error);return await commencerQuartSansReseau(args,moment,pos);",
+    "vers": "signalerEchecReseau(r.error);return await commencerQuartSansReseau({...args,id:nouvelId()},moment,pos);"
   },
   {
     "nom": "la confirmation dit l'heure du téléphone au lieu de celle du serveur",
@@ -230,8 +230,8 @@
   {
     "nom": "la position du punch n'est pas envoyée",
     "fichier": "js/quart-ecrans.js",
-    "de": "return {lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null,precision:null};",
-    "vers": "return {lat:null,lon:null,precision:null};"
+    "de": "return {lat:p?p.lat:null,lon:p?p.lon:null,precision:p?p.precision:null,info:p};",
+    "vers": "return {lat:null,lon:null,precision:null,info:p};"
   },
   {
     "nom": "« Je commence » en ligne sans délai (un serveur muet bloquerait l'écran)",
@@ -308,7 +308,7 @@
   {
     "nom": "hors réseau, la confirmation de début ne dit pas ⏳",
     "fichier": "js/quart-ecrans.js",
-    "de": "montrerConfirmationQuart('Quart commencé à',heureCourte(moment),[],'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r));",
-    "vers": "montrerConfirmationQuart('Quart commencé à',heureCourte(moment),[]);"
+    "de": "montrerConfirmationQuart('Quart commencé à',heureCourte(moment),lignePosition(pos),'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r));",
+    "vers": "montrerConfirmationQuart('Quart commencé à',heureCourte(moment),lignePosition(pos));"
   }
 ]

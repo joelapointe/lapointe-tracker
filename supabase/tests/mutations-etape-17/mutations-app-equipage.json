@@ -50,8 +50,8 @@
   {
     "nom": "équipe : l'heure des passagers est celle du téléphone, pas celle donnée par le serveur pour mon quart",
     "fichier": "js/quart-ecrans.js",
-    "de": "const bilan=await terminerEquipe(equipe,fin);",
-    "vers": "const bilan=await terminerEquipe(equipe,moment);"
+    "de": "const bilan=await terminerEquipe(equipe,fin,pos);",
+    "vers": "const bilan=await terminerEquipe(equipe,moment,pos);"
   },
   {
     "nom": "confirmation : ne nomme plus les personnes terminées aussi",
@@ -74,8 +74,8 @@
   {
     "nom": "confirmation : avec un avertissement, elle se ferme quand même toute seule",
     "fichier": "js/quart-ecrans.js",
-    "de": "lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan)),null,bilan.problemes.length>0);",
-    "vers": "lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan)),null,false);"
+    "de": "lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan),lignePosition(pos)),null,bilan.problemes.length>0);",
+    "vers": "lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan),lignePosition(pos)),null,false);"
   },
   {
     "nom": "hors réseau : les gestes des personnes n'ont pas l'heure du toucher (fin de quart)",

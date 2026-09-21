@@ -38,4 +38,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Étape 17, morceau 3 : la position du téléphone au moment du punch (« Je commence » / « Je termine »), quand l'application est ouverte.
+         Position précise ET approximative (Android 12 et plus laisse la personne choisir « approximative » : le punch s'enregistre alors avec sa précision).
+         Le suivi de la position EN ARRIÈRE-PLAN (ACCESS_BACKGROUND_LOCATION) est l'étape 18 : il n'est PAS déclaré ici. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>

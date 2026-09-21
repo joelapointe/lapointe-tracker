@@ -21,8 +21,22 @@ let _verificationQuart=false;   // (fermer un écran relance la vérification : 
 let _equipeFin=null;            // « Terminer aussi le quart de : » {passeId, membres:[{utilisateur_id,nom}], coches:{id:true}, source, chargement}
 const FIN_EQUIPE_HEURES=3;      // on ne propose l'équipe d'une passe déjà fermée que si elle s'est terminée il y a moins de 3 h (le serveur a le dernier mot : réglage fin_equipe_apres_passe_heures)
 
-function positionDuPunch(){
-  return {lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null,precision:null};
+// La position au moment du punch (position.js, étape 17 morceau 3) : la lecture continue du GPS si elle a moins de 20 s, sinon une lecture fraîche (6 secondes
+// au plus), sinon la dernière lecture (moins de 2 minutes), sinon « sans position ». Ne lève jamais d'erreur et ne bloque jamais le punch.
+// Renvoie {lat, lon, precision, info} : info = la lecture (pour la ligne « 📍 » de la confirmation), ou null.
+async function positionDuPunch(){
+  const p=(typeof obtenirPosition==='function')?await obtenirPosition():null;
+  return {lat:p?p.lat:null,lon:p?p.lon:null,precision:p?p.precision:null,info:p};
+}
+// La ligne « 📍 Position enregistrée (±12 m) » ou « 📍 Sans position : … » de la confirmation (un tableau : 0 ou 1 ligne)
+function lignePosition(pos){
+  return typeof textePosition==='function'?[textePosition(pos&&pos.info)]:[];
+}
+const NOTE_POSITION_REFUSEE='<div class="quart-note">📍 La localisation est refusée pour cette application : ton quart sera enregistré sans position. (Réglages du téléphone &gt; Applications &gt; Lapointe Tracker &gt; Autorisations)</div>';
+const NOTE_GPS_DESACTIVE='<div class="quart-note">📍 Le GPS du téléphone est désactivé : ton quart sera enregistré sans position.</div>';
+function notePositionQuart(){
+  const e=(typeof _permissionPosition!=='undefined')?_permissionPosition:'inconnue';
+  return e==='refusee'?NOTE_POSITION_REFUSEE:(e==='gps_desactive'?NOTE_GPS_DESACTIVE:'');
 }
 
 // ── L'écran d'accueil : une seule fois par ouverture et par personne ──
@@ -98,6 +112,7 @@ function htmlAccueilQuart(){
     '<button id="btn-quart-commencer" type="button" class="quart-gros commence" onclick="commencerQuart()">▶ JE COMMENCE</button>'+
     '<div id="quart-msg" class="quart-msg" role="alert"></div>'+
     (reseau.enLigne?'':NOTE_HORS_RESEAU_QUART)+
+    notePositionQuart()+
     '<button type="button" class="quart-lien" onclick="fermerEcranQuart()">voir la carte</button>';
 }
 
@@ -156,9 +171,12 @@ async function commencerQuart(){
   if(enService()){fermerEcranQuart();toast('Tu es déjà en service.');return;}   // (un autre téléphone, ou une passe, l'a déjà ouvert)
   _envoiQuart=true;majEcranQuart();
   try{
-    const id=nouvelId(),moment=new Date().toISOString(),pos=positionDuPunch();
+    const id=nouvelId(),moment=new Date().toISOString();   // l'heure est prise AU TOUCHER, avant l'attente éventuelle du GPS
+    showSync(true);
+    const pos=await positionDuPunch();
+    showSync(false);
     const args={id,lat:pos.lat,lon:pos.lon,precision:pos.precision};
-    if(!reseau.enLigne) return await commencerQuartSansReseau(args,moment);
+    if(!reseau.enLigne) return await commencerQuartSansReseau(args,moment,pos);
     showSync(true);
     let r;
     try{
@@ -168,7 +186,7 @@ async function commencerQuart(){
     }
     showSync(false);
     // Pas de réponse : le MÊME numéro de quart passe à la file, avec l'heure du toucher (un renvoi ne crée jamais deux quarts)
-    if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await commencerQuartSansReseau(args,moment);}
+    if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await commencerQuartSansReseau(args,moment,pos);}
     if(r.error){messageQuart('❌ '+messageErreurQuart(r.error));return;}
     const d=r.data||{};
     if(d.statut==='chevauchement'){
@@ -187,7 +205,7 @@ async function commencerQuart(){
     const q={id:d.quart_id||id,debut,fin:null,debut_source:'manuel',a_valider:false,raison_a_valider:null};
     installerQuart(q);
     lectureReussie('quart',q);
-    montrerConfirmationQuart('Quart commencé à',heureCourte(debut),[]);
+    montrerConfirmationQuart('Quart commencé à',heureCourte(debut),lignePosition(pos));
     chargerMonQuart();   // (relecture de contrôle, sans attendre)
   }finally{
     showSync(false);
@@ -195,10 +213,10 @@ async function commencerQuart(){
   }
 }
 // Sans réseau : le geste est gardé sur le téléphone, la personne est en service tout de suite à l'écran (quart.js : superposerQuart)
-async function commencerQuartSansReseau(args,moment){
+async function commencerQuartSansReseau(args,moment,pos){
   const r=await enfiler('quart_commencer',args,{libelle:'▶ Quart commencé',moment});
   if(!r.ok){messageQuart(MESSAGE_GESTE_NON_GARDE);return;}   // jamais « commencé » si rien n'est gardé
-  montrerConfirmationQuart('Quart commencé à',heureCourte(moment),[],'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r));
+  montrerConfirmationQuart('Quart commencé à',heureCourte(moment),lignePosition(pos),'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r));
 }
 
 // ── « ■ JE TERMINE » ───────────────────────────────────
@@ -208,12 +226,15 @@ async function terminerQuart(){
   if(!q&&!m){fermerEcranQuart();toast('Tu n’es pas en service.');return;}
   _envoiQuart=true;majEcranQuart();
   try{
-    const moment=new Date().toISOString(),pos=positionDuPunch();
-    // Sans numéro (quartId null) = « mon quart ouvert » : celui qu'une passe a ouvert toute seule n'a pas de numéro connu du téléphone
-    const args={quartId:(q&&q.id)||null,lat:pos.lat,lon:pos.lon,precision:pos.precision};
+    const moment=new Date().toISOString();   // l'heure est prise AU TOUCHER, avant l'attente éventuelle du GPS
     const avant={debut:q?q.debut:null,passe:m?numeroPasse(m.tour):null};
     const equipe=equipeCochee();   // les personnes cochées, relevées AU TOUCHER (la passe, elle, va se fermer)
-    if(!reseau.enLigne) return await terminerQuartSansReseau(args,moment,avant,equipe);
+    showSync(true);
+    const pos=await positionDuPunch();
+    showSync(false);
+    // Sans numéro (quartId null) = « mon quart ouvert » : celui qu'une passe a ouvert toute seule n'a pas de numéro connu du téléphone
+    const args={quartId:(q&&q.id)||null,lat:pos.lat,lon:pos.lon,precision:pos.precision};
+    if(!reseau.enLigne) return await terminerQuartSansReseau(args,moment,avant,equipe,pos);
     showSync(true);
     let r;
     try{
@@ -222,7 +243,7 @@ async function terminerQuart(){
       r={data:null,error:err};
     }
     showSync(false);
-    if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await terminerQuartSansReseau(args,moment,avant,equipe);}
+    if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await terminerQuartSansReseau(args,moment,avant,equipe,pos);}
     if(r.error&&String(r.error.message||'').includes('quart_introuvable')){
       // Le quart n'existe plus (fermé automatiquement, ou par l'administrateur) : on remet l'écran à jour et on le dit
       await rafraichirApresQuart();
@@ -237,11 +258,11 @@ async function terminerQuart(){
     installerQuart(null);
     lectureReussie('quart',null);
     // L'équipe : chaque personne cochée, à la MÊME seconde que moi (celle que le serveur m'a donnée), avant de relire les passes
-    const bilan=await terminerEquipe(equipe,fin);
+    const bilan=await terminerEquipe(equipe,fin,pos);
     _equipeFin=null;
     await rafraichirApresQuart();
     if(d.statut==='pas_en_quart'&&!equipe.personnes.length){fermerEcranQuart();toast('Tu n’étais pas en service.');return;}
-    montrerConfirmationQuart(d.statut==='deja_termine'?'Quart déjà terminé à':'Quart terminé à',heureCourte(fin),lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan)),null,bilan.problemes.length>0);
+    montrerConfirmationQuart(d.statut==='deja_termine'?'Quart déjà terminé à':'Quart terminé à',heureCourte(fin),lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan),lignePosition(pos)),null,bilan.problemes.length>0);
   }finally{
     showSync(false);
     _envoiQuart=false;majEcranQuart();
@@ -249,19 +270,19 @@ async function terminerQuart(){
 }
 // Sans réseau : le geste est gardé ; ma passe se ferme tout de suite à l'écran et je sors du camion (tours.js, vehicules.js).
 // Les personnes cochées suivent, dans l'ordre, avec la MÊME heure (elles partiront toutes au retour du signal).
-async function terminerQuartSansReseau(args,moment,avant,equipe){
+async function terminerQuartSansReseau(args,moment,avant,equipe,pos){
   const r=await enfiler('quart_terminer',args,{libelle:'■ Quart terminé',moment});
   if(!r.ok){messageQuart(MESSAGE_GESTE_NON_GARDE);return;}   // jamais « terminé » si rien n'est gardé
   const bilan={ok:[],attente:[],problemes:[]};
-  const pos=positionDuPunch();
   for(const p of (equipe&&equipe.personnes)||[]){
-    const g=await enfiler('quart_terminer_equipier',{passeId:equipe.passeId,userId:p.utilisateur_id,nom:p.nom,lat:pos.lat,lon:pos.lon,precision:pos.precision},{libelle:'■ Quart terminé : '+p.nom,moment});
+    // (la MÊME position que la mienne : celle du camion, lue une seule fois au toucher)
+    const g=await enfiler('quart_terminer_equipier',{passeId:equipe.passeId,userId:p.utilisateur_id,nom:p.nom,lat:args.lat,lon:args.lon,precision:args.precision},{libelle:'■ Quart terminé : '+p.nom,moment});
     if(g.ok) bilan.ok.push(p.nom); else bilan.problemes.push('Le quart de '+p.nom+' n’a pas pu être gardé sur le téléphone : à refaire plus tard.');
   }
   _equipeFin=null;
   _passeVue=null;   // je viens de terminer moi-même : pas de résumé de passe
   renderAll();majCarte();
-  montrerConfirmationQuart('Quart terminé à',heureCourte(moment),lignesFinQuart(avant,moment,false).concat(lignesEquipe(bilan)),'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r),bilan.problemes.length>0);
+  montrerConfirmationQuart('Quart terminé à',heureCourte(moment),lignesFinQuart(avant,moment,false).concat(lignesEquipe(bilan),lignePosition(pos)),'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r),bilan.problemes.length>0);
 }
 function lignesFinQuart(avant,fin,passeFermee){
   const l=[];
@@ -354,8 +375,8 @@ function equipeCochee(){
   return {passeId:e.passeId,personnes:e.membres.filter(x=>e.coches[x.utilisateur_id])};
 }
 // Termine le quart d'UNE personne (en ligne, avec un délai ; sinon la file, avec la même heure). Renvoie {etat:'ok'|'attente'|'perdu'|'refuse', texte?}
-async function terminerQuartEquipier(passeId,p,moment){
-  const pos=positionDuPunch();
+async function terminerQuartEquipier(passeId,p,moment,pos){
+  if(!pos) pos=await positionDuPunch();   // (« JE TERMINE » la donne déjà ; après « Retirer », on la lit ici)
   const args={passeId,userId:p.utilisateur_id,nom:p.nom,lat:pos.lat,lon:pos.lon,precision:pos.precision};
   const enAttente=async()=>{
     const g=await enfiler('quart_terminer_equipier',args,{libelle:'■ Quart terminé : '+p.nom,moment});
@@ -375,10 +396,10 @@ async function terminerQuartEquipier(passeId,p,moment){
   return {etat:'refuse',texte:raisonQuartEquipier(p.nom,d)};
 }
 // Toutes les personnes cochées, l'une après l'autre : {ok:[noms], attente:[noms], problemes:[textes]}
-async function terminerEquipe(equipe,moment){
+async function terminerEquipe(equipe,moment,pos){
   const bilan={ok:[],attente:[],problemes:[]};
   for(const p of (equipe&&equipe.personnes)||[]){
-    const r=await terminerQuartEquipier(equipe.passeId,p,moment);
+    const r=await terminerQuartEquipier(equipe.passeId,p,moment,pos);
     if(r.etat==='ok') bilan.ok.push(p.nom);
     else if(r.etat==='attente') bilan.attente.push(p.nom);
     else bilan.problemes.push(r.texte);

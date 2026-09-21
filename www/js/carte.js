@@ -38,10 +38,15 @@ function initApp(){
   const lblEl=document.getElementById('gps-lbl');
   const addrEl=document.getElementById('addr-txt');
 
-  if(navigator.geolocation){
-    navigator.geolocation.watchPosition(pos=>{
-      const{latitude:lat,longitude:lon,accuracy}=pos.coords;
-      lastPos=[lat,lon];
+  // Le suivi GPS démarre APRÈS la connexion (loadStops : demarrerSuiviGps) et non au chargement de la page : la permission de localisation est demandée UNE
+  // SEULE FOIS, à la première ouverture après la connexion (étape 17, morceau 3 ; position.js). La lecture est celle du plugin du téléphone, sinon du navigateur.
+  let _gpsDemarre=false;
+  window.demarrerSuiviGps=async function(){
+    if(_gpsDemarre) return;
+    _gpsDemarre=true;
+    try{await demanderPermissionPosition();}catch(e){}
+    demarrerSuiviPosition(pos=>{
+      const{latitude:lat,longitude:lon,accuracy}=pos.coords;   // (lastPos et lastPosInfo : déjà posés par position.js)
       dotEl.className='on';
       lblEl.textContent=`±${Math.round(accuracy)}m`;
       const icon=L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:#4ade80;border:3px solid #fff;box-shadow:0 0 8px #4ade80"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
@@ -58,8 +63,8 @@ function initApp(){
 		  if(currentUser) envoyerPosition(lat,lon);
 		  verifierProximite(lat,lon);
 		}
-    },()=>{dotEl.className='err';lblEl.textContent='Erreur';},{enableHighAccuracy:true,maximumAge:5000,timeout:15000});
-  }
+    },()=>{dotEl.className='err';lblEl.textContent='Erreur';});
+  };
 
   window.centerUser=function(){if(lastPos) map.flyTo(lastPos,16,{duration:.8});};
 

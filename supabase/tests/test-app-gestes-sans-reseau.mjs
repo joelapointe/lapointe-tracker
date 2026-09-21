@@ -109,9 +109,10 @@ function monde(o = {}) {
     __map: { removeLayer() {}, flyTo() {} }, __fauxDb: fauxDb, setStatus() {}, hideLoading() {}, showErr: (m) => appels.erreurs.push(m),
     __toasts: appels.toasts, __confirmations: appels.confirmations, __questionsFin: appels.questionsFin, __reponseFin: { oui: false },
     crypto: { randomUUID: () => crypto.randomUUID() },
+    ...(o.navigateur ? { navigator: o.navigateur } : {}),   // (étape 17, morceau 3 : un faux GPS de navigateur, voir fauxGps)
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/quart.js', 'js/quart-ecrans.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
+  for (const f of ['js/config.js', 'js/position.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/quart.js', 'js/quart-ecrans.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map;', ctx);
   vm.runInContext('currentUser = ' + JSON.stringify(o.utilisateur ?? LUC) + ';', ctx);
@@ -1598,10 +1599,10 @@ log('\n=== « ▶ JE COMMENCE » EN LIGNE : L\'HEURE DU SERVEUR, LA CONFIRMATION
 {
   const debutServeur = iso(3);
   const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: serveurQuart({ debut: debutServeur }) } });
-  m.run('lastPos=[46.5,-72.8]');
+  m.run('noterPosition(46.5,-72.8,12)');   // (une lecture du GPS de moins de 20 s : le punch la prend tout de suite, avec sa précision)
   await m.run('commencerQuart()'); await attendre(30);
   const a = envoi(m, 'quart_commencer'), e = ecranQuart(m);
-  eq('UN envoi : le numéro du quart (fabriqué par le téléphone), la position, SANS heure (c\'est celle du serveur)', [nbEnvois(m, 'quart_commencer'), typeof a.p_id, 'p_moment' in a, a.p_lat, a.p_lon, a.p_precision], [1, 'string', false, 46.5, -72.8, null]);
+  eq('UN envoi : le numéro du quart (fabriqué par le téléphone), la position, SANS heure (c\'est celle du serveur)', [nbEnvois(m, 'quart_commencer'), typeof a.p_id, 'p_moment' in a, a.p_lat, a.p_lon, a.p_precision], [1, 'string', false, 46.5, -72.8, 12]);
   eq('la confirmation dit l\'heure du SERVEUR (pas celle du téléphone), sans ⏳', [e.quel, confirme(e, 'Quart commencé à', heureDe(m, debutServeur)), e.html.includes('⏳'), e.html.includes('✔')], ['confirmation', true, false, true]);
   eq('la pastille : en service depuis cette heure, sans ⏳ ; c\'est le quart du serveur (pas un quart « local »)', [pastille(m).classe, pastille(m).texte, m.run('monQuart.id') === a.p_id, m.run('monQuart.local')], ['quart-on', '🟢 Depuis ' + heureDe(m, debutServeur), true, undefined]);
   eq('rien en attente ; l\'écran d\'accueil ne revient pas', [m.attentes().length, m.run('_accueilQuartPour')], [0, 'u-luc']);
@@ -1682,7 +1683,7 @@ log('\n=== « ▶ JE COMMENCE » : LES REFUS DU SERVEUR ET LES PANNES ===');
 log('\n=== « ▶ JE COMMENCE » SANS RÉSEAU : EN SERVICE TOUT DE SUITE, L\'HEURE EST GARDÉE ===');
 {
   const m = await ouvrir({ quarts: [], tours: [] }); coupe(m);
-  m.run('lastPos=[46.5,-72.8]');
+  m.run('noterPosition(46.5,-72.8,12)');   // (une lecture du GPS de moins de 20 s : le punch la prend tout de suite, avec sa précision)
   m.run('fermerEcranQuart()'); m.run('pastilleQuartTouchee()');   // (l'écran d'accueil rouvert, cette fois sans réseau)
   eq('(l\'écran d\'accueil, rouvert sans réseau, dit la note « pas de réseau »)', ecranQuart(m).html.includes('Pas de réseau : l’heure est gardée'), true);
   await m.run('commencerQuart()');
@@ -1704,7 +1705,7 @@ log('\n=== « ■ JE TERMINE » EN LIGNE : L\'HEURE DU SERVEUR, MA PASSE TERMIN�
 {
   const finServeur = iso(2);
   const m = await ouvrir({ quarts: [rowQuart('q-serveur')], monde: { serveur: serveurQuart({ fin: finServeur, passeFermee: 'p-luc' }) } });
-  m.run('lastPos=[46.5,-72.8]');
+  m.run('noterPosition(46.5,-72.8,12)');   // (une lecture du GPS de moins de 20 s : le punch la prend tout de suite, avec sa précision)
   m.run('__ouv=[];{const o=ouvrirEcranQuart;ouvrirEcranQuart=(q)=>{__ouv.push(q);o(q);};}');   // (on note les écrans ouverts)
   m.run('pastilleQuartTouchee()');
   const e0 = ecranQuart(m);
@@ -1872,7 +1873,7 @@ log('\n=== « ■ JE TERMINE » AVEC L\'ÉQUIPE : EN LIGNE ===');
 {
   const finServeur = iso(1);
   const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: serveurQuart({ fin: finServeur, passeFermee: 'p-luc' }) } });
-  m.run('lastPos=[46.5,-72.8]');
+  m.run('noterPosition(46.5,-72.8,12)');   // (une lecture du GPS de moins de 20 s : le punch la prend tout de suite, avec sa précision)
   m.run('pastilleQuartTouchee()');
   m.run('basculerEquipierQuart(\'u-nina\')');   // Nina continue ailleurs : décochée
   await m.run('terminerQuart()');
@@ -1898,7 +1899,7 @@ for (const [nom, reponse, texte] of [
   m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
   const e = ecranQuart(m);
   eq(`refus « ${nom} » : le message NOMME la personne et dit pourquoi ; Nina, elle, est terminée`, [e.html.includes(texte), e.html.includes('Quart terminé aussi pour : Nina.')], [true, true]);
-  eq('… la confirmation NE se ferme PAS toute seule (elle porte un avertissement à lire) ; mon propre quart est bien terminé', [m.run('_tConfirmationQuart'), m.run('enService()')], [null, false]);
+  eq('… la confirmation NE se ferme PAS toute seule (elle porte un avertissement à lire) ; mon propre quart est bien terminé', [m.run('_tConfirmationQuart===null'), m.run('enService()')], [true, false]);
   m.fin();
 }
 {
@@ -2133,6 +2134,142 @@ for (const [nom, o] of [['plus de 24 heures', { fin: iso(60 * 25) }], ['déjà s
   n.run('_tickRelecture=3'); await n.run('rafraichirEnCours()');
   eq('aucun écran ouvert : la carte s\'ouvre à la relecture suivante (dans la minute)', ecranQuart(n).quel, 'avis');
   n.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 17, MORCEAU 3 : LE PUNCH ET LA POSITION (position.js : lecture au toucher, précision, jamais bloquant)
+// ══════════════════════════════════════════════════════════════════════
+// Un faux GPS de navigateur : compte les lectures et garde leurs options ; delaiMs / jamais / erreur règlent sa réponse
+const fauxGps = (o = {}) => {
+  const gps = { lectures: 0, opts: [] };
+  gps.navigator = { geolocation: { getCurrentPosition: (bon, mauvais, opts) => {
+    gps.lectures++; gps.opts.push(opts);
+    (async () => {
+      if (o.delaiMs) await attendre(o.delaiMs);
+      if (o.jamais) return new Promise(() => {});
+      if (o.erreur) throw o.erreur;
+      return { coords: { latitude: o.lat ?? 46.6, longitude: o.lon ?? -72.9, accuracy: o.precision ?? 8 }, timestamp: Date.now() };
+    })().then(bon, mauvais);
+  } } };
+  return gps;
+};
+
+log('\n=== LE PUNCH LIT LA POSITION ET SA PRÉCISION ===');
+{
+  const gps = fauxGps({ lat: 46.6, lon: -72.9, precision: 8 });
+  const m = await ouvrir({ quarts: [], tours: [], monde: { navigateur: gps.navigator, serveur: serveurQuart({ debut: iso(3) }) } });
+  await m.run('commencerQuart()'); await attendre(30);
+  const a = envoi(m, 'quart_commencer');
+  eq('aucune lecture connue : « JE COMMENCE » lit le GPS (précision élevée), et envoie la position ET la précision', [gps.lectures, a.p_lat, a.p_lon, a.p_precision, gps.opts[0].enableHighAccuracy], [1, 46.6, -72.9, 8, true]);
+  eq('la confirmation le dit : « 📍 Position enregistrée (±8 m) »', ecranQuart(m).html.includes('📍 Position enregistrée (±8 m)'), true);
+  m.fin();
+  const n = fauxGps();
+  const p = await ouvrir({ quarts: [], tours: [], monde: { navigateur: n.navigator, serveur: serveurQuart({ debut: iso(3) }) } });
+  p.run('noterPosition(46.5,-72.8,12)');
+  await p.run('commencerQuart()'); await attendre(30);
+  eq('une lecture du GPS de moins de 20 s : le punch la prend tout de suite, SANS lire le GPS', [n.lectures, envoi(p, 'quart_commencer').p_precision, ecranQuart(p).html.includes('(±12 m)')], [0, 12, true]);
+  p.fin();
+  const q = await ouvrir({ quarts: [], tours: [], monde: { serveur: serveurQuart({ debut: iso(3) }) } });
+  await q.run('commencerQuart()'); await attendre(30);
+  eq('aucun GPS du tout : le quart est enregistré quand même, « sans position » (rien de bloquant)', [envoi(q, 'quart_commencer').p_lat, envoi(q, 'quart_commencer').p_precision, q.run('enService()'), ecranQuart(q).html.includes('📍 Sans position : le GPS n’a pas répondu')], [null, null, true, true]);
+  q.fin();
+}
+{
+  // L'attente du GPS : l'heure du geste est celle du TOUCHER
+  const gps = fauxGps({ delaiMs: 120 });
+  const m = await ouvrir({ quarts: [], tours: [], monde: { navigateur: gps.navigator } }); coupe(m);
+  const t0 = Date.now();
+  const punch = m.run('commencerQuart()');
+  await attendre(40);
+  eq('pendant l\'attente du GPS : l\'indicateur « Sync » est affiché et le gros bouton est grisé (pas de double toucher)', [m.el('sync').classList.contains('show'), m.el('btn-quart-commencer').disabled], [true, true]);
+  await punch;
+  const g = m.run('gestesEnAttente()[0]');
+  vrai('L\'HEURE DU GESTE est celle du TOUCHER, pas celle de la fin de l\'attente du GPS', Date.parse(g.moment) - t0 < 40 && Date.now() - Date.parse(g.moment) >= 80, `moment ${Date.parse(g.moment) - t0} ms après le toucher, ${Date.now() - Date.parse(g.moment)} ms avant la fin`);
+  eq('… la position lue est dans le geste gardé, avec sa précision', [g.args.lat, g.args.lon, g.args.precision], [46.6, -72.9, 8]);
+  eq('… et la confirmation la dit', ecranQuart(m).html.includes('📍 Position enregistrée (±8 m)'), true);
+  m.fin();
+  const n = fauxGps({ delaiMs: 100 });
+  const p = await ouvrir({ quarts: [], tours: [], monde: { navigateur: n.navigator, serveur: serveurQuart({ debut: iso(3) }) } });
+  await Promise.all([p.run('commencerQuart()'), p.run('commencerQuart()')]);
+  eq('deux touchers pendant l\'attente du GPS : UNE lecture, UN seul envoi', [n.lectures, nbEnvois(p, 'quart_commencer')], [1, 1]);
+  p.fin();
+}
+{
+  // Un GPS qui ne répond jamais : le punch n'attend que la limite
+  const gps = fauxGps({ jamais: true });
+  const m = await ouvrir({ quarts: [], tours: [], monde: { navigateur: gps.navigator, serveur: serveurQuart({ debut: iso(3) }) } });
+  m.run('POSITION_ATTENTE_MS=150');
+  const t0 = Date.now();
+  await m.run('commencerQuart()'); await attendre(30);
+  const ms = Date.now() - t0;
+  eq('un GPS qui ne répond JAMAIS : le quart est enregistré quand même après la limite (ici 150 ms au lieu de 6 s), « sans position »', [ms >= 130 && ms < 1500, envoi(m, 'quart_commencer').p_lat, m.run('enService()'), ecranQuart(m).html.includes('📍 Sans position : le GPS n’a pas répondu')], [true, null, true, true]);
+  m.fin();
+}
+{
+  // Le GPS refuse, mais une lecture d'il y a 60 s existe : elle est reprise, et la confirmation le dit
+  const gps = fauxGps({ erreur: new Error('denied') });
+  const m = await ouvrir({ quarts: [], tours: [], monde: { navigateur: gps.navigator, serveur: serveurQuart({ debut: iso(3) }) } });
+  m.run('noterPosition(46.1,-72.2,20); lastPosInfo.le=Date.now()-60000');
+  await m.run('commencerQuart()'); await attendre(30);
+  eq('la lecture fraîche échoue : la lecture de 60 s est reprise (la confirmation dit « Dernière position connue »)', [envoi(m, 'quart_commencer').p_lat, envoi(m, 'quart_commencer').p_precision, ecranQuart(m).html.includes('📍 Dernière position connue (±20 m)')], [46.1, 20, true]);
+  m.fin();
+}
+
+log('\n=== LA PERMISSION : L\'ÉCRAN D\'ACCUEIL ET LA CONFIRMATION LE DISENT ===');
+{
+  const m = await ouvrir({ quarts: [], tours: [] });
+  m.run('_permissionPosition="refusee"; fermerEcranQuart(); ouvrirEcranQuart(\'accueil\')');
+  const e = ecranQuart(m);
+  eq('la localisation est REFUSÉE : l\'écran d\'accueil le dit discrètement, avec où la rétablir', [e.html.includes('📍 La localisation est refusée pour cette application : ton quart sera enregistré sans position.'), e.html.includes('Réglages du téléphone &gt; Applications &gt; Lapointe Tracker &gt; Autorisations'), e.html.includes('▶ JE COMMENCE')], [true, true, true]);
+  m.run('_permissionPosition="gps_desactive"; fermerEcranQuart(); ouvrirEcranQuart(\'accueil\')');
+  eq('le GPS du téléphone est éteint : l\'écran d\'accueil le dit', ecranQuart(m).html.includes('📍 Le GPS du téléphone est désactivé : ton quart sera enregistré sans position.'), true);
+  m.run('_permissionPosition="accordee"; fermerEcranQuart(); ouvrirEcranQuart(\'accueil\')');
+  eq('permission accordée : aucune note', ecranQuart(m).html.includes('📍'), false);
+  m.fin();
+  const n = await ouvrir({ quarts: [], tours: [], monde: { serveur: serveurQuart({ debut: iso(3) }) } });
+  n.run('_permissionPosition="refusee"');
+  await n.run('commencerQuart()'); await attendre(30);
+  eq('sans position parce que refusée : la confirmation dit pourquoi, et le quart est bien enregistré', [ecranQuart(n).html.includes('📍 Sans position : la localisation est refusée pour cette application'), n.run('enService()')], [true, true]);
+  n.fin();
+}
+
+log('\n=== « JE TERMINE » ET L\'ÉQUIPE : UNE SEULE LECTURE, LA MÊME POSITION POUR TOUS ===');
+{
+  const gps = fauxGps({ lat: 46.7, lon: -72.6, precision: 10 });
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { navigateur: gps.navigator, serveur: serveurQuart({ fin: iso(1), passeFermee: 'p-luc' }) } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  const a = envoi(m, 'quart_terminer');
+  eq('mon quart ET le quart de Marc et de Nina : UNE seule lecture du GPS, la MÊME position et précision (celles du camion)', [gps.lectures, [a.p_lat, a.p_lon, a.p_precision], equipiers(m).map((x) => [x.p_lat, x.p_lon, x.p_precision])], [1, [46.7, -72.6, 10], [[46.7, -72.6, 10], [46.7, -72.6, 10]]]);
+  const e = ecranQuart(m);
+  eq('la confirmation dit la position (sans « ⚠ » : un quart sans position n\'est pas une erreur)', [e.html.includes('📍 Position enregistrée (±10 m)'), e.html.includes('⚠')], [true, false]);
+  m.fin();
+}
+{
+  const gps = fauxGps({ lat: 46.7, lon: -72.6, precision: 10 });
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { navigateur: gps.navigator } }); coupe(m);
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('SANS RÉSEAU : les gestes gardés (mon quart, Marc, Nina) portent tous la position et la précision, lues UNE fois', [gps.lectures, m.run('gestesEnAttente().map(g=>[g.args.lat,g.args.lon,g.args.precision])')], [1, [[46.7, -72.6, 10], [46.7, -72.6, 10], [46.7, -72.6, 10]]]);
+  eq('… et la confirmation dit la position', ecranQuart(m).html.includes('📍 Position enregistrée (±10 m)'), true);
+  m.fin();
+}
+{
+  // Après « Retirer » : la position est lue à ce moment-là
+  const gps = fauxGps({ lat: 46.8, lon: -72.5, precision: 6 });
+  const finR = iso(0.5);
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { navigateur: gps.navigator, serveur: { equipage_retirer: () => ({ data: { statut: 'retire', fin: finR }, error: null }) } } }); m.repondreFin(true);
+  await m.run('ouvrirEquipage()'); await retirerEq(m, 'u-nina');
+  const a = equipiers(m)[0];
+  eq('« Retirer » puis « Oui, terminer son quart » : la position (et sa précision) est lue à ce moment-là', [gps.lectures, a.p_lat, a.p_lon, a.p_precision], [1, 46.8, -72.5, 6]);
+  m.fin();
+}
+
+log('\n=== LE CODE : L\'HEURE EST PRISE AVANT LA POSITION ===');
+{
+  const qe = lire('js/quart-ecrans.js');
+  const ordre = (nom) => { const d = qe.indexOf('async function ' + nom + '('); const f = qe.indexOf('\n}\n', d); const c = qe.slice(d, f); return c.indexOf('moment=new Date().toISOString()') > -1 && c.indexOf('moment=new Date().toISOString()') < c.indexOf('await positionDuPunch()'); };
+  vrai('« Je commence » et « Je termine » prennent l\'heure AU TOUCHER, avant d\'attendre le GPS', ordre('commencerQuart') && ordre('terminerQuart'));
+  vrai('la position est lue UNE fois au toucher et transmise (les gestes de l\'équipe ne la relisent pas)', /terminerEquipe\(equipe,fin,pos\)/.test(qe) && /terminerQuartEquipier\(equipe\.passeId,p,moment,pos\)/.test(qe) && /lat:args\.lat,lon:args\.lon,precision:args\.precision/.test(qe));
+  vrai('le punch ne lit plus « lastPos » directement (il passe par position.js)', !/lastPos/.test(qe.replace(/\/\/[^\n]*/g, '')));
 }
 
 log('\n=== LE CODE : L\'ÉQUIPAGE PASSE PAR LES MÊMES RÈGLES QUE LES AUTRES GESTES ===');

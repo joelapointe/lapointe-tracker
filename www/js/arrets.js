@@ -66,11 +66,20 @@ async function dbDel(id){
   return a.error?'erreur':'archive';
 }
 
+// Les arrêts qui changent (l'administrateur les ordonne, en ajoute…) : UNE seule relecture même si plusieurs changements arrivent d'un coup
+// (déplacer un client modifie deux lignes : sans ce regroupement, chaque téléphone relirait tout deux fois de suite)
+let _tRechargeArrets=null;
+function planifierRechargementArrets(){
+  clearTimeout(_tRechargeArrets);
+  _tRechargeArrets=setTimeout(()=>{loadStops();},800);
+}
+
 // ── MARQUEURS ──────────────────────────────────────────
-function mkIcon(done,hasProb,onSite){
+function mkIcon(done,hasProb,onSite,prochain){
   const c=couleurEtat(done,hasProb,onSite);   // règle de couleur unique (tours.js), la même que pour les zones
-  const s=done&&!hasProb?14:18;
-  return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${c};border:2px solid rgba(0,0,0,.5);transform:rotate(45deg);box-shadow:0 2px 6px rgba(0,0,0,.6)"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]});
+  const s=prochain?24:(done&&!hasProb?14:18);   // le PROCHAIN CLIENT (étape 18b) : plus gros, avec un halo blanc, pour le repérer de loin
+  const halo=prochain?'border:3px solid #fff;box-shadow:0 0 0 4px rgba(255,255,255,.35),0 2px 8px rgba(0,0,0,.7)':'border:2px solid rgba(0,0,0,.5);box-shadow:0 2px 6px rgba(0,0,0,.6)';
+  return L.divIcon({className:'',html:`<div style="width:${s}px;height:${s}px;background:${c};${halo};transform:rotate(45deg)"></div>`,iconSize:[s,s],iconAnchor:[s/2,s/2]});
 }
 
 let polys=[];   // zones dessinées (à effacer avant de redessiner, sinon elles s'empilent)
@@ -79,10 +88,11 @@ function renderAll(){
   Object.keys(mkrs).forEach(k=>delete mkrs[k]);
   polys.forEach(p=>map.removeLayer(p));
   polys=[];
+  const prochain=(typeof prochainArret==='function')?prochainArret():null;   // le prochain client de ma passe (ordre.js, étape 18b) : marqueur plus gros
   stops.forEach((s,i)=>{
     if(!s.lat) return;
   if(routeActive!==null && s.route_id!==routeActive) return;
-  const m=L.marker([s.lat,s.lon],{icon:mkIcon(estFait(s),aProbleme(s),estEnCours(s))}).addTo(map);
+  const m=L.marker([s.lat,s.lon],{icon:mkIcon(estFait(s),aProbleme(s),estEnCours(s),s===prochain)}).addTo(map);
     m.on('click',()=>openCard(i));
     mkrs[i]=m;
   });

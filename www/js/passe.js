@@ -592,8 +592,15 @@ function pourcentageDe(t){return Math.max(0,Math.min(100,Number(t.pourcentage)||
 function htmlCartePasse(t,passe,role){
   const pct=pourcentageDe(t);
   const nom=nomVehiculeDe(passe.equipe_id)||'Camion';
-  return '<div class="passe-encours" onclick="basculerBandeauPasse()"><div class="passe-pct">'+pct+' %</div><div class="passe-infos"><b>'+(role==='bord'?'👤 À bord · ':'🚜 ')+esc(nom)+'</b>'+
-    '<br>Passe n° '+esc(numeroPasse(t))+' · '+esc(nomRoute(t.route_id))+'<br>'+esc(t.tache)+' · '+esc(t.faits)+'/'+esc(t.total)+
+  // Ligne 1 : le camion et l'avancement · ligne 2 : la passe, la route, la tâche · ligne 3 : le PROCHAIN CLIENT (ordre.js, étape 18b), qu'on touche pour ouvrir sa fiche
+  let prochain='';
+  if(typeof prochainArret==='function'){
+    const p=prochainArret();
+    prochain=p?'<button type="button" class="passe-prochain" onclick="ouvrirProchain(event)">▶ '+esc(p.adresse)+'</button>'
+      :'<span class="passe-prochain-fini">'+(pct>=100?'✔ Tous les clients sont faits':'Aucun client à faire')+'</span>';
+  }
+  return '<div class="passe-encours" onclick="basculerBandeauPasse()"><div class="passe-pct">'+pct+' %</div><div class="passe-infos"><b>'+(role==='bord'?'👤 À bord · ':'🚜 ')+esc(nom)+'</b> · '+esc(t.faits)+'/'+esc(t.total)+
+    '<br>Passe n° '+esc(numeroPasse(t))+' · '+esc(nomRoute(t.route_id))+' · '+esc(t.tache)+prochain+
     '<div class="passe-barre"><i style="width:'+pct+'%"></i></div></div><span class="passe-chevron" aria-hidden="true"></span></div>';
 }
 // Le bandeau se réduit d'un toucher sur la carte du pourcentage (retouche après l'essai sur téléphone du 21 sept. : il cachait trop de l'écran) ; le choix est

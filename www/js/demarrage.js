@@ -2,7 +2,9 @@
 // (extrait de l'ancien index.html)
 setStatus('Chargement de la carte…');
 Promise.all([
-  loadScript('vendor/leaflet.js'),          // copiées dans l'application (étape 16a) : elle démarre sans réseau (voir vendor/VERSIONS.txt)
+  // copiées dans l'application (étape 16a) : elle démarre sans réseau (voir vendor/VERSIONS.txt)
+  // La rotation de la carte (étape 18b) se charge APRÈS Leaflet ; si elle manquait, la carte marcherait quand même, sans pouvoir pivoter.
+  loadScript('vendor/leaflet.js').then(()=>loadScript('vendor/leaflet-rotate.umd.min.js').catch(()=>{})),
   loadScript('vendor/supabase.min.js'),
 ]).then(()=>{
   setStatus('Connexion à la base de données…');

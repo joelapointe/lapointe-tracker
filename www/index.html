@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
   <title>Lapointe Tracker</title>
   <link rel="stylesheet" href="vendor/leaflet.css"/>
+  <link rel="stylesheet" href="vendor/leaflet-rotate.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css"/>
 </head>
@@ -246,6 +247,7 @@
       <button id="liste-x" onclick="closeListe()">✕</button>
     </div>
     <div id="liste-body"></div>
+    <div id="liste-parcours"></div>
     <div id="liste-footer">
       <button class="lf-btn fermer" onclick="closeListe()">FERMER</button>
       <button class="lf-btn nouveau" id="btn-nouveau-liste" onclick="closeListe();openModal()">＋ NOUVEAU</button>
@@ -344,6 +346,7 @@
 <script src="js/photos.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/liste-arrets.js"></script>
+<script src="js/ordre.js"></script>
 <script src="js/tracking.js"></script>
 <script src="js/placement.js"></script>
 <script src="js/demarrage.js"></script>

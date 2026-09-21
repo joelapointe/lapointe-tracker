@@ -4,7 +4,8 @@
 import vm from 'vm';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-const WWW = fileURLToPath(new URL('../../www/', import.meta.url));
+// WWW_TEST : un autre dossier « www » (les erreurs volontaires modifient une COPIE du code, jamais le vrai)
+const WWW = process.env.WWW_TEST ? process.env.WWW_TEST.split('\\').join('/').replace(/\/?$/, '/') : fileURLToPath(new URL('../../www/', import.meta.url));
 
 let ok = 0, ko = 0;
 const log = (s) => console.log(s);
@@ -70,7 +71,8 @@ function monde(o = {}) {
         if (q.op === 'select') {
           appels.lectures.push(table);
           if (o.lectureLance?.includes(table)) throw new Error('Failed to fetch');
-          res = o.erreurLecture?.includes(table) ? { data: null, error: { message: 'boum' } } : { data: donnees[table] ?? [], error: null };
+          // (les arrêts sont rendus en COPIE, comme le fait un vrai serveur : l'application qui change l'ordre d'un arrêt chez elle ne change pas « la base » toute seule)
+          res = o.erreurLecture?.includes(table) ? { data: null, error: { message: 'boum' } } : { data: table === 'stops' ? (donnees.stops ?? []).map((s) => ({ ...s })) : (donnees[table] ?? []), error: null };
         } else {
           appels.ecritures.push({ table, op: q.op, valeur: q.valeur, filtres: q.filtres });
           const rep = reponsesEcriture[table + '.' + q.op];
@@ -108,7 +110,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -199,7 +201,7 @@ log('\n=== LISTE DES ARRÊTS ===');
   eq('route Charette : « 3 restants · 1 complété »', m.el('liste-sub').textContent, '3 restants · 1 complété');
   eq('4 lignes (seulement les arrêts de la route choisie)', m.elementsListe().length, 4);
   vrai('les arrêts à faire d\'abord, le fait à la fin, avec le badge « ✔ FAIT »', m.elementsListe()[3].innerHTML.includes('✔ FAIT') && m.elementsListe()[3].innerHTML.includes('304 rue de l&#39;Église'), m.elementsListe()[3].innerHTML);
-  vrai('… les autres sont « À FAIRE »', m.elementsListe().slice(0, 3).every((d) => d.innerHTML.includes('À FAIRE')));
+  vrai('… le premier à faire est le PROCHAIN client de ma passe (étape 18b), les deux suivants sont « À FAIRE »', m.elementsListe()[0].innerHTML.includes('▶ PROCHAIN') && m.elementsListe().slice(1, 3).every((d) => d.innerHTML.includes('À FAIRE')));
   vrai('une route choisie : le nom de la route n\'est pas répété sur chaque ligne', !m.elementsListe()[0].innerHTML.includes('Charette'));
   m.routeActive(null); await m.run('renderListe()');
   eq('toutes les routes : 6 lignes', m.elementsListe().length, 6);
@@ -707,6 +709,229 @@ log('\n=== LE CODE DE L\'APPLICATION : plus de restes de l\'ancien « fait » ==
   vrai('la fiche d\'un arrêt a sa ligne « Passe n° … »', html.includes('id="sc-tour"'));
   vrai('aucune écriture directe dans passes / passe_arrets depuis l\'application (tout passe par les fonctions du serveur)',
     !fichiersJs.some((f) => /from\(\s*['"](passes|passe_arrets)['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(lire('js/' + f))));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 18b : L'ORDRE DES CLIENTS, LE PROCHAIN CLIENT, LE PARCOURS DANS GOOGLE MAPS (www/js/ordre.js)
+// Demande de Joé (21 sept.) : « appuyer sur le nombre de clients pour voir la liste que je pourrais placer selon un ordre précis » ; seul l'administrateur change l'ordre ;
+// la navigation reste Google Maps.
+// ══════════════════════════════════════════════════════════════════════
+const ADMIN = { id: 'u-joe', nom: 'Joé', role: 'admin' };
+const sansMaPasse = () => TOURS().map((t) => ({ ...t, passes: t.passes.map((x) => ({ ...x, je_suis_chauffeur: false, je_suis_a_bord: false })) }));
+const adresses = (m) => m.elementsListe().map((d) => (d.innerHTML.match(/ci-addr [^>]*>([^<]*)</) || [])[1]);   // les adresses, dans l'ordre où la liste les affiche
+const misesAJourOrdre = (m) => m.appels.ecritures.filter((e) => e.table === 'stops' && e.op === 'update').map((e) => [e.filtres[0][1], e.valeur.ordre]).sort();
+const stopsAvec = (ordres) => STOPS.map((s) => ({ ...s, ordre: ordres[s.id] ?? s.ordre }));
+
+log('\n=== L\'ORDRE DES CLIENTS : TRIER PAR « ORDRE » ===');
+{
+  const m = monde(); await m.run('loadStops()');
+  eq('enOrdre trie par « ordre » ; à égalité (ou sans ordre), l\'ordre de départ est gardé', m.run("enOrdre([{id:'a',ordre:2},{id:'b',ordre:0},{id:'c',ordre:0},{id:'d'}]).map(s=>s.id)"), ['b', 'c', 'd', 'a']);
+  eq('une valeur d\'ordre illisible compte pour 0 (jamais de plantage)', [m.run("valeurOrdre({ordre:'x'})"), m.run('valeurOrdre(null)'), m.run("valeurOrdre({ordre:'4'})")], [0, 0, 4]);
+  m.fin();
+}
+
+log('\n=== LE PROCHAIN CLIENT DE MA PASSE ===');
+{
+  const m = monde(); await m.run('loadStops()');
+  eq('Luc conduit le tour de déneigement de Charette, l\'arrêt s1 est fait : le prochain est s2', m.run('prochainArret().id'), 's2');
+  eq('les clients restants de sa passe, dans l\'ordre (s2, s3 : pas s4, qui est du sel)', m.run('clientsRestants().map(s=>s.id)'), ['s2', 's3']);
+  m.fin();
+  const t = monde({ stops: stopsAvec({ s2: 9, s3: 1 }) }); await t.run('loadStops()');
+  eq('l\'ORDRE décide : s3 (ordre 1) passe avant s2 (ordre 9)', t.run('prochainArret().id'), 's3');
+  t.fin();
+  const g = monde({ stops: STOPS.map((s) => (s.id === 's2' ? { ...s, lat: null, lon: null } : { ...s })) }); await g.run('loadStops()');
+  eq('un client sans position sur la carte est laissé de côté', g.run('prochainArret().id'), 's3');
+  g.fin();
+  const f = monde({ tours: TOURS().map((t2) => (t2.tache === MEC ? { ...t2, faits: 3, pourcentage: 100, arrets_faits: ['s1', 's2', 's3'] } : t2)) }); await f.run('loadStops()');
+  eq('tous les clients de la passe sont faits : plus de prochain client', [f.run('prochainArret()'), f.run('clientsRestants().length')], [null, 0]);
+  f.fin();
+  const p = monde({ tours: TOURS().map((t2) => ({ ...t2, passes: t2.passes.map((x) => ({ ...x, je_suis_chauffeur: false, je_suis_a_bord: x.passe_id === 'p-marc' })) })) }); await p.run('loadStops()');
+  eq('un PASSAGER du camion de Marc voit le même prochain client (celui de la passe où il est à bord)', p.run('prochainArret().id'), 's2');
+  p.fin();
+  const a = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await a.run('loadStops()');
+  eq('sans passe (conduite ou à bord) : aucun prochain client', [a.run('prochainArret()'), a.run('urlParcoursGoogle()')], [null, null]);
+  a.fin();
+}
+
+log('\n=== LE PROCHAIN CLIENT S\'AFFICHE : BANDEAU, MARQUEUR, LISTE ===');
+{
+  const m = monde(); await m.run('loadStops()');
+  const h = m.el('passe-bandeau').innerHTML;
+  vrai('le bandeau : « ▶ » suivi de l\'adresse du prochain client, en bouton relié à ouvrirProchain(event)', /<button type="button" class="passe-prochain" onclick="ouvrirProchain\(event\)">▶ 220 rue du Moulin<\/button>/.test(h), h);
+  vrai('… les autres lignes du bandeau sont toujours là (camion, avancement, passe, route, tâche)', h.includes('Passe n° 1 · Charette · ' + MEC) && h.includes('1/3'), h);
+  eq('le marqueur du prochain client est plus gros (24) et cerclé de blanc ; les autres gardent leur taille', [m.marqueurs[1].opt.icon.iconSize, m.marqueurs[1].opt.icon.html.includes('border:3px solid #fff'), m.marqueurs[2].opt.icon.iconSize, m.marqueurs[0].opt.icon.iconSize], [[24, 24], true, [18, 18], [14, 14]]);
+  eq('… et sa couleur suit la règle unique (jaune : pas encore fait)', m.couleur(m.marqueurs[1]), '#c8e63c');
+  m.run('ouvrirProchain({stopPropagation(){globalThis.__ar=(globalThis.__ar||0)+1;}})');
+  eq('toucher le prochain client ouvre sa fiche (s2) ; le toucher ne réduit pas le bandeau (stopPropagation)', [m.run('activeIdx'), m.el('stop-card').classList.contains('open'), m.run('globalThis.__ar')], [idx('s2'), true, 1]);
+  m.fin();
+  const f = monde({ tours: TOURS().map((t2) => (t2.tache === MEC ? { ...t2, faits: 3, pourcentage: 100, arrets_faits: ['s1', 's2', 's3'] } : t2)) }); await f.run('loadStops()');
+  vrai('100 % : « ✔ Tous les clients sont faits » (pas de bouton)', f.el('passe-bandeau').innerHTML.includes('✔ Tous les clients sont faits') && !f.el('passe-bandeau').innerHTML.includes('passe-prochain"'), f.el('passe-bandeau').innerHTML);
+  f.fin();
+}
+{
+  const l = monde(); await l.run('loadStops()'); l.routeActive(CH); await l.run('renderListe()');
+  eq('la liste : les clients à faire dans l\'ordre, puis le fait ; le premier à faire est marqué « ▶ PROCHAIN »', [adresses(l).slice(0, 3), l.elementsListe()[0].innerHTML.includes('▶ PROCHAIN'), l.elementsListe()[0].className.includes('ci-prochain')], [['220 rue du Moulin', '50 rue Notre-Dame', '215 rue Bellerive'], true, true]);
+  vrai('un employé ne voit AUCUNE flèche pour changer l\'ordre', !l.elementsListe().some((d) => d.innerHTML.includes('ci-mv')));
+  l.fin();
+  const o = monde({ stops: stopsAvec({ s2: 9, s3: 1 }) }); await o.run('loadStops()'); o.routeActive(CH); await o.run('renderListe()');
+  eq('la liste suit « ordre » (s3 = 1, s4 = 3, s2 = 9) et non l\'ordre de lecture', adresses(o).slice(0, 3), ['50 rue Notre-Dame', '215 rue Bellerive', '220 rue du Moulin']);
+  o.fin();
+}
+
+log('\n=== L\'ADMINISTRATEUR CHANGE L\'ORDRE (▲ ▼) ===');
+{
+  const a = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await a.run('loadStops()'); a.routeActive(CH); await a.run('renderListe()');
+  const rangs = a.elementsListe();
+  vrai('l\'administrateur, route choisie : des flèches ▲ ▼ sur chaque client À FAIRE (3), aucune sur le client fait', rangs.slice(0, 3).every((d) => d.innerHTML.includes('ci-mv')) && !rangs[3].innerHTML.includes('ci-mv'), rangs.map((d) => d.innerHTML.includes('ci-mv')).join());
+  vrai('… ▲ est grisé pour le premier, ▼ pour le dernier client à faire', /aria-label="Plus tôt dans l’ordre" disabled/.test(rangs[0].innerHTML) && !/aria-label="Plus tard dans l’ordre" disabled/.test(rangs[0].innerHTML) && /aria-label="Plus tard dans l’ordre" disabled/.test(rangs[2].innerHTML) && !/aria-label="Plus tôt dans l’ordre" disabled/.test(rangs[2].innerHTML));
+  vrai('… sans passe à lui, aucun « prochain » : tous « À FAIRE »', rangs.slice(0, 3).every((d) => d.innerHTML.includes('À FAIRE')) && !rangs.some((d) => d.innerHTML.includes('PROCHAIN')));
+  a.routeActive(null); await a.run('renderListe()');
+  vrai('« toutes les routes » : aucune flèche (l\'ordre est propre à UNE route)', !a.elementsListe().some((d) => d.innerHTML.includes('ci-mv')));
+  a.fin();
+  const j = monde({ utilisateur: { id: 'u-luc', nom: 'Luc', role: 'employe' } }); await j.run('loadStops()'); j.routeActive(CH);
+  await j.run(`deplacerArret(null,${idx('s3')},-1)`);
+  eq('un employé qui appellerait quand même deplacerArret : rien n\'est écrit, rien ne change', [misesAJourOrdre(j), j.run('stops[' + idx('s3') + '].ordre')], [[], 2]);
+  j.fin();
+}
+{
+  const m = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await m.run('loadStops()'); m.routeActive(CH);
+  await m.run(`deplacerArret({stopPropagation(){}},${idx('s3')},-1)`);
+  eq('s3 monte : s3 et s2 ÉCHANGENT leurs valeurs d\'ordre (DEUX lignes seulement : s2 = 2, s3 = 1)', misesAJourOrdre(m), [['s2', 2], ['s3', 1]]);
+  eq('… la liste montre le nouvel ordre tout de suite (s3, s2, s4) et les valeurs locales sont à jour', [(await m.run('renderListe()'), adresses(m).slice(0, 3)), m.run('stops[' + idx('s3') + '].ordre'), m.run('stops[' + idx('s2') + '].ordre')], [['50 rue Notre-Dame', '220 rue du Moulin', '215 rue Bellerive'], 1, 2]);
+  eq('… aucune erreur, aucun message', [m.appels.toasts.length, m.run('_deplacementEnCours')], [0, false]);
+  const avant = m.appels.ecritures.length;
+  await m.run(`deplacerArret(null,${idx('s3')},-1)`);
+  eq('le premier client à faire ne peut pas monter (rien n\'est écrit)', m.appels.ecritures.length, avant);
+  await m.run(`deplacerArret(null,${idx('s4')},1)`);
+  eq('le dernier client à faire ne peut pas descendre (rien n\'est écrit)', m.appels.ecritures.length, avant);
+  await m.run(`deplacerArret(null,${idx('s1')},1)`);
+  eq('un client déjà FAIT ne se déplace pas (rien n\'est écrit)', m.appels.ecritures.length, avant);
+  m.fin();
+}
+{
+  // Deux clients de même ordre (rare) : la route est renumérotée, mais seules les lignes qui changent sont écrites
+  const m = monde({ utilisateur: ADMIN, tours: sansMaPasse(), stops: stopsAvec({ s3: 1 }) }); await m.run('loadStops()'); m.routeActive(CH);
+  await m.run(`deplacerArret(null,${idx('s3')},-1)`);
+  eq('s2 et s3 avaient le MÊME ordre (1) : s3 monte quand même, une seule ligne est écrite (s2 = 2)', [misesAJourOrdre(m), m.run('enOrdre(stops.filter(s=>s.route_id===' + JSON.stringify(CH) + ').filter(s=>!estFait(s))).map(s=>s.id)')], [[['s2', 2]], ['s3', 's2', 's4']]);
+  m.fin();
+}
+{
+  // Deux touchers rapprochés : un seul déplacement à la fois
+  const m = monde({ utilisateur: ADMIN, tours: sansMaPasse(), ecritures: { 'stops.update': () => new Promise((r) => setTimeout(() => r({ data: null, error: null }), 80)) } }); await m.run('loadStops()'); m.routeActive(CH);
+  const a = m.run(`deplacerArret(null,${idx('s3')},-1)`), b = m.run(`deplacerArret(null,${idx('s4')},-1)`);
+  await Promise.all([a, b]);
+  eq('deux touchers rapprochés : UN seul déplacement (deux lignes écrites, pas quatre)', misesAJourOrdre(m).length, 2);
+  m.fin();
+}
+{
+  // Le serveur refuse, ou le signal disparaît : l'ordre n'est pas gardé en silence
+  const r = monde({ utilisateur: ADMIN, tours: sansMaPasse(), ecritures: { 'stops.update': { data: null, error: { message: 'permission denied' } } } }); await r.run('loadStops()'); r.routeActive(CH);
+  const lecturesAvant = r.appels.lectures.filter((x) => x === 'stops').length;
+  await r.run(`deplacerArret(null,${idx('s3')},-1)`);
+  eq('le serveur REFUSE : message d\'erreur, l\'ordre est RELU (le serveur a le dernier mot) : s2 reste avant s3', [r.dernierToast(), r.appels.lectures.filter((x) => x === 'stops').length - lecturesAvant, r.run('stops[' + idx('s3') + '].ordre'), r.run('_deplacementEnCours')], ['❌ L’ordre n’a pas pu être enregistré.', 1, 2, false]);
+  r.fin();
+  const s = monde({ utilisateur: ADMIN, tours: sansMaPasse(), ecritures: { 'stops.update': { data: null, error: { message: 'Failed to fetch' } } } }); await s.run('loadStops()'); s.routeActive(CH);
+  await s.run(`deplacerArret(null,${idx('s3')},-1)`);
+  eq('le signal disparaît PENDANT l\'écriture : le dit et relit l\'ordre (s2 reste avant s3)', [s.dernierToast(), s.run('stops[' + idx('s3') + '].ordre')], ['📴 Le signal a disparu : l’ordre n’a pas été enregistré.', 2]);
+  s.fin();
+  const h = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await h.run('loadStops()'); h.routeActive(CH); h.run('reseau.enLigne=false');
+  await h.run(`deplacerArret(null,${idx('s3')},-1)`);
+  eq('sans réseau : « pas de réseau », RIEN n\'est changé ni écrit (un changement d\'ordre n\'est pas gardé pour plus tard)', [h.dernierToast(), misesAJourOrdre(h), h.run('stops[' + idx('s3') + '].ordre')], ['📴 Pas de réseau : l’ordre ne peut pas être changé maintenant.', [], 2]);
+  h.fin();
+}
+
+log('\n=== LES VRAIES FLÈCHES ▲ ▼, ET TOUT SE REDESSINE APRÈS UN DÉPLACEMENT ===');
+{
+  // On lit ce que CHAQUE bouton de la liste ferait au toucher (l'attribut onclick), puis on le lance : ▲ doit monter, ▼ doit descendre
+  const a = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await a.run('loadStops()'); a.routeActive(CH); await a.run('renderListe()');
+  const rang = (m, id) => m.elementsListe()[adresses(m).indexOf(STOPS[idx(id)].adresse)].innerHTML;
+  const appelDe = (html, etiquette) => (html.match(new RegExp('aria-label="' + etiquette + '"[^>]*onclick="(deplacerArret\\(event,\\d+,-?1\\))"')) || [])[1];
+  const haut = appelDe(rang(a, 's4'), 'Plus tôt dans l’ordre'), bas = appelDe(rang(a, 's2'), 'Plus tard dans l’ordre');
+  eq('▲ du client s4 appelle deplacerArret(s4, -1) ; ▼ du client s2 appelle deplacerArret(s2, 1)', [haut, bas], [`deplacerArret(event,${idx('s4')},-1)`, `deplacerArret(event,${idx('s2')},1)`]);
+  await a.run(haut.replace('event', 'null'));
+  eq('toucher ▲ sur s4 : s4 passe avant s3 (s3 = 3, s4 = 2)', misesAJourOrdre(a), [['s3', 3], ['s4', 2]]);
+  a.fin();
+  const b = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await b.run('loadStops()'); b.routeActive(CH); await b.run('renderListe()');
+  await b.run(appelDe(rang(b, 's2'), 'Plus tard dans l’ordre').replace('event', 'null'));
+  eq('toucher ▼ sur s2 : s2 passe après s3 (s2 = 2, s3 = 1)', misesAJourOrdre(b), [['s2', 2], ['s3', 1]]);
+  b.fin();
+}
+{
+  // L'administrateur conduit aussi un camion : après un déplacement, la liste OUVERTE, la carte et le bandeau montrent le nouvel ordre sans rien toucher d'autre
+  const m = monde({ utilisateur: ADMIN }); await m.run('loadStops()'); m.routeActive(CH); await m.run('openListe()');
+  vrai('au départ : la liste ouverte commence par s2 (le prochain client)', adresses(m)[0] === '220 rue du Moulin', adresses(m).join(' | '));
+  const avant = m.marqueurs.length;
+  await m.run(`deplacerArret(null,${idx('s3')},-1)`);
+  const neufs = m.marqueurs.slice(avant), gros = neufs.filter((x) => x.opt.icon.html.includes('border:3px solid #fff'));
+  eq('la CARTE est redessinée : le marqueur cerclé de blanc est maintenant celui de s3 (le nouveau prochain client)', [neufs.length > 0, gros.length, gros[0] && gros[0].ll], [true, 1, [STOPS[idx('s3')].lat, STOPS[idx('s3')].lon]]);
+  eq('la LISTE ouverte est redessinée : s3 en premier, marqué « ▶ PROCHAIN »', [adresses(m).slice(0, 2), m.elementsListe()[0].innerHTML.includes('▶ PROCHAIN')], [['50 rue Notre-Dame', '220 rue du Moulin'], true]);
+  vrai('le BANDEAU montre le nouveau prochain client (s3)', m.el('passe-bandeau').innerHTML.includes('▶ 50 rue Notre-Dame'), m.el('passe-bandeau').innerHTML);
+  m.fin();
+  const f = monde({ utilisateur: ADMIN }); await f.run('loadStops()'); f.routeActive(CH);
+  await f.run(`deplacerArret(null,${idx('s3')},-1)`);
+  vrai('la liste FERMÉE n\'est pas redessinée pour rien (elle se dessine à l\'ouverture)', f.el('liste-body').children.length === 0);
+  f.fin();
+}
+{
+  // Les clients FAITS suivent eux aussi l'ordre de la route (s2 = 0 passe avant s1 = 5)
+  const d = monde({ stops: stopsAvec({ s1: 5, s2: 0 }), tours: TOURS().map((t2) => (t2.tache === MEC ? { ...t2, faits: 2, pourcentage: 66, arrets_faits: ['s1', 's2'] } : t2)) }); await d.run('loadStops()'); d.routeActive(CH); await d.run('renderListe()');
+  eq('les clients à faire (s3, s4) puis les FAITS dans l\'ordre de la route : s2 (ordre 0) avant s1 (ordre 5)', [adresses(d).slice(0, 3), adresses(d)[3].includes('Église')], [['50 rue Notre-Dame', '215 rue Bellerive', '220 rue du Moulin'], true]);
+  d.fin();
+}
+
+log('\n=== LE PARCOURS DANS GOOGLE MAPS (les clients restants, dans l\'ordre, un seul lien) ===');
+{
+  const m = monde(); await m.run('loadStops()');
+  const u = m.run('urlParcoursGoogle()');
+  eq('Luc : reste s2 puis s3 : arrivée = s3, étape = s2, en voiture, SANS point de départ (Google prend la position du téléphone)', u, 'https://www.google.com/maps/dir/?api=1&destination=46.439,-72.926&waypoints=46.443%2C-72.922&travelmode=driving');
+  vrai('… pas de « origin= » dans le lien', !u.includes('origin='));
+  m.routeActive(CH); await m.run('renderListe()');
+  vrai('la liste offre le bouton « 🧭 Parcours dans Google Maps · 2 clients », relié à ouvrirParcoursGoogle()', /<button type="button" class="lf-btn parcours" onclick="ouvrirParcoursGoogle\(\)">🧭 Parcours dans Google Maps · 2 clients<\/button>/.test(m.el('liste-parcours').innerHTML), m.el('liste-parcours').innerHTML);
+  await m.run('ouvrirParcoursGoogle()');
+  eq('le bouton ouvre ce lien dans un nouvel onglet', m.appels.ouverts, [u]);
+  m.fin();
+  const un = monde({ tours: TOURS().map((t2) => (t2.tache === MEC ? { ...t2, faits: 2, pourcentage: 66, arrets_faits: ['s1', 's2'] } : t2)) }); await un.run('loadStops()');
+  eq('un seul client restant : arrivée seulement, aucune étape (« waypoints » absent)', un.run('urlParcoursGoogle()'), 'https://www.google.com/maps/dir/?api=1&destination=46.439,-72.926&travelmode=driving');
+  un.routeActive(CH); await un.run('renderListe()');
+  vrai('… « 1 client » au singulier', un.el('liste-parcours').innerHTML.includes('· 1 client<'), un.el('liste-parcours').innerHTML);
+  un.fin();
+  const a = monde({ utilisateur: ADMIN, tours: sansMaPasse() }); await a.run('loadStops()'); a.routeActive(CH); await a.run('renderListe()');
+  await a.run('ouvrirParcoursGoogle()');
+  eq('sans passe : pas de bouton, et si on l\'appelle : un message, aucune fenêtre ouverte', [a.el('liste-parcours').innerHTML, a.dernierToast(), a.appels.ouverts], ['', 'Aucun client à faire pour ta passe.', []]);
+  a.fin();
+}
+{
+  // Plus de 10 clients à faire : les 10 prochains seulement (9 étapes + l'arrivée, la limite d'un lien Google Maps)
+  const douze = Array.from({ length: 12 }, (_, i) => ({ id: 'c' + (i + 1), adresse: 'rue ' + (i + 1), client: 'C' + (i + 1), route_id: CH, service: MEC, lat: 46 + i / 100, lon: -72 - i / 100, ordre: i, actif: true }));
+  const m = monde({ stops: douze, tours: [{ route_id: CH, tache: MEC, numero: 1, total: 12, faits: 0, pourcentage: 0, arrets_faits: [], passes: [{ passe_id: 'p-luc', equipe_id: 'e1', chauffeur_id: 'u-luc', je_suis_chauffeur: true, je_suis_a_bord: true }] }] }); await m.run('loadStops()');
+  const u = decodeURIComponent(m.run('urlParcoursGoogle()'));
+  const etapes = (u.match(/waypoints=([^&]*)/)?.[1] ?? '').split('|');
+  eq('12 clients à faire : les 10 premiers seulement : 9 étapes (c1 à c9) et l\'arrivée c10', [etapes.length, etapes[0], etapes[8], u.match(/destination=([^&]*)/)[1]], [9, '46,-72', '46.08,-72.08', '46.09,-72.09']);
+  m.routeActive(CH); await m.run('renderListe()');
+  vrai('… le bouton annonce 10 clients (pas 12)', m.el('liste-parcours').innerHTML.includes('· 10 clients<'), m.el('liste-parcours').innerHTML);
+  m.fin();
+}
+
+log('\n=== LES ARRÊTS QUI CHANGENT SONT RELUS UNE SEULE FOIS ===');
+{
+  const m = monde(); await m.run('loadStops()');
+  const avant = m.appels.lectures.filter((x) => x === 'stops').length;
+  m.run('planifierRechargementArrets();planifierRechargementArrets();planifierRechargementArrets()');
+  await attendre(1200);
+  eq('trois changements d\'arrêts d\'un coup (déplacer un client en modifie deux) : UNE seule relecture', m.appels.lectures.filter((x) => x === 'stops').length - avant, 1);
+  m.fin();
+}
+
+log('\n=== LE CODE : ORDRE, PARCOURS, PAGE ===');
+{
+  const page = lire('index.html'), css = lire('css/style.css'), carte = lire('js/carte.js'), ordre = lire('js/ordre.js');
+  vrai('la page charge ordre.js après liste-arrets.js et avant tracking.js, et a la place du bouton « Parcours »', page.indexOf('js/liste-arrets.js') < page.indexOf('js/ordre.js') && page.indexOf('js/ordre.js') < page.indexOf('js/tracking.js') && page.includes('id="liste-parcours"'));
+  vrai('les changements d\'arrêts en temps réel passent par le regroupement (planifierRechargementArrets)', /table:'stops'\},\(\)=>planifierRechargementArrets\(\)/.test(carte));
+  vrai('le lien Google Maps : au plus 10 clients (9 étapes + l\'arrivée), pas de départ imposé, en voiture', /const MAX_ETAPES_GOOGLE=10;/.test(ordre) && /travelmode=driving/.test(ordre) && !/origin/.test(ordre.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')));
+  vrai('SEUL l\'administrateur, avec une route choisie, change l\'ordre', /return !!\(currentUser&&currentUser\.role==='admin'&&routeActive!==null\);/.test(ordre));
+  vrai('l\'ordre s\'écrit dans stops.ordre par « update » (règle stops_admin : pas de SQL) et jamais autrement', /db\.from\('stops'\)\.update\(\{ordre:valeurOrdre\(x\)\}\)\.eq\('id',x\.id\)/.test(ordre));
+  vrai('le style : l\'adresse d\'un client passe sur 2 lignes au plus (les flèches ▲ ▼ prennent de la place), sans être coupée sur une seule', /\.ci-addr\{[^}]*-webkit-line-clamp:2/.test(css) && !/\.ci-addr\{[^}]*white-space:nowrap/.test(css));
+  vrai('le style : le prochain client, les flèches (40 px), le bouton Google Maps',/\.ci\.ci-prochain\{[^}]*box-shadow:inset 3px 0 0/.test(css) && /\.ci-mv\{width:40px;height:40px/.test(css) && /\.lf-btn\.parcours\{width:100%;min-height:48px/.test(css) && /\.passe-prochain\{[^}]*color:var\(--accent\)/.test(css));
 }
 
 tousLesMondes.forEach((w) => w.fin());

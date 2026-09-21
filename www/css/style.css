@@ -136,7 +136,7 @@
 .ci-diamond.todo{background:#c8e63c;}
 .ci-diamond.done{background:#4ade80;}
 .ci-info{flex:1;min-width:0;}
-.ci-addr{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#f0f4f8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ci-addr{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;color:#f0f4f8;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow-wrap:anywhere;}   /* 2 lignes au plus : avec les flèches ▲▼ (étape 18b) il reste peu de largeur */
 .ci-addr.done{color:#6b7a8d;text-decoration:line-through;}
 .ci-svc{font-size:11px;color:#6b7a8d;margin-top:1px;}
 .ci-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;}
@@ -146,6 +146,16 @@
 .lf-btn{flex:1;padding:12px;border-radius:10px;border:none;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
 .lf-btn.fermer{background:#252d3a;color:#6b7a8d;}
 .lf-btn.nouveau{background:#c8e63c;color:#111;}
+/* Étape 18b (ordre.js) : le prochain client dans la liste, les flèches ▲ ▼ de l'administrateur, le bouton « Parcours dans Google Maps » */
+.ci-badge.prochain{background:#c8e63c;color:#111;}
+.ci.ci-prochain{background:rgba(200,230,60,.08);box-shadow:inset 3px 0 0 #c8e63c;}
+.ci-mv-groupe{display:flex;gap:6px;flex-shrink:0;}
+.ci-mv{width:40px;height:40px;border:1px solid #252d3a;border-radius:10px;background:#161c24;color:#f0f4f8;font-size:16px;cursor:pointer;}
+.ci-mv:active{filter:brightness(.85);}
+.ci-mv:disabled{opacity:.25;cursor:default;}
+#liste-parcours{flex-shrink:0;padding:0 16px;}
+#liste-parcours:not(:empty){padding-top:10px;}
+.lf-btn.parcours{width:100%;min-height:48px;background:#1d4ed8;color:#fff;font-size:17px;}
     /* STOP CARD */
     #stop-card{
       position:absolute;bottom:calc(72px + var(--sa-bottom));left:0;right:0;z-index:950;
@@ -373,6 +383,11 @@
 .passe-encours{padding:5px 10px 6px;gap:10px;cursor:pointer;}
 .passe-infos{flex:1;min-width:0;}
 .passe-barre{height:4px;background:#252d3a;border-radius:2px;overflow:hidden;margin-top:4px;}
+/* Le prochain client (ordre.js) : une ligne du bandeau qu'on touche pour ouvrir la fiche du client ; la zone de toucher dépasse un peu la ligne (padding, marge négative) */
+.passe-prochain,.passe-prochain-fini{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.passe-prochain{padding:5px 0;margin:-5px 0;border:none;background:none;font:inherit;font-weight:700;color:var(--accent);cursor:pointer;pointer-events:all;}
+.passe-prochain:active{opacity:.7;}
+.passe-prochain-fini{color:var(--muted);}
 /* Le bandeau se réduit d'un toucher sur la carte (le chauffeur voit alors seulement le pourcentage) ; le choix est gardé sur le téléphone */
 .passe-chevron{flex-shrink:0;font-size:16px;color:var(--muted);line-height:1;}
 .passe-chevron::before{content:'▾';}
@@ -483,6 +498,15 @@
 .geste-ref .geste-raison{color:#fecaca;}
 .geste-fermer{margin-top:8px;min-height:44px;width:100%;border:none;border-radius:10px;background:#252d3a;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;cursor:pointer;}
 #map,.leaflet-container{background:#0c1117;}
+
+/* Étape 18b : la boussole de la carte (plugin vendor/leaflet-rotate, licence MIT). Nord VERROUILLÉ par défaut (aiguille grise) ; un toucher active la rotation à deux
+   doigts (aiguille en couleur, contour vert) ; un deuxième toucher remet le nord en haut et reverrouille. Placée sous les trois boutons ronds (satellite, plan, position). */
+:root{--lrc-control-bg:#1a1f26;--lrc-control-hover:#252d3a;--lrc-control-size:44px;}
+.leaflet-top.leaflet-right{margin-top:calc(244px + var(--sa-top));}
+.leaflet-right .leaflet-control-rotate.leaflet-bar{margin:0 12px 0 0;border:1px solid var(--border);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.4);overflow:hidden;}
+.leaflet-control-rotate.leaflet-bar a,.leaflet-touch .leaflet-control-rotate.leaflet-bar a{width:44px;height:44px;line-height:44px;background-color:var(--lrc-control-bg);border-radius:10px;border-bottom:none;}
+.leaflet-control-rotate.leaflet-bar a:hover,.leaflet-touch .leaflet-control-rotate.leaflet-bar a:hover{background-color:var(--lrc-control-hover);}
+.leaflet-control-rotate:not(.leaflet-control-rotate--inactive){border-color:var(--accent);}
 
 /* Étape 17, morceau 2 : le punch — « JE COMMENCE » à l'ouverture (écran plein), la confirmation de l'heure, « JE TERMINE » (quart-ecrans.js).
    Sous le message flottant (3000) pour qu'un message d'erreur reste visible ; sous le résumé de passe (3600) et les boîtes de confirmation (4000). */

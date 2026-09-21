@@ -6,7 +6,11 @@ leaflet.js, leaflet.css, images/*    Leaflet 1.9.4 (licence BSD-2-Clause)   http
 supabase.min.js                      supabase-js 2.116.0, version UMD (licence MIT)   https://github.com/supabase/supabase-js
                                      source : https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js (téléchargé le 20 septembre 2026)
 
-SHA-256 (début) : leaflet.js 5c9aecfc30e45645 · leaflet.css b570abbda963c60b · supabase.min.js fbde52aab1700a3b
+leaflet-rotate.umd.min.js,           @tomickigrzegorz/leaflet-rotate 0.2.4 (licence MIT, © 2026 Grzegorz Tomicki : texte dans LICENSE-leaflet-rotate.txt), la rotation de la carte
+leaflet-rotate.css                   (étape 18b, 21 septembre 2026) ; se charge APRÈS leaflet.js ; source : https://www.npmjs.com/package/@tomickigrzegorz/leaflet-rotate
+                                     ⚠ NE PAS remplacer par « leaflet-rotate » de Raruto ni « @vpulim/leaflet-rotate » : licence GPL-3.0 (incompatible avec un produit à vendre)
+
+SHA-256 (début) : leaflet.js 5c9aecfc30e45645 · leaflet.css b570abbda963c60b · supabase.min.js fbde52aab1700a3b · leaflet-rotate.umd.min.js 543dab62fed6b85c · leaflet-rotate.css fde9c7ff97be5908
 
 Ce qui reste chargé depuis Internet (l'application marche sans, en moins joli) :
   • les polices Barlow (Google Fonts) : sans réseau, le téléphone utilise une police de secours ;

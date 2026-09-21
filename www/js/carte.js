@@ -9,7 +9,9 @@ function initApp(){
 
   // Carte
   try{
-    map = L.map('map',{center:[46.55,-72.75],zoom:14,zoomControl:false});
+    // La rotation (étape 18b, plugin vendor/leaflet-rotate) : NORD VERROUILLÉ par défaut ; la boussole (sous les boutons ronds) active la rotation à deux doigts,
+    // un deuxième toucher remet le nord en haut et reverrouille. Sans le plugin (fichier absent), ces options sont ignorées : la carte marche, sans pivoter.
+    map = L.map('map',{center:[46.55,-72.75],zoom:14,zoomControl:false,rotate:true,bearing:0,touchRotate:true,dragRotate:true,shiftKeyRotate:false,rotateControl:{position:'topright',behavior:'toggle',enabled:false}});
   } catch(e){
     showErr('Erreur carte: '+esc(e.message)); return;
   }
@@ -69,7 +71,7 @@ function initApp(){
   // on relit seulement les tours (une seule fois même si plusieurs changements arrivent d'un coup). Chacun ne reçoit
   // que ce que les règles d'accès lui permettent de voir.
   db.channel('stops-changes')
-    .on('postgres_changes',{event:'*',schema:'public',table:'stops'},()=>loadStops())
+    .on('postgres_changes',{event:'*',schema:'public',table:'stops'},()=>planifierRechargementArrets())   // (regroupées : l'ordre des clients change deux lignes à la fois)
     .on('postgres_changes',{event:'*',schema:'public',table:'passes'},()=>planifierRechargementTours())
     .on('postgres_changes',{event:'*',schema:'public',table:'passe_arrets'},()=>planifierRechargementTours())
     .on('postgres_changes',{event:'*',schema:'public',table:'positions'},()=>planifierRechargementPositions())

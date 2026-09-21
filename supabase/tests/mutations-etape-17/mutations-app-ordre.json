@@ -1,0 +1,302 @@
+[
+  {
+    "nom": "l'ordre ne décide plus (les clients restent dans l'ordre de lecture)",
+    "fichier": "js/ordre.js",
+    "de": "return liste.map((s,i)=>({s,i})).sort((a,b)=>valeurOrdre(a.s)-valeurOrdre(b.s)||a.i-b.i).map(x=>x.s);",
+    "vers": "return liste.slice();"
+  },
+  {
+    "nom": "à égalité d'ordre, l'ordre de départ n'est plus gardé",
+    "fichier": "js/ordre.js",
+    "de": "valeurOrdre(a.s)-valeurOrdre(b.s)||a.i-b.i",
+    "vers": "valeurOrdre(a.s)-valeurOrdre(b.s)||b.i-a.i"
+  },
+  {
+    "nom": "une valeur d'ordre illisible fait planter ou devient NaN",
+    "fichier": "js/ordre.js",
+    "de": "return isFinite(n)?n:0;",
+    "vers": "return n;"
+  },
+  {
+    "nom": "le prochain client ne tient plus compte du type de service de la passe",
+    "fichier": "js/ordre.js",
+    "de": "&&s.service===t.tache&&s.lat&&s.lon&&!estFait(s)",
+    "vers": "&&s.lat&&s.lon&&!estFait(s)"
+  },
+  {
+    "nom": "le prochain client peut être un client déjà fait",
+    "fichier": "js/ordre.js",
+    "de": "&&s.service===t.tache&&s.lat&&s.lon&&!estFait(s)",
+    "vers": "&&s.service===t.tache&&s.lat&&s.lon"
+  },
+  {
+    "nom": "un client sans position est proposé comme prochain",
+    "fichier": "js/ordre.js",
+    "de": "&&s.service===t.tache&&s.lat&&s.lon&&!estFait(s)",
+    "vers": "&&s.service===t.tache&&!estFait(s)"
+  },
+  {
+    "nom": "le prochain client est celui d'une autre route",
+    "fichier": "js/ordre.js",
+    "de": "stops.filter(s=>s.route_id===t.route_id&&s.actif!==false",
+    "vers": "stops.filter(s=>s.actif!==false"
+  },
+  {
+    "nom": "un passager ne voit plus le prochain client du camion",
+    "fichier": "js/ordre.js",
+    "de": "  const b=(typeof monBord==='function')?monBord():null;\n  return b?b.tour:null;",
+    "vers": "  return null;"
+  },
+  {
+    "nom": "toucher le prochain client ne réduit plus SEULEMENT le bandeau : il l'ouvre aussi (pas de stopPropagation)",
+    "fichier": "js/ordre.js",
+    "de": "  if(e&&e.stopPropagation) e.stopPropagation();   // (le bandeau se réduit au toucher : pas ici)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "toucher le prochain client n'ouvre plus sa fiche",
+    "fichier": "js/ordre.js",
+    "de": "  if(i>=0) openCard(i);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "le lien Google Maps impose un point de départ",
+    "fichier": "js/ordre.js",
+    "de": "'https://www.google.com/maps/dir/?api=1&destination='",
+    "vers": "'https://www.google.com/maps/dir/?api=1&origin=Current+Location&destination='"
+  },
+  {
+    "nom": "le lien Google Maps a plus de 10 clients",
+    "fichier": "js/ordre.js",
+    "de": "const MAX_ETAPES_GOOGLE=10;",
+    "vers": "const MAX_ETAPES_GOOGLE=25;"
+  },
+  {
+    "nom": "le lien Google Maps n'a plus d'étapes intermédiaires",
+    "fichier": "js/ordre.js",
+    "de": "const etapes=l.slice(0,-1).map(pt).join('|');",
+    "vers": "const etapes='';"
+  },
+  {
+    "nom": "le lien Google Maps ne passe pas en voiture",
+    "fichier": "js/ordre.js",
+    "de": "+'&travelmode=driving';",
+    "vers": "+'&travelmode=walking';"
+  },
+  {
+    "nom": "le bouton Google Maps n'ouvre rien",
+    "fichier": "js/ordre.js",
+    "de": "  window.open(u,'_blank');",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un employé peut changer l'ordre",
+    "fichier": "js/ordre.js",
+    "de": "return !!(currentUser&&currentUser.role==='admin'&&routeActive!==null);",
+    "vers": "return !!(currentUser&&routeActive!==null);"
+  },
+  {
+    "nom": "l'ordre peut être changé sans route choisie (toutes les routes)",
+    "fichier": "js/ordre.js",
+    "de": "return !!(currentUser&&currentUser.role==='admin'&&routeActive!==null);",
+    "vers": "return !!(currentUser&&currentUser.role==='admin');"
+  },
+  {
+    "nom": "deux déplacements peuvent courir en même temps",
+    "fichier": "js/ordre.js",
+    "de": "  if(_deplacementEnCours||!peutChangerOrdre()) return;",
+    "vers": "  if(!peutChangerOrdre()) return;"
+  },
+  {
+    "nom": "on peut déplacer un client déjà fait",
+    "fichier": "js/ordre.js",
+    "de": "const groupe=enOrdre(arretsVisibles().filter(x=>!estFait(x)));",
+    "vers": "const groupe=enOrdre(arretsVisibles());"
+  },
+  {
+    "nom": "sans réseau, l'ordre est changé chez soi seulement",
+    "fichier": "js/ordre.js",
+    "de": "  if(!reseau.enLigne){toast('📴 Pas de réseau : l’ordre ne peut pas être changé maintenant.');return;}",
+    "vers": "  ;"
+  },
+  {
+    "nom": "les deux clients n'échangent plus leurs valeurs (un seul est écrit)",
+    "fichier": "js/ordre.js",
+    "de": "s.ordre=b;voisin.ordre=a;",
+    "vers": "s.ordre=b;"
+  },
+  {
+    "nom": "toutes les lignes de la route sont réécrites à chaque déplacement",
+    "fichier": "js/ordre.js",
+    "de": "const changes=stops.filter(x=>valeurOrdre(x)!==avant.get(x));",
+    "vers": "const changes=stops.filter(x=>x.route_id===s.route_id);"
+  },
+  {
+    "nom": "deux clients de même ordre ne sont pas renumérotés",
+    "fichier": "js/ordre.js",
+    "de": "    if(valeurOrdre(s)===valeurOrdre(voisin)){\n      enOrdre(stops.filter(x=>x.route_id===s.route_id)).forEach((x,i)=>{x.ordre=i;});\n    }",
+    "vers": ""
+  },
+  {
+    "nom": "un refus du serveur ne prévient pas et ne relit pas l'ordre",
+    "fichier": "js/ordre.js",
+    "de": "    if(refus){\n      toast(estErreurReseau(refus)?'📴 Le signal a disparu : l’ordre n’a pas été enregistré.':'❌ L’ordre n’a pas pu être enregistré.');\n      if(estErreurReseau(refus)) signalerEchecReseau(refus);\n      await loadStops();   // le serveur a le dernier mot : on relit l'ordre\n    }",
+    "vers": ""
+  },
+  {
+    "nom": "un refus du serveur est pris pour une panne de réseau",
+    "fichier": "js/ordre.js",
+    "de": "toast(estErreurReseau(refus)?'📴 Le signal a disparu : l’ordre n’a pas été enregistré.':'❌ L’ordre n’a pas pu être enregistré.');",
+    "vers": "toast('📴 Le signal a disparu : l’ordre n’a pas été enregistré.');"
+  },
+  {
+    "nom": "le verrou du déplacement n'est jamais rendu",
+    "fichier": "js/ordre.js",
+    "de": "    _deplacementEnCours=false;\n    renderAll();",
+    "vers": "    renderAll();"
+  },
+  {
+    "nom": "la carte n'est pas redessinée après un déplacement",
+    "fichier": "js/ordre.js",
+    "de": "    _deplacementEnCours=false;\n    renderAll();\n",
+    "vers": "    _deplacementEnCours=false;\n"
+  },
+  {
+    "nom": "la liste n'est pas redessinée après un déplacement",
+    "fichier": "js/ordre.js",
+    "de": "    if(document.getElementById('liste-overlay').classList.contains('open')) renderListe();",
+    "vers": "    ;"
+  },
+  {
+    "nom": "la liste ne suit plus l'ordre (clients à faire)",
+    "fichier": "js/liste-arrets.js",
+    "de": "  const aFaire=enOrdreOuTel(todo);",
+    "vers": "  const aFaire=todo;"
+  },
+  {
+    "nom": "la liste ne suit plus l'ordre (clients faits)",
+    "fichier": "js/liste-arrets.js",
+    "de": "  const sorted=[...aFaire,...enOrdreOuTel(done)];",
+    "vers": "  const sorted=[...aFaire,...done];"
+  },
+  {
+    "nom": "le prochain client n'est plus marqué dans la liste",
+    "fichier": "js/liste-arrets.js",
+    "de": "    const estProchain=!fait&&s===prochain;",
+    "vers": "    const estProchain=false;"
+  },
+  {
+    "nom": "les flèches apparaissent pour tout le monde",
+    "fichier": "js/liste-arrets.js",
+    "de": "  const ordonnable=(typeof peutChangerOrdre==='function')&&peutChangerOrdre();",
+    "vers": "  const ordonnable=true;"
+  },
+  {
+    "nom": "les flèches apparaissent aussi sur les clients faits",
+    "fichier": "js/liste-arrets.js",
+    "de": "const fleches=(ordonnable&&!fait)",
+    "vers": "const fleches=(ordonnable)"
+  },
+  {
+    "nom": "« ▲ » n'est pas grisé pour le premier client",
+    "fichier": "js/liste-arrets.js",
+    "de": "(i===0?' disabled':'')",
+    "vers": "('')"
+  },
+  {
+    "nom": "« ▼ » n'est pas grisé pour le dernier client à faire",
+    "fichier": "js/liste-arrets.js",
+    "de": "(i===aFaire.length-1?' disabled':'')",
+    "vers": "('')"
+  },
+  {
+    "nom": "la flèche ▲ descend au lieu de monter",
+    "fichier": "js/liste-arrets.js",
+    "de": "onclick=\"deplacerArret(event,'+idx+',-1)\">▲",
+    "vers": "onclick=\"deplacerArret(event,'+idx+',1)\">▲"
+  },
+  {
+    "nom": "le bouton Google Maps de la liste n'apparaît jamais",
+    "fichier": "js/liste-arrets.js",
+    "de": "zoneParcours.innerHTML=n?'<button",
+    "vers": "zoneParcours.innerHTML=false?'<button"
+  },
+  {
+    "nom": "le bouton Google Maps annonce un mauvais nombre de clients",
+    "fichier": "js/liste-arrets.js",
+    "de": "Math.min(clientsRestants().length,MAX_ETAPES_GOOGLE)",
+    "vers": "clientsRestants().length"
+  },
+  {
+    "nom": "le bandeau ne montre plus le prochain client",
+    "fichier": "js/passe.js",
+    "de": "prochain=p?'<button type=\"button\" class=\"passe-prochain\" onclick=\"ouvrirProchain(event)\">▶ '+esc(p.adresse)+'</button>'",
+    "vers": "prochain=p?''"
+  },
+  {
+    "nom": "le bandeau ne dit plus « Tous les clients sont faits »",
+    "fichier": "js/passe.js",
+    "de": "(pct>=100?'✔ Tous les clients sont faits':'Aucun client à faire')",
+    "vers": "'Aucun client à faire'"
+  },
+  {
+    "nom": "le marqueur du prochain client n'est plus plus gros",
+    "fichier": "js/arrets.js",
+    "de": "const s=prochain?24:(done&&!hasProb?14:18);",
+    "vers": "const s=(done&&!hasProb?14:18);"
+  },
+  {
+    "nom": "le marqueur du prochain client n'a plus de halo blanc",
+    "fichier": "js/arrets.js",
+    "de": "const halo=prochain?'border:3px solid #fff;",
+    "vers": "const halo=false?'border:3px solid #fff;"
+  },
+  {
+    "nom": "la carte ne marque plus le prochain client",
+    "fichier": "js/arrets.js",
+    "de": "mkIcon(estFait(s),aProbleme(s),estEnCours(s),s===prochain)",
+    "vers": "mkIcon(estFait(s),aProbleme(s),estEnCours(s),false)"
+  },
+  {
+    "nom": "les changements d'arrêts ne sont plus regroupés",
+    "fichier": "js/arrets.js",
+    "de": "  _tRechargeArrets=setTimeout(()=>{loadStops();},800);",
+    "vers": "  loadStops();"
+  },
+  {
+    "nom": "la carte relit les arrêts à chaque changement (sans regrouper)",
+    "fichier": "js/carte.js",
+    "de": "table:'stops'},()=>planifierRechargementArrets())",
+    "vers": "table:'stops'},()=>loadStops())"
+  },
+  {
+    "nom": "la page ne charge plus ordre.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/ordre.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "la page n'a plus la place du bouton Google Maps",
+    "fichier": "index.html",
+    "de": "    <div id=\"liste-parcours\"></div>\n",
+    "vers": ""
+  },
+  {
+    "nom": "le prochain client n'est plus mis en évidence dans la liste (style)",
+    "fichier": "css/style.css",
+    "de": ".ci.ci-prochain{background:rgba(200,230,60,.08);box-shadow:inset 3px 0 0 #c8e63c;}",
+    "vers": ".ci.ci-prochain{}"
+  },
+  {
+    "nom": "les flèches redeviennent minuscules",
+    "fichier": "css/style.css",
+    "de": ".ci-mv{width:40px;height:40px;",
+    "vers": ".ci-mv{width:20px;height:20px;"
+  },
+  {
+    "nom": "l'adresse d'un client est de nouveau coupée sur une seule ligne",
+    "fichier": "css/style.css",
+    "de": "line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;",
+    "vers": "white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+  }
+]

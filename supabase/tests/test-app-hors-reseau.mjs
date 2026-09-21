@@ -5,7 +5,8 @@ import vm from 'vm';
 import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-const WWW = fileURLToPath(new URL('../../www/', import.meta.url));
+// WWW_TEST : un autre dossier « www » (les erreurs volontaires modifient une COPIE du code, jamais le vrai)
+const WWW = process.env.WWW_TEST ? process.env.WWW_TEST.split('\\').join('/').replace(/\/?$/, '/') : fileURLToPath(new URL('../../www/', import.meta.url));
 
 let ok = 0, ko = 0;
 const log = (s) => console.log(s);
@@ -364,6 +365,15 @@ log('\n=== LE CODE : plus aucune dépendance à Internet au démarrage ===');
   vrai('la note des versions dit ce qui est copié et ce qui reste sur Internet (polices, fond de carte)', /Leaflet 1\.9\.4/.test(notes) && /supabase-js 2\.\d+\.\d+/.test(notes) && /polices/.test(notes) && /fond de carte/.test(notes));
   vrai('la page charge hors-reseau.js avant auth.js, et a la bande « hors réseau »', html.indexOf('js/hors-reseau.js') > 0 && html.indexOf('js/hors-reseau.js') < html.indexOf('js/auth.js') && html.includes('id="bandeau-reseau"'));
   vrai('la bande « hors réseau » ne bloque aucun toucher, et le fond de carte est sombre quand le fond satellite manque', /#bandeau-reseau\{[^}]*pointer-events:none/.test(css) && /#map,\.leaflet-container\{background:#0c1117/.test(css));
+  // — La rotation de la carte (étape 18b, demande de Joé : « permettre à la carte de pivoter ou être bloquée sur direction nord ») —
+  const carte = lire('js/carte.js'), rot = fichier('leaflet-rotate.umd.min.js').toString();
+  eq('la rotation est COPIÉE dans l\'application (jamais chargée d\'Internet) : les empreintes de la note vendor/VERSIONS.txt', [sha('leaflet-rotate.umd.min.js').slice(0, 16), sha('leaflet-rotate.css').slice(0, 16)], ['543dab62fed6b85c', 'fde9c7ff97be5908']);
+  vrai('licence MIT (le plugin GPL-3.0 « leaflet-rotate » de Raruto est INTERDIT : incompatible avec un produit à vendre) : en-tête, fichier de licence et note', /^\/\*! @tomickigrzegorz\/leaflet-rotate v0\.2\.4 \| MIT \*\//.test(rot) && /^MIT License/.test(lire('vendor/LICENSE-leaflet-rotate.txt')) && /@tomickigrzegorz\/leaflet-rotate 0\.2\.4 \(licence MIT/.test(notes) && /GPL-3\.0/.test(notes) && !/GNU GENERAL PUBLIC LICENSE|GPL-3\.0/.test(rot));
+  vrai('le plugin ne va chercher RIEN sur Internet (aucune adresse, sauf l\'espace de noms SVG)', (rot.match(/https?:\/\/[^"'\s)]+/g) || []).every((u) => u === 'http://www.w3.org/2000/svg'));
+  vrai('la page charge la feuille de style de la boussole, avant celle de l\'application, et ne va toujours chercher sur Internet que les polices', html.indexOf('href="vendor/leaflet.css"') < html.indexOf('href="vendor/leaflet-rotate.css"') && html.indexOf('href="vendor/leaflet-rotate.css"') < html.indexOf('href="css/style.css"'));
+  vrai('le plugin se charge APRÈS Leaflet, et son absence ne bloque PAS l\'application (la carte marche alors, sans pivoter)', /loadScript\('vendor\/leaflet\.js'\)\.then\(\(\)=>loadScript\('vendor\/leaflet-rotate\.umd\.min\.js'\)\.catch\(\(\)=>\{\}\)\)/.test(demarrage));
+  vrai('la carte : rotation permise, deux doigts, NORD VERROUILLÉ au départ (boussole en mode « toggle », désactivée), en haut à droite', /rotate:true,bearing:0,touchRotate:true/.test(carte) && /rotateControl:\{position:'topright',behavior:'toggle',enabled:false\}/.test(carte));
+  vrai('la boussole se range sous les trois boutons ronds (44 px, même style, 8 px d\'écart) et l\'aiguille en couleur montre la rotation active', /\.leaflet-top\.leaflet-right\{margin-top:calc\(244px \+ var\(--sa-top\)\);\}/.test(css) && /--lrc-control-size:44px/.test(css) && /\.leaflet-control-rotate:not\(\.leaflet-control-rotate--inactive\)\{border-color:var\(--accent\);\}/.test(css));
   vrai('rien de secret dans les copies ni dans le code hors réseau (aucune clé de service, aucun NIP)', !/service_role|sb_secret|nip|password/i.test(lire('js/hors-reseau.js').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n')));
   vrai('le code de la sonde n\'envoie que la clé PUBLIQUE et ne lit rien : c\'est une simple demande d\'état', /\/auth\/v1\/health/.test(lire('js/hors-reseau.js')) && /headers:\{apikey:SUPA_KEY\}/.test(lire('js/hors-reseau.js')));
 }

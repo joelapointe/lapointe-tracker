@@ -113,7 +113,7 @@ function monde(o = {}) {
     ...(o.navigateur ? { navigator: o.navigateur } : {}),   // (étape 17, morceau 3 : un faux GPS de navigateur, voir fauxGps)
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/position.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/quart.js', 'js/quart-ecrans.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
+  for (const f of ['js/config.js', 'js/position.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/quart.js', 'js/quart-ecrans.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/problemes.js', 'js/photos.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map;', ctx);
   vm.runInContext('currentUser = ' + JSON.stringify(o.utilisateur ?? LUC) + ';', ctx);
@@ -189,7 +189,7 @@ log('\n=== HORS RÉSEAU : « COMPLÉTÉ » MONTRE SON RÉSULTAT TOUT DE SUITE ==
   eq('la fiche dit « en attente d\'envoi » et le bouton offre « Annuler » (10 min)', [m.el('sc-tour').textContent.includes('⏳ en attente d’envoi'), m.el('btn-cmp').textContent], [true, '↩ Annuler (10 min)']);
   m.run('renderListe()');
   const badges = m.el('liste-body').children.map((c) => c.innerHTML.match(/ci-badge [^>]*>([^<]*)</)?.[1]);
-  eq('la liste des arrêts : s1 « ✔ FAIT ⏳ », s2 « À FAIRE » sans ⏳', badges.slice().sort(), ['À FAIRE', '✔ FAIT ⏳']);
+  eq('la liste des arrêts : s1 « ✔ FAIT ⏳ », s2 « ▶ PROCHAIN » (le prochain client de ma passe, étape 18b) sans ⏳', badges.slice().sort(), ['▶ PROCHAIN', '✔ FAIT ⏳']);
   eq('la barre du bas : 1/2 et 50 %', [m.el('prog-txt').textContent, m.el('prog-pct').textContent], ['1/2', '50%']);
   eq('la bande du haut : « Hors réseau · ⏳ 1 geste en attente »', m.bande().texte.includes('⏳ 1 geste en attente'), true);
   // La copie du serveur n'est JAMAIS modifiée (ni en mémoire, ni sur le téléphone) : la superposition travaille sur une copie

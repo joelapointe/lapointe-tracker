@@ -3,6 +3,8 @@
       --bg:#111418;--surface:#1a1f26;--border:#2a3140;
       --accent:#c8e63c;--green:#4ade80;--red:#ef4444;
       --text:#f0f4f8;--muted:#7a8899;
+      /* Zones sûres d'un iPhone (encoche en haut, barre d'accueil en bas). Sur Android et sur ordinateur : 0, rien ne change. */
+      --sa-top:env(safe-area-inset-top,0px);--sa-bottom:env(safe-area-inset-bottom,0px);
     }
     html,body{height:100%;overflow:hidden;background:var(--bg);}
     body{font-family:'Barlow',sans-serif;display:flex;flex-direction:column;}
@@ -40,7 +42,7 @@
     #topbar{
       position:absolute;top:0;left:0;right:0;z-index:900;
       background:linear-gradient(to bottom,rgba(17,20,24,.95) 65%,transparent);
-      padding:10px 14px 24px;
+      padding:calc(10px + var(--sa-top)) 14px 24px;
       display:flex;align-items:center;justify-content:space-between;
       pointer-events:none;
     }
@@ -70,13 +72,13 @@
     #gps-dot.err{background:var(--red);}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
     #addr-row{
-      position:absolute;top:52px;left:14px;right:14px;z-index:900;
+      position:absolute;top:calc(52px + var(--sa-top));left:14px;right:14px;z-index:900;
       font-size:12px;color:var(--text);pointer-events:none;
       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
 
     /* CONTROLS */
-    #controls{position:absolute;top:80px;right:12px;z-index:800;display:flex;flex-direction:column;gap:8px;}
+    #controls{position:absolute;top:calc(80px + var(--sa-top));right:12px;z-index:800;display:flex;flex-direction:column;gap:8px;}
     .ctrl{
       width:44px;height:44px;border-radius:10px;
       background:var(--surface);border:1px solid var(--border);
@@ -140,7 +142,7 @@
 .lf-btn.nouveau{background:#c8e63c;color:#111;}
     /* STOP CARD */
     #stop-card{
-      position:absolute;bottom:72px;left:0;right:0;z-index:950;
+      position:absolute;bottom:calc(72px + var(--sa-bottom));left:0;right:0;z-index:950;
       background:rgba(17,20,24,.97);border-top:1px solid var(--border);
       padding:14px 16px 12px;
       /* Cachée : sous l'écran, barre du bas comprise (avant, elle glissait de sa seule hauteur et venait GRISER la barre du bas) */
@@ -182,7 +184,7 @@
 
     /* TOAST */
     #toast{
-      position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+      position:fixed;bottom:calc(80px + var(--sa-bottom));left:50%;transform:translateX(-50%) translateY(20px);
       background:var(--surface);border:1px solid var(--border);border-radius:10px;
       padding:10px 18px;font-size:13px;color:var(--text);z-index:3000;
       opacity:0;transition:all .3s;pointer-events:none;
@@ -191,7 +193,7 @@
     }
     #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-    #sync{position:absolute;top:14px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);z-index:900;pointer-events:none;opacity:0;transition:opacity .3s;}
+    #sync{position:absolute;top:calc(14px + var(--sa-top));left:50%;transform:translateX(-50%);font-size:11px;color:var(--muted);z-index:900;pointer-events:none;opacity:0;transition:opacity .3s;}
     #sync.show{opacity:1;}
 #login-screen{display:none;position:fixed;inset:0;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;z-index:8000;padding:28px;}
 #login-screen.show{display:flex;}
@@ -238,7 +240,7 @@
 #placement-banner{
   display:none;position:fixed;top:0;left:0;right:0;z-index:1000;
   background:rgba(200,230,60,.95);
-  padding:12px 16px;
+  padding:calc(12px + var(--sa-top)) 16px 12px;
   display:none;
   align-items:center;justify-content:space-between;
   font-family:'Barlow Condensed',sans-serif;font-weight:700;color:#111;
@@ -261,7 +263,7 @@
 .user-approve{padding:8px 16px;background:#c8e63c;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#111;cursor:pointer;}
 .user-refuse{padding:8px 16px;background:#3a1a1a;border:none;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:#ef4444;cursor:pointer;margin-left:8px;}
  /* BOTTOM BAR */
-#bottombar{position:absolute;bottom:0;left:0;right:0;z-index:900;background:#161c24;border-top:2px solid #c8e63c;display:flex;align-items:stretch;height:72px;}
+#bottombar{position:absolute;bottom:0;left:0;right:0;z-index:900;background:#161c24;border-top:2px solid #c8e63c;display:flex;align-items:stretch;height:calc(72px + var(--sa-bottom));padding-bottom:var(--sa-bottom);}
 .bb{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 12px;border-right:1px solid #252d3a;gap:2px;}
 .bbl{font-size:9px;color:#6b7a8d;text-transform:uppercase;letter-spacing:.9px;}
 .bbv{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:700;color:#f0f4f8;white-space:nowrap;}
@@ -319,7 +321,7 @@
 .camion.perime{opacity:.5;border-color:#6b7a8d;}
 
 /* Étape 14a : bandeau de passe (sous la barre du haut) et écran « Débuter la passe » */
-#passe-bandeau{position:absolute;top:74px;left:12px;right:68px;z-index:850;display:none;pointer-events:none;}
+#passe-bandeau{position:absolute;top:calc(74px + var(--sa-top));left:12px;right:68px;z-index:850;display:none;pointer-events:none;}
 #passe-bandeau.show{display:block;}
 .passe-debuter{pointer-events:all;min-height:56px;padding:0 22px;border:none;border-radius:14px;background:var(--accent);color:#111;font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:.3px;box-shadow:0 3px 12px rgba(0,0,0,.5);cursor:pointer;}
 .passe-debuter:active{filter:brightness(.85);}
@@ -386,7 +388,7 @@
 #photo-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:4500;align-items:center;justify-content:center;padding:12px;}
 #photo-overlay.open{display:flex;}
 #photo-plein{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;}
-#photo-x{position:absolute;top:14px;right:14px;width:48px;height:48px;border:none;border-radius:12px;background:rgba(37,45,58,.95);color:#f0f4f8;font-size:22px;cursor:pointer;}
+#photo-x{position:absolute;top:calc(14px + var(--sa-top));right:14px;width:48px;height:48px;border:none;border-radius:12px;background:rgba(37,45,58,.95);color:#f0f4f8;font-size:22px;cursor:pointer;}
 
 /* Étape 15b : l'équipage au départ (« À bord avec toi ») et le choix d'une personne */
 .debut-note{font-size:13px;color:var(--muted);background:none;padding:0 0 8px;}
@@ -434,11 +436,13 @@
 .eq-vide{padding:20px 8px;text-align:center;color:var(--muted);font-size:14px;}
 
 /* Étape 16a : la bande « hors réseau » et un fond de carte sombre quand le fond satellite ne se charge pas */
-#bandeau-reseau{position:absolute;top:50px;right:12px;z-index:960;display:none;padding:4px 12px;border-radius:999px;background:rgba(58,26,26,.96);border:1px solid rgba(248,113,113,.6);color:#fecaca;font-size:12px;font-weight:600;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5);}
+#bandeau-reseau{position:absolute;top:calc(50px + var(--sa-top));right:12px;z-index:960;display:none;padding:4px 12px;border-radius:999px;background:rgba(58,26,26,.96);border:1px solid rgba(248,113,113,.6);color:#fecaca;font-size:12px;font-weight:600;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.5);}
 #bandeau-reseau.show{display:block;}
 /* Étape 16b : la bande dit aussi les gestes en attente ; elle s'ouvre sur leur liste (elle peut passer sur deux lignes) */
 #bandeau-reseau{white-space:normal;text-align:right;max-width:calc(100vw - 24px);}
 #bandeau-reseau.actif{pointer-events:auto;cursor:pointer;}
+/* Les fenêtres qui montent du bas de l'écran restent au-dessus de la barre d'accueil d'un iPhone (0 ailleurs) */
+#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
 #gestes-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:4000;align-items:center;justify-content:center;padding:20px;}
 #gestes-overlay.open{display:flex;}
 #gestes-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 16px 16px;width:100%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;}

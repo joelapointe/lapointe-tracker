@@ -1,0 +1,296 @@
+[
+  {
+    "nom": "la durée maximale de départ n'est plus 16 h",
+    "fichier": "js/quart.js",
+    "de": "const REGLAGES_QUART_DEFAUT={rappel:12,pause:4,max:16};",
+    "vers": "const REGLAGES_QUART_DEFAUT={rappel:12,pause:4,max:24};"
+  },
+  {
+    "nom": "le rappel de départ n'est plus 12 h",
+    "fichier": "js/quart.js",
+    "de": "const REGLAGES_QUART_DEFAUT={rappel:12,pause:4,max:16};",
+    "vers": "const REGLAGES_QUART_DEFAUT={rappel:10,pause:4,max:16};"
+  },
+  {
+    "nom": "la pause de départ n'est plus 4 h",
+    "fichier": "js/quart.js",
+    "de": "const REGLAGES_QUART_DEFAUT={rappel:12,pause:4,max:16};",
+    "vers": "const REGLAGES_QUART_DEFAUT={rappel:12,pause:5,max:16};"
+  },
+  {
+    "nom": "un réglage de 0 ou négatif est cru (rappel à 0 h)",
+    "fichier": "js/quart.js",
+    "de": "return (isFinite(n)&&n>0)?n:defaut;",
+    "vers": "return isFinite(n)?n:defaut;"
+  },
+  {
+    "nom": "un réglage écrit en texte (« 3 ») n'est plus lu",
+    "fichier": "js/quart.js",
+    "de": "const n=typeof v==='number'?v:(typeof v==='string'&&v.trim()!==''?Number(v):NaN);",
+    "vers": "const n=typeof v==='number'?v:NaN;"
+  },
+  {
+    "nom": "un réglage qui n'est pas ceux du quart s'installe quand même",
+    "fichier": "js/quart.js",
+    "de": "if(k) r[k]=heuresReglage(l.valeur,REGLAGES_QUART_DEFAUT[k]);",
+    "vers": "r[k||l.cle]=heuresReglage(l.valeur,REGLAGES_QUART_DEFAUT[k]);"
+  },
+  {
+    "nom": "le rappel et la pause sont lus sous la mauvaise clé",
+    "fichier": "js/quart.js",
+    "de": "{rappel_en_service_heures:'rappel',suggestion_pause_heures:'pause',duree_max_quart_heures:'max'}",
+    "vers": "{rappel_en_service_heures:'pause',suggestion_pause_heures:'rappel',duree_max_quart_heures:'max'}"
+  },
+  {
+    "nom": "la lecture des réglages demande toute la table",
+    "fichier": "js/quart.js",
+    "de": ".select('cle, valeur').in('cle',Object.keys(CLES_REGLAGES_QUART));",
+    "vers": ".select('cle, valeur');"
+  },
+  {
+    "nom": "les réglages lus ne sont plus gardés sur le téléphone",
+    "fichier": "js/quart.js",
+    "de": "    lectureReussie('reglagesQuart',lignes);",
+    "vers": "    ;"
+  },
+  {
+    "nom": "sans réseau, la dernière valeur connue n'est plus reprise",
+    "fichier": "js/quart.js",
+    "de": "    await restaurerReglagesQuart();   // pas de réponse",
+    "vers": "    ;   // pas de réponse"
+  },
+  {
+    "nom": "la copie des réglages n'est plus relue",
+    "fichier": "js/quart.js",
+    "de": "if(c&&Array.isArray(c.data)) installerReglagesQuart(c.data);",
+    "vers": ";"
+  },
+  {
+    "nom": "poserQuart ne contrôle plus le rappel",
+    "fichier": "js/quart.js",
+    "de": "  if(typeof verifierRappelsQuart==='function') verifierRappelsQuart();   // en service depuis longtemps ? suggestion de pause, rappel (quart-ecrans.js, morceau 4)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "fermer un écran ne contrôle plus la suggestion ni le rappel",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  verifierRappelsQuart();   // puis, s'il n'y a rien d'autre à montrer : la suggestion de pause ou le rappel « encore en service »",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un toucher à côté ferme le rappel",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(_ecranQuart==='rappel') return;   // (le rappel « encore en service » ne se ferme que par ses deux boutons : il concerne les heures payées)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "le rappel reste à l'écran quand le quart est terminé ailleurs",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  else if((_ecranQuart==='rappel'||_ecranQuart==='pause')&&!enService()) fermerEcranQuart();",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la suggestion écrase un écran du quart déjà ouvert",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(!currentUser||!_quartConnu||_ecranQuart!==null||_envoiQuart||!monQuart||!monQuart.debut) return;",
+    "vers": "if(!currentUser||!_quartConnu||_envoiQuart||!monQuart||!monQuart.debut) return;"
+  },
+  {
+    "nom": "la suggestion s'ouvre pendant l'envoi d'un punch",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(!currentUser||!_quartConnu||_ecranQuart!==null||_envoiQuart||!monQuart||!monQuart.debut) return;",
+    "vers": "if(!currentUser||!_quartConnu||_ecranQuart!==null||!monQuart||!monQuart.debut) return;"
+  },
+  {
+    "nom": "le rappel ne vient qu'une heure trop tard",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(h>=reglagesQuart.rappel){",
+    "vers": "  if(h>=reglagesQuart.rappel+1){"
+  },
+  {
+    "nom": "le rappel vient dès l'heure de la pause",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(h>=reglagesQuart.rappel){",
+    "vers": "  if(h>=reglagesQuart.pause){"
+  },
+  {
+    "nom": "la suggestion de pause vient une heure trop tard",
+    "fichier": "js/quart-ecrans.js",
+    "de": "}else if(h>=reglagesQuart.pause&&!s.pause){",
+    "vers": "}else if(h>=reglagesQuart.pause+1&&!s.pause){"
+  },
+  {
+    "nom": "la suggestion de pause revient à chaque contrôle (jamais notée « montrée »)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    s.pause=true;garderSuiviQuart();   // (notée dès qu'elle est montrée",
+    "vers": "    garderSuiviQuart();   // (notée dès qu'elle est montrée"
+  },
+  {
+    "nom": "la suggestion de pause n'est pas gardée sur le téléphone",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    s.pause=true;garderSuiviQuart();   // (notée dès qu'elle est montrée",
+    "vers": "    s.pause=true;   // (notée dès qu'elle est montrée"
+  },
+  {
+    "nom": "après le rappel, la suggestion de pause viendrait encore",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    if(!s.pause){s.pause=true;garderSuiviQuart();}   // (rendu là",
+    "vers": "    ;   // (rendu là"
+  },
+  {
+    "nom": "le rappel ne respecte plus le délai de 2 heures",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    if(Date.now()<s.prochain) return;",
+    "vers": "    ;"
+  },
+  {
+    "nom": "le rappel se répète après 12 heures au lieu de 2",
+    "fichier": "js/quart-ecrans.js",
+    "de": "let RAPPEL_REPETE_HEURES=2;",
+    "vers": "let RAPPEL_REPETE_HEURES=12;"
+  },
+  {
+    "nom": "« Je travaille encore » ne repousse pas le rappel",
+    "fichier": "js/quart-ecrans.js",
+    "de": "s.prochain=Date.now()+RAPPEL_REPETE_HEURES*3600000;",
+    "vers": "s.prochain=0;"
+  },
+  {
+    "nom": "le délai du rappel n'est pas gardé sur le téléphone",
+    "fichier": "js/quart-ecrans.js",
+    "de": "s.prochain=Date.now()+RAPPEL_REPETE_HEURES*3600000;\n  garderSuiviQuart();",
+    "vers": "s.prochain=Date.now()+RAPPEL_REPETE_HEURES*3600000;"
+  },
+  {
+    "nom": "un autre quart reprend la mémoire de l'ancien (mémoire du téléphone)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(!r||typeof r!=='object'||r.debut!==debut) r={debut,pause:false,prochain:0};",
+    "vers": "if(!r||typeof r!=='object') r={debut,pause:false,prochain:0};"
+  },
+  {
+    "nom": "un autre quart reprend la mémoire de l'ancien (mémoire vive)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(_suiviQuart&&_suiviQuart.pour===pour&&_suiviQuart.debut===debut) return _suiviQuart;",
+    "vers": "if(_suiviQuart&&_suiviQuart.pour===pour) return _suiviQuart;"
+  },
+  {
+    "nom": "une autre personne reprend la mémoire de la première (mémoire vive)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(_suiviQuart&&_suiviQuart.pour===pour&&_suiviQuart.debut===debut) return _suiviQuart;",
+    "vers": "if(_suiviQuart&&_suiviQuart.debut===debut) return _suiviQuart;"
+  },
+  {
+    "nom": "la mémoire du rappel n'est plus lue au bon nom",
+    "fichier": "js/quart-ecrans.js",
+    "de": "try{r=JSON.parse(lireMemo(CLE_RAPPEL_QUART+pour)||'null');}catch(e){}",
+    "vers": "try{r=JSON.parse(lireMemo(CLE_RAPPEL_QUART)||'null');}catch(e){}"
+  },
+  {
+    "nom": "la mémoire du rappel n'est jamais écrite",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(s&&currentUser&&s.pour===currentUser.id) ecrireMemo(",
+    "vers": "if(false) ecrireMemo("
+  },
+  {
+    "nom": "le rappel annonce toujours 16 h (chiffre en dur)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "esc(heuresTexte(reglagesQuart.max))",
+    "vers": "'16 h'"
+  },
+  {
+    "nom": "« 12,5 h » s'écrit « 12.5 h »",
+    "fichier": "js/quart-ecrans.js",
+    "de": ".replace('.',',')+' h';",
+    "vers": "+' h';"
+  },
+  {
+    "nom": "« depuis 06 h 42 » devient « depuis à 06 h 42 »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "return 'depuis '+(q==='à'?'':q+' ')+heureCourte(iso);",
+    "vers": "return 'depuis '+q+' '+heureCourte(iso);"
+  },
+  {
+    "nom": "les cartes ne disent plus la durée de travail",
+    "fichier": "js/quart-ecrans.js",
+    "de": "+' · '+dureeTexte(monQuart.debut,new Date().toISOString())+' de travail';",
+    "vers": ";"
+  },
+  {
+    "nom": "« JE TERMINE » du rappel fait « Je travaille encore »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "onclick=\"rappelTerminerQuart()\">■ JE TERMINE",
+    "vers": "onclick=\"rappelContinuerQuart()\">■ JE TERMINE"
+  },
+  {
+    "nom": "le rappel commence par « ⚠ »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "<div id=\"quart-titre\" class=\"quart-salut\">Tu es encore en service&nbsp;?</div>",
+    "vers": "<div id=\"quart-titre\" class=\"quart-salut\">⚠ Tu es encore en service&nbsp;?</div>"
+  },
+  {
+    "nom": "la suggestion de pause parle d'obligation",
+    "fichier": "js/quart-ecrans.js",
+    "de": "Pense à prendre une&nbsp;pause</div>",
+    "vers": "Pense à prendre une&nbsp;pause (obligation légale)</div>"
+  },
+  {
+    "nom": "le point d'interrogation du rappel peut se retrouver seul sur sa ligne",
+    "fichier": "js/quart-ecrans.js",
+    "de": "Tu es encore en service&nbsp;?</div>",
+    "vers": "Tu es encore en service ?</div>"
+  },
+  {
+    "nom": "la suggestion de pause n'a plus sa tasse",
+    "fichier": "js/quart-ecrans.js",
+    "de": "<div class=\"quart-coche\" aria-hidden=\"true\">☕</div>",
+    "vers": ""
+  },
+  {
+    "nom": "« JE TERMINE » du rappel ne note pas la réponse",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  noterRappelVu();\n  ouvrirEcranQuart('fin');",
+    "vers": "  ouvrirEcranQuart('fin');"
+  },
+  {
+    "nom": "« JE TERMINE » du rappel n'ouvre plus l'écran « Terminer ton quart ? »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  noterRappelVu();\n  ouvrirEcranQuart('fin');",
+    "vers": "  noterRappelVu();\n  fermerEcranQuart();"
+  },
+  {
+    "nom": "« Je travaille encore » ne note pas la réponse",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  noterRappelVu();\n  fermerEcranQuart();\n}",
+    "vers": "  fermerEcranQuart();\n}"
+  },
+  {
+    "nom": "« Je travaille encore » ne ferme plus l'écran",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  noterRappelVu();\n  fermerEcranQuart();\n}",
+    "vers": "  noterRappelVu();\n}"
+  },
+  {
+    "nom": "« Je travaille encore » agit même quand le rappel n'est pas à l'écran",
+    "fichier": "js/quart-ecrans.js",
+    "de": "function rappelContinuerQuart(){\n  if(_ecranQuart!=='rappel') return;",
+    "vers": "function rappelContinuerQuart(){\n  ;"
+  },
+  {
+    "nom": "la minuterie de la carte ne contrôle plus le rappel",
+    "fichier": "js/tours.js",
+    "de": "  if(typeof verifierRappelsQuart==='function') verifierRappelsQuart();   // en service depuis longtemps ? (étape 17, morceau 4 : même sans réseau, avant toute lecture)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "les réglages ne sont plus lus au chargement",
+    "fichier": "js/arrets.js",
+    "de": "    if(typeof chargerReglagesQuart==='function') await chargerReglagesQuart();",
+    "vers": "    ;"
+  },
+  {
+    "nom": "les réglages ne sont plus restaurés hors réseau",
+    "fichier": "js/hors-reseau.js",
+    "de": "  if(typeof restaurerReglagesQuart==='function') await restaurerReglagesQuart();",
+    "vers": "  ;"
+  }
+]

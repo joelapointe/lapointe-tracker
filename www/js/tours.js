@@ -279,6 +279,7 @@ function signatureEnCours(){
 // Relit les positions ; ne redessine que si un client entre ou sort de l'état « en cours »
 async function rafraichirEnCours(){
   if(!currentUser) return;
+  if(typeof verifierRappelsQuart==='function') verifierRappelsQuart();   // en service depuis longtemps ? (étape 17, morceau 4 : même sans réseau, avant toute lecture)
   await chargerPositionsVehicules();
   _tickRelecture++;
   if(_tickRelecture%4===0){

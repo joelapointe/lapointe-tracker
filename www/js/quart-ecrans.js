@@ -11,7 +11,8 @@
 //     la passe et sort la personne du camion ; hors réseau, tours.js et vehicules.js le montrent tout de suite à l'écran.
 // Même patron que les autres gestes (passe.js, arrets.js) : en ligne, un délai de 10 s (avecDelai) puis la file en cas de panne ; sans réseau, la file
 // (file-attente.js). Le numéro d'un quart est fabriqué par le téléphone (nouvelId) : un renvoi ne crée jamais deux quarts.
-// Position : la dernière connue du GPS déjà actif (lastPos). Sans position, le punch se fait quand même (jamais bloquant). La lecture précise = morceau 3.
+// Position : lue au moment du punch (positionDuPunch, position.js : étape 17, morceau 3). Sans position, le punch se fait quand même (jamais bloquant).
+// Morceau 4 (en bas du fichier) : la suggestion de pause après 4 h en service et le rappel « encore en service » après 12 h.
 let _accueilQuartPour=null;     // à QUELLE personne l'écran d'accueil a déjà été montré depuis l'ouverture de l'application
 let _ecranQuart=null;           // l'écran affiché : 'accueil', 'fin', 'avis', 'confirmation', ou null
 let _envoiQuart=false;          // un seul geste du punch à la fois (pas de double toucher)
@@ -62,6 +63,7 @@ function synchroniserEcranQuart(){
   if(_envoiQuart) return;   // un geste est en cours : c'est lui qui décide de l'écran
   if(_ecranQuart==='accueil'&&enService()) fermerEcranQuart();
   else if(_ecranQuart==='fin'&&!enService()) fermerEcranQuart();
+  else if((_ecranQuart==='rappel'||_ecranQuart==='pause')&&!enService()) fermerEcranQuart();   // (le serveur ou un autre téléphone a terminé le quart : le rappel n'a plus d'objet)
 }
 
 // La pastille du haut
@@ -80,7 +82,7 @@ function ouvrirEcranQuart(quel){
   clearTimeout(_tConfirmationQuart);_tConfirmationQuart=null;
   _ecranQuart=quel;
   if(quel==='fin') preparerEquipeFin();
-  boite.innerHTML=quel==='fin'?htmlFinQuart():(quel==='avis'?htmlAvisFin():htmlAccueilQuart());
+  boite.innerHTML=quel==='fin'?htmlFinQuart():(quel==='avis'?htmlAvisFin():(quel==='rappel'?htmlRappelQuart():(quel==='pause'?htmlPauseQuart():htmlAccueilQuart())));
   o.classList.toggle('plein',quel==='accueil');
   o.classList.add('open');
   majEcranQuart();
@@ -91,8 +93,10 @@ function fermerEcranQuart(){
   const o=document.getElementById('quart-overlay');
   if(o){o.classList.remove('open');o.classList.remove('plein');}
   verifierAccueilQuart();   // ce qui attendait (un avis à lire, l'écran d'accueil) passe maintenant
+  verifierRappelsQuart();   // puis, s'il n'y a rien d'autre à montrer : la suggestion de pause ou le rappel « encore en service »
 }
 function bgClickQuart(e){
+  if(_ecranQuart==='rappel') return;   // (le rappel « encore en service » ne se ferme que par ses deux boutons : il concerne les heures payées)
   // (l'écran d'accueil ne se ferme que par « voir la carte » : un toucher à côté ne doit rien faire)
   if(e.target===document.getElementById('quart-overlay')&&_ecranQuart&&_ecranQuart!=='accueil') fermerEcranQuart();
 }
@@ -479,4 +483,88 @@ async function signalerErreurFinQuart(){
     showSync(false);
     _envoiQuart=false;majEcranQuart();
   }
+}
+
+// ── La suggestion de pause (4 h) et le rappel « encore en service » (12 h) — étape 17, morceau 4 ──
+// Décisions de Joé (21 sept.) : les durées viennent des réglages (quart.js : reglagesQuart, 4 h et 12 h au départ) ; la pause est une SUGGESTION, jamais une
+// obligation, et rien n'est enregistré ; UNE seule suggestion par quart, sans parler de la loi ; le rappel se répète 2 heures après « Je travaille encore »
+// (jusqu'à la fermeture automatique du quart par le serveur). Le contrôle se fait à l'ouverture, à chaque relecture du quart et à chaque tour de la minuterie
+// de la carte (tours.js), MÊME SANS RÉSEAU (le calcul se fait sur le téléphone). Application fermée : pas de notification (étape 18).
+// Ce qui a déjà été montré pour le quart en cours se garde sur le téléphone : rouvrir l'application ne redit rien.
+let RAPPEL_REPETE_HEURES=2;
+const CLE_RAPPEL_QUART='lp_rappel_quart:';   // + numéro de l'employé : {debut (du quart, en ms), pause (déjà suggérée), prochain (pas de rappel avant cette heure, en ms)}
+let _suiviQuart=null;                        // la même chose en mémoire : {pour (employé), debut, pause, prochain}
+
+// Ce qui a déjà été montré pour CE quart (un autre quart, ou une autre personne sur le même téléphone : on repart de zéro)
+function suiviQuartPour(q){
+  const pour=currentUser.id,debut=Date.parse(q.debut);
+  if(_suiviQuart&&_suiviQuart.pour===pour&&_suiviQuart.debut===debut) return _suiviQuart;
+  let r=null;
+  try{r=JSON.parse(lireMemo(CLE_RAPPEL_QUART+pour)||'null');}catch(e){}
+  if(!r||typeof r!=='object'||r.debut!==debut) r={debut,pause:false,prochain:0};
+  _suiviQuart={pour,debut,pause:!!r.pause,prochain:Number(r.prochain)||0};
+  return _suiviQuart;
+}
+function garderSuiviQuart(){
+  const s=_suiviQuart;
+  if(s&&currentUser&&s.pour===currentUser.id) ecrireMemo(CLE_RAPPEL_QUART+s.pour,JSON.stringify({debut:s.debut,pause:s.pause,prochain:s.prochain}));
+}
+// Un écran de plus à montrer ? Ne fait rien si un autre écran du quart est ouvert (il passe avant) ; il est rappelé à la fermeture de cet écran.
+function verifierRappelsQuart(){
+  if(!currentUser||!_quartConnu||_ecranQuart!==null||_envoiQuart||!monQuart||!monQuart.debut) return;
+  const h=(Date.now()-Date.parse(monQuart.debut))/3600000;   // (heure illisible ou début « dans le futur », horloge du téléphone en retard : h est NaN ou négatif, aucune comparaison ne réussit)
+  const s=suiviQuartPour(monQuart);
+  if(h>=reglagesQuart.rappel){
+    if(!s.pause){s.pause=true;garderSuiviQuart();}   // (rendu là, suggérer une pause n'aurait plus de sens)
+    if(Date.now()<s.prochain) return;
+    ouvrirEcranQuart('rappel');
+  }else if(h>=reglagesQuart.pause&&!s.pause){
+    s.pause=true;garderSuiviQuart();   // (notée dès qu'elle est montrée : « une seule fois par quart », même si la personne ferme l'application sans toucher OK)
+    ouvrirEcranQuart('pause');
+  }
+}
+// « 12 h », « 12,5 h »
+function heuresTexte(n){
+  return String(Math.round(n*100)/100).replace('.',',')+' h';
+}
+// « depuis 06 h 42 », « depuis hier à 18 h 05 », « depuis le 20 septembre à 18 h 05 »
+function depuisQuart(iso){
+  const q=quandQuart(iso);
+  return 'depuis '+(q==='à'?'':q+' ')+heureCourte(iso);
+}
+// (seulement appelée pour un quart qui dure depuis longtemps : monQuart et sa durée existent)
+function ligneDepuisQuart(){
+  return 'En service '+depuisQuart(monQuart.debut)+' · '+dureeTexte(monQuart.debut,new Date().toISOString())+' de travail';
+}
+function htmlRappelQuart(){
+  // (espaces insécables avant « ? » : jamais un point d'interrogation seul sur sa ligne)
+  return '<div id="quart-titre" class="quart-salut">Tu es encore en service&nbsp;?</div>'+
+    '<div class="quart-sous">'+esc(ligneDepuisQuart())+'<br>As-tu oublié de terminer ton quart&nbsp;?</div>'+
+    '<button id="btn-quart-rappel-terminer" type="button" class="quart-gros termine" onclick="rappelTerminerQuart()">■ JE TERMINE</button>'+
+    '<button id="btn-quart-rappel-encore" type="button" class="quart-ok" onclick="rappelContinuerQuart()">Je travaille encore</button>'+
+    '<div class="quart-note">Un quart encore ouvert après '+esc(heuresTexte(reglagesQuart.max))+' est fermé automatiquement (fin estimée, à valider par l’administrateur).</div>';
+}
+function htmlPauseQuart(){
+  return '<div class="quart-coche" aria-hidden="true">☕</div>'+
+    '<div id="quart-titre" class="quart-salut">Pense à prendre une&nbsp;pause</div>'+
+    '<div class="quart-sous">'+esc(ligneDepuisQuart())+'</div>'+
+    '<button id="btn-quart-pause-ok" type="button" class="quart-gros ok" onclick="fermerEcranQuart()">OK</button>';
+}
+// Le rappel a été vu (l'une ou l'autre réponse) : on ne le redit pas avant 2 heures
+function noterRappelVu(){
+  if(!currentUser||!monQuart||!monQuart.debut) return;
+  const s=suiviQuartPour(monQuart);
+  s.prochain=Date.now()+RAPPEL_REPETE_HEURES*3600000;
+  garderSuiviQuart();
+}
+// « ■ JE TERMINE » : l'écran habituel « Terminer ton quart ? » (deux touchers : jamais une fin de quart par accident)
+function rappelTerminerQuart(){
+  if(_ecranQuart!=='rappel') return;
+  noterRappelVu();
+  ouvrirEcranQuart('fin');
+}
+function rappelContinuerQuart(){
+  if(_ecranQuart!=='rappel') return;
+  noterRappelVu();
+  fermerEcranQuart();
 }

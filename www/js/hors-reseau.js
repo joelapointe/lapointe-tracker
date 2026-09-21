@@ -271,6 +271,7 @@ async function restaurerDepuisCache(){
   if(typeof _passeVue!=='undefined') _passeVue=null;   // les tours changent parce qu'on relit une COPIE, pas parce que ma passe s'est fermée : jamais de faux « Passe terminée »
   installerProblemes((lire.problemes&&Array.isArray(lire.problemes.data))?lire.problemes.data:[]);
   employes=(lire.employes&&Array.isArray(lire.employes.data))?lire.employes.data:[];
+  if(typeof restaurerReglagesQuart==='function') await restaurerReglagesQuart();   // rappel, pause : la dernière valeur connue (elle ne compte pas dans « données de … »)
   if(lire.quart&&typeof installerQuart==='function') installerQuart(lire.quart.data||null);   // suis-je en service ? (la copie « null » = pas en service)
   positionsVehicules=[];   // les positions ne se gardent pas : un point de plus de 3 minutes ne veut plus rien dire
   // Les données affichées valent ce que vaut la plus VIEILLE des copies (honnêteté)

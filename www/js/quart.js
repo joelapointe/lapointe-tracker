@@ -54,6 +54,46 @@ function poserQuart(){
   monQuart=superposerQuart(_quartServeur);
   majPastilleQuart();
   if(typeof verifierAccueilQuart==='function') verifierAccueilQuart();   // l'écran d'accueil « JE COMMENCE » (quart-ecrans.js)
+  if(typeof verifierRappelsQuart==='function') verifierRappelsQuart();   // en service depuis longtemps ? suggestion de pause, rappel (quart-ecrans.js, morceau 4)
+}
+
+// ── Les réglages du quart (étape 17, morceau 4) ────────
+// Rappel « encore en service » (12 h au départ), suggestion de pause (4 h) et durée après laquelle le serveur ferme lui-même un quart (16 h) : la table
+// « reglages » (lisible par tous les employés, modifiable par l'administrateur). Relus à chaque chargement complet ; sans réseau, la DERNIÈRE valeur connue
+// (copie « reglagesQuart » du téléphone), sinon ces valeurs de départ. Un réglage illisible (vide, 0, négatif, texte) est remplacé par sa valeur de départ.
+const REGLAGES_QUART_DEFAUT={rappel:12,pause:4,max:16};   // en heures
+const CLES_REGLAGES_QUART={rappel_en_service_heures:'rappel',suggestion_pause_heures:'pause',duree_max_quart_heures:'max'};
+let reglagesQuart={...REGLAGES_QUART_DEFAUT};
+function heuresReglage(v,defaut){
+  const n=typeof v==='number'?v:(typeof v==='string'&&v.trim()!==''?Number(v):NaN);
+  return (isFinite(n)&&n>0)?n:defaut;
+}
+function installerReglagesQuart(lignes){
+  const r={...REGLAGES_QUART_DEFAUT};
+  (Array.isArray(lignes)?lignes:[]).forEach(l=>{
+    const k=l&&CLES_REGLAGES_QUART[l.cle];
+    if(k) r[k]=heuresReglage(l.valeur,REGLAGES_QUART_DEFAUT[k]);
+  });
+  reglagesQuart=r;
+}
+async function chargerReglagesQuart(){
+  if(!currentUser) return false;
+  try{
+    const{data,error}=await db.from('reglages').select('cle, valeur').in('cle',Object.keys(CLES_REGLAGES_QUART));
+    if(error) throw error;
+    const lignes=Array.isArray(data)?data:[];
+    installerReglagesQuart(lignes);
+    lectureReussie('reglagesQuart',lignes);
+    return true;
+  }catch(e){
+    signalerEchecReseau(e);
+    await restaurerReglagesQuart();   // pas de réponse : la dernière valeur connue (sans copie : ce qu'on savait déjà, sinon les valeurs de départ)
+    return false;
+  }
+}
+async function restaurerReglagesQuart(){
+  const c=await cacheLire('reglagesQuart');
+  if(c&&Array.isArray(c.data)) installerReglagesQuart(c.data);
 }
 
 // Renvoie la copie du serveur si rien n'attend, sinon une COPIE où les gestes en attente sont appliqués, dans l'ordre où ils ont été faits.

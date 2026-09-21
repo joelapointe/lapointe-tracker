@@ -56,7 +56,7 @@ function monde(o = {}) {
     equipage_periodes: [{ passe_id: 'p-luc', role: 'chauffeur', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } }],
   };
   // appels.envois : chaque appel d'un geste au serveur, dans l'ordre [{nom, args, t}] ; appels.lectures : les lectures (tables)
-  const appels = { envois: [], lectures: [], sondes: [], toasts: [], confirmations: [], questionsFin: [], erreurs: [], evenements: [], uploads: [], reload: 0, signOut: 0, enCours: 0, maxEnCours: 0 };
+  const appels = { envois: [], lectures: [], sondes: [], toasts: [], confirmations: [], questionsFin: [], erreurs: [], evenements: [], uploads: [], reload: 0, signOut: 0, enCours: 0, maxEnCours: 0, filtresIn: [] };
   const echec = () => { throw new Error('Failed to fetch'); };
   const GESTES = Object.keys(REPONSES);
   const fauxDb = {
@@ -77,9 +77,10 @@ function monde(o = {}) {
     },
     from: (table) => {
       if (appels.lectures.length > 1500) throw new Error('BOUCLE INFINIE détectée (plus de 1500 lectures)');
-      const q = { filtres: [] };
+      const q = { filtres: [], dansListe: [] };
       q.select = () => q; q.order = () => q; q.is = () => q; q.limit = () => q; q.maybeSingle = () => q;
       q.eq = (c, v) => { q.filtres.push([c, v]); return q; };
+      q.in = (c, vs) => { q.dansListe.push([c, vs]); appels.filtresIn.push([table, c, vs]); return q; };   // (étape 17, morceau 4 : la lecture des réglages)
       q.insert = async (rows) => {
         const n = appels.envois.filter((x) => x.nom === 'insert:' + table).length;
         appels.envois.push({ nom: 'insert:' + table, args: rows[0], t: Date.now() });
@@ -90,7 +91,7 @@ function monde(o = {}) {
       q.then = (ok_, ko_) => {
         appels.lectures.push(table); appels.evenements.push('L:' + table);
         if (!etat.enLigne) return Promise.reject(new Error('Failed to fetch')).then(ok_, ko_);
-        const rows = (donnees[table] ?? []).filter((r) => q.filtres.every(([c, v]) => !(c in r) || r[c] === v));
+        const rows = (donnees[table] ?? []).filter((r) => q.filtres.every(([c, v]) => !(c in r) || r[c] === v) && q.dansListe.every(([c, vs]) => !(c in r) || vs.includes(r[c])));
         return Promise.resolve({ data: rows, error: null }).then(ok_, ko_);
       };
       return q;
@@ -153,6 +154,7 @@ async function ouvrir(o = {}) {
   if (o.tours) m.donnees.tours = o.tours;
   if (o.equipes) m.donnees.equipes = o.equipes;
   m.donnees.quarts = o.quarts ?? [];   // (étape 17 : mes quarts, côté serveur)
+  m.donnees.reglages = o.reglages ?? [];   // (étape 17, morceau 4 : les réglages du quart, comme les donne la table « reglages » ; vide = valeurs de départ)
   if (o.equipagePrecedent) m.donnees.equipagePrecedent = o.equipagePrecedent;   // (étape 17 : l'équipe de ma dernière passe, comme la donne equipage_precedent)
   if (o.utilisateurs) m.donnees.utilisateurs = o.utilisateurs;
   if (o.equipages) m.donnees.equipage_periodes = o.equipages.map((x) => ({ ...x }));   // (une copie : le faux serveur en modifie le contenu, les autres scénarios ne doivent pas le voir)
@@ -2261,6 +2263,268 @@ log('\n=== « JE TERMINE » ET L\'ÉQUIPE : UNE SEULE LECTURE, LA MÊME POSITION
   const a = equipiers(m)[0];
   eq('« Retirer » puis « Oui, terminer son quart » : la position (et sa précision) est lue à ce moment-là', [gps.lectures, a.p_lat, a.p_lon, a.p_precision], [1, 46.8, -72.5, 6]);
   m.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 17, MORCEAU 4 : LA SUGGESTION DE PAUSE (4 h) ET LE RAPPEL « ENCORE EN SERVICE » (12 h)
+// ══════════════════════════════════════════════════════════════════════
+const heures = (h) => iso(h * 60);   // « il y a h heures »
+const reglages = (rappel, pause, max) => [{ cle: 'rappel_en_service_heures', valeur: rappel }, { cle: 'suggestion_pause_heures', valeur: pause }, { cle: 'duree_max_quart_heures', valeur: max }];
+const CLE_RAPPEL = 'lp_rappel_quart:u-luc';
+const suivi = (m, cle = CLE_RAPPEL) => (m.stockage[cle] ? JSON.parse(m.stockage[cle]) : null);
+const texteEcran = (e) => e.html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');   // (le texte que la personne lit : sans balises, l'espace insécable devient un espace)
+const toucheAcote = (m) => m.run("bgClickQuart({target:document.getElementById('quart-overlay')})");
+const relire = async (m) => { await m.run('chargerMonQuart()'); await m.run('rafraichirEnCours()'); };   // (la relecture du quart, puis un tour de la minuterie de la carte)
+
+log('\n=== LES RÉGLAGES DU QUART : RAPPEL, PAUSE, DURÉE MAXIMALE ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1')], tours: [] });
+  eq('la table « reglages » est vide : les valeurs de départ (rappel 12 h, pause 4 h, durée maximale 16 h)', m.run('reglagesQuart'), { rappel: 12, pause: 4, max: 16 });
+  eq('l\'application ne demande à la table « reglages » QUE les trois réglages du quart', m.appels.filtresIn.filter((x) => x[0] === 'reglages'), [['reglages', 'cle', ['rappel_en_service_heures', 'suggestion_pause_heures', 'duree_max_quart_heures']]]);
+  eq('un « 16 » ou un « 12,5 » s\'écrit comme une personne le lit', [m.run('heuresTexte(16)'), m.run('heuresTexte(12.5)')], ['16 h', '12,5 h']);
+  const auj = m.run('depuisQuart(new Date().toISOString())'), hier = m.run('depuisQuart(new Date(Date.now()-86400000).toISOString())');
+  eq('« depuis 06 h 42 » aujourd\'hui (sans « à »), « depuis hier à 06 h 42 » la veille', [/^depuis \d/.test(auj), /^depuis hier à \d/.test(hier)], [true, true]);
+  m.run("installerReglagesQuart([{cle:'suggestion_pause_heures',valeur:6},{cle:'un_autre_reglage',valeur:1}])");
+  eq('un réglage qui n\'est pas ceux du quart est ignoré, les autres gardent leur valeur de départ', m.run('reglagesQuart'), { rappel: 12, pause: 6, max: 16 });
+  m.run('installerReglagesQuart(null)');
+  eq('une lecture vide ou absurde : les valeurs de départ', m.run('reglagesQuart'), { rappel: 12, pause: 4, max: 16 });
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1')], tours: [], reglages: reglages(10, '3', 20.5) });
+  eq('l\'administrateur a changé les réglages (un nombre, un texte « 3 », un nombre décimal) : 10 h, 3 h, 20,5 h', m.run('reglagesQuart'), { rappel: 10, pause: 3, max: 20.5 });
+  m.fin();
+  const n = await ouvrir({ quarts: [rowQuart('q1')], tours: [], reglages: reglages(0, -2, 'abc') });
+  eq('des réglages illisibles (0, négatif, du texte) : les valeurs de départ, JAMAIS un rappel à 0 h', n.run('reglagesQuart'), { rappel: 12, pause: 4, max: 16 });
+  n.fin();
+  const o = await ouvrir({ quarts: [rowQuart('q1')], tours: [], reglages: [{ cle: 'rappel_en_service_heures', valeur: null }, { cle: 'suggestion_pause_heures', valeur: '' }, { cle: 'duree_max_quart_heures', valeur: true }] });
+  eq('vide, texte vide, oui/non : les valeurs de départ aussi', o.run('reglagesQuart'), { rappel: 12, pause: 4, max: 16 });
+  o.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1')], tours: [], reglages: reglages(10, 3, 20) });
+  await m.run('attendreEcritures()');
+  const cle = m.cles('cache:').find((k) => k.endsWith(':reglagesQuart'));
+  eq('les réglages lus sont gardés sur le téléphone (copie « reglagesQuart »)', [!!cle, m.memoire()[cle]?.data?.length], [true, 3]);
+  m.run('reglagesQuart={rappel:12,pause:4,max:16}');   // (l'application vient d'être rouverte : les valeurs de départ sont en mémoire)
+  coupe(m);
+  eq('sans réseau : la lecture échoue et on reprend la DERNIÈRE valeur connue (la copie) : 10 h, 3 h, 20 h', [await m.run('chargerReglagesQuart()'), m.run('reglagesQuart')], [false, { rappel: 10, pause: 3, max: 20 }]);
+  m.fin();
+}
+{
+  const m = monde({ enLigne: false });
+  m.run('reglagesQuart={rappel:9,pause:2,max:15}');
+  eq('sans réseau et SANS copie : ce qu\'on savait déjà (9 h, 2 h, 15 h) reste, rien ne plante', [await m.run('chargerReglagesQuart()'), m.run('reglagesQuart')], [false, { rappel: 9, pause: 2, max: 15 }]);
+  m.fin();
+}
+{
+  // On rouvre l'application SANS réseau : les réglages viennent de la copie, et le rappel les utilise (10 h ici, pas 12 h)
+  const a = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(10.5) })], tours: [], reglages: reglages(10, 3, 20) });
+  await a.run('attendreEcritures()');
+  const surLeTelephone = a.memoire(); a.fin();
+  const b = monde({ enLigne: false, memoire: surLeTelephone });
+  await b.run('loadStops()');
+  eq('on rouvre l\'application SANS réseau : les réglages de la copie (10 h) sont utilisés, le rappel s\'ouvre à 10 h 30', [b.run('reglagesQuart.rappel'), ecranQuart(b).quel], [10, 'rappel']);
+  eq('… et il annonce la fermeture automatique du RÉGLAGE (20 h), pas d\'un chiffre écrit en dur', [ecranQuart(b).html.includes('après 20 h est fermé automatiquement'), ecranQuart(b).html.includes('après 16 h')], [true, false]);
+  b.fin();
+}
+
+log('\n=== LA SUGGESTION DE PAUSE : À 4 H, UNE SEULE FOIS PAR QUART, JAMAIS UNE OBLIGATION ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(3.5) })], tours: [] });
+  eq('en service depuis 3 h 30 : rien à l\'écran, rien de noté', [ecranQuart(m).ouvert, suivi(m)], [false, null]);
+  m.fin();
+}
+{
+  const debut = heures(4.2);
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut })], tours: [] });
+  const e = ecranQuart(m);
+  eq('en service depuis 4 h 12 : la suggestion s\'ouvre, en carte (pas en plein écran)', [e.ouvert, e.plein, e.quel], [true, false, 'pause']);
+  eq('… une tasse, « Pense à prendre une pause », depuis quand, la durée de travail, un seul bouton « OK »', [texteEcran(e).includes('Pense à prendre une pause') && e.html.includes('☕'), e.html.includes('En service depuis'), e.html.includes('4 h 12 de travail'), (e.html.match(/<button/g) || []).length, /onclick="fermerEcranQuart\(\)">OK</.test(e.html)], [true, true, true, 1, true]);
+  eq('… JAMAIS une obligation : pas de « JE TERMINE », pas d\'avertissement, rien sur la loi', [e.html.includes('JE TERMINE'), e.html.includes('⚠'), /loi|CNESST|obligat/i.test(e.html)], [false, false, false]);
+  eq('… rien n\'est envoyé au serveur, rien n\'est gardé dans la file d\'attente', [m.appels.envois.length, m.cles('file:').length], [0, 0]);
+  eq('… le téléphone note « déjà suggérée » pour CE quart : une seule fois', [suivi(m)?.pause, suivi(m)?.debut === Date.parse(debut), suivi(m)?.prochain], [true, true, 0]);
+  m.run('fermerEcranQuart()');
+  eq('« OK » : l\'écran se ferme', ecranQuart(m).ouvert, false);
+  await relire(m);
+  eq('… et elle NE revient PAS (relecture du quart, minuterie de la carte)', ecranQuart(m).ouvert, false);
+  m.run('_suiviQuart=null'); await m.run('loadStops()');
+  eq('… ni à la réouverture de l\'application (la mémoire du téléphone dit « déjà suggérée »)', ecranQuart(m).ouvert, false);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(5) })], tours: [] });
+  toucheAcote(m);
+  eq('un toucher à côté de la carte ferme la suggestion (elle ne bloque rien)', ecranQuart(m).ouvert, false);
+  m.fin();
+}
+{
+  // Chaque quart a sa suggestion
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(4.2) })], tours: [] });
+  m.run('fermerEcranQuart()');
+  m.donnees.quarts = [rowQuart('q2', { debut: heures(4.1) })];   // (un autre quart, commencé à une autre heure)
+  await m.run('chargerMonQuart()');
+  eq('un AUTRE quart (autre heure de début), 4 h plus tard : la suggestion revient, pour lui', ecranQuart(m).quel, 'pause');
+  m.fin();
+}
+{
+  // Deux personnes sur le même téléphone, dont le quart a commencé à la MÊME heure (une équipe qui part ensemble)
+  const debut = heures(4.2);
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut }), rowQuart('q9', { utilisateur_id: 'u-marc', debut })], tours: [] });
+  m.run('fermerEcranQuart()');
+  m.run("currentUser={id:'u-marc',nom:'Marc',role:'employe'}");
+  await m.run('chargerMonQuart()');
+  eq('une AUTRE personne sur le même téléphone, quart commencé à la même heure : la suggestion s\'ouvre pour elle aussi (ce qu\'a vu Luc ne compte pas), avec sa propre mémoire', [ecranQuart(m).quel, suivi(m, 'lp_rappel_quart:u-marc')?.pause, suivi(m)?.pause], ['pause', true, true]);
+  m.fin();
+}
+{
+  // Un écran du quart déjà ouvert passe avant
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(5) })], tours: [] });
+  m.run('fermerEcranQuart()');
+  delete m.stockage[CLE_RAPPEL]; m.run('_suiviQuart=null');
+  m.run('pastilleQuartTouchee()'); m.run('verifierRappelsQuart()');
+  eq('un écran du quart déjà ouvert (« Terminer ton quart ? ») n\'est JAMAIS écrasé par la suggestion', ecranQuart(m).quel, 'fin');
+  m.run('fermerEcranQuart()');
+  eq('… elle passe à sa fermeture (« Non, continuer »)', ecranQuart(m).quel, 'pause');
+  m.fin();
+}
+{
+  // Ce qui ne doit rien déclencher
+  const a = await ouvrir({ quarts: [], tours: [] });
+  a.run('fermerEcranQuart()'); a.run('verifierRappelsQuart()');
+  eq('hors service : ni suggestion ni rappel', ecranQuart(a).ouvert, false);
+  a.fin();
+  const e = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(5) })], tours: [] });
+  e.run('fermerEcranQuart()'); delete e.stockage[CLE_RAPPEL]; e.run('_suiviQuart=null');
+  e.run('_envoiQuart=true; verifierRappelsQuart()');
+  eq('un geste du punch est en cours d\'envoi : rien ne s\'ouvre par-dessus', [ecranQuart(e).ouvert, suivi(e)], [false, null]);
+  e.run('_envoiQuart=false; rappelContinuerQuart()');
+  eq('« Je travaille encore » touché alors que le rappel n\'est pas à l\'écran (un bouton resté d\'un ancien écran) : rien n\'est noté', [suivi(e)], [null]);
+  e.fin();
+  const b = await ouvrir({ quarts: [rowQuart('q1', { debut: 'pas une date' })], tours: [] });
+  eq('une heure de début illisible : rien (et aucune erreur)', [ecranQuart(b).ouvert, b.appels.erreurs.length], [false, 0]);
+  b.fin();
+  const c = await ouvrir({ quarts: [rowQuart('q1', { debut: new Date(Date.now() + 3600000).toISOString() })], tours: [] });
+  eq('un début « dans le futur » (horloge du téléphone en retard) : rien', ecranQuart(c).ouvert, false);
+  c.fin();
+  const d = monde({ enLigne: false });
+  await d.run('loadStops()');
+  d.run('verifierRappelsQuart()');
+  eq('on ne SAIT pas encore si je suis en service (aucune copie, pas de réseau) : rien', ecranQuart(d).ouvert, false);
+  d.fin();
+}
+{
+  // Les durées viennent des réglages
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(2.5) })], tours: [], reglages: reglages(10, 3, 20) });
+  eq('réglage « pause » à 3 h : à 2 h 30, rien', ecranQuart(m).ouvert, false);
+  m.donnees.quarts = [rowQuart('q2', { debut: heures(3.5) })]; await m.run('chargerMonQuart()');
+  eq('… à 3 h 30, la suggestion (pas à 4 h)', ecranQuart(m).quel, 'pause');
+  m.fin();
+}
+
+log('\n=== LE RAPPEL « TU ES ENCORE EN SERVICE ? » : À 12 H, DEUX RÉPONSES, REDIT 2 H PLUS TARD ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(11.5) })], tours: [] });
+  eq('en service depuis 11 h 30 : la suggestion de pause (pas encore le rappel)', ecranQuart(m).quel, 'pause');
+  m.fin();
+}
+{
+  const debut = heures(12.5);
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut })], tours: [] });
+  const e = ecranQuart(m);
+  eq('en service depuis 12 h 30 : le RAPPEL s\'ouvre (pas la suggestion de pause)', [e.ouvert, e.quel], [true, 'rappel']);
+  eq('… « Tu es encore en service ? », depuis quand, 12 h 30 de travail, « As-tu oublié de terminer ton quart ? »', [texteEcran(e).includes('Tu es encore en service ?'), e.html.includes('En service depuis'), e.html.includes('12 h 30 de travail'), texteEcran(e).includes('As-tu oublié de terminer ton quart ?')], [true, true, true, true]);
+  eq('… un espace insécable avant chaque « ? » : jamais un point d\'interrogation seul sur sa ligne', [e.html.includes('service&nbsp;?'), e.html.includes('quart&nbsp;?')], [true, true]);
+  eq('… deux boutons : « ■ JE TERMINE » (gros, rouge) et « Je travaille encore »', [/class="quart-gros termine" onclick="rappelTerminerQuart\(\)">■ JE TERMINE</.test(e.html), /class="quart-ok" onclick="rappelContinuerQuart\(\)">Je travaille encore</.test(e.html), (e.html.match(/<button/g) || []).length], [true, true, 2]);
+  eq('… il dit que le serveur ferme tout seul un quart après 16 h (le réglage), sans ⚠', [e.html.includes('après 16 h est fermé automatiquement (fin estimée, à valider par l’administrateur)'), e.html.includes('⚠')], [true, false]);
+  eq('… la suggestion de pause est notée « montrée » en silence : elle ne viendra pas après le rappel', suivi(m)?.pause, true);
+  eq('… rien n\'est envoyé au serveur', m.appels.envois.length, 0);
+  toucheAcote(m);
+  eq('un toucher à côté NE ferme PAS le rappel (il concerne des heures payées : il faut répondre)', ecranQuart(m).quel, 'rappel');
+  await relire(m);
+  eq('… les relectures le laissent tel quel', [ecranQuart(m).quel, ecranQuart(m).ouvert], ['rappel', true]);
+  m.run('rappelContinuerQuart()');
+  const s = suivi(m);
+  eq('« Je travaille encore » : l\'écran se ferme ; le prochain rappel est dans 2 heures (à une minute près)', [ecranQuart(m).ouvert, Math.abs(s?.prochain - (Date.now() + 2 * 3600000)) < 60000, s?.debut === Date.parse(debut)], [false, true, true]);
+  await relire(m);
+  eq('… rien pendant ces 2 heures (relecture du quart, minuterie de la carte)', ecranQuart(m).ouvert, false);
+  m.run('_suiviQuart=null'); await m.run('loadStops()');
+  eq('… ni à la réouverture de l\'application (le téléphone s\'en souvient)', ecranQuart(m).ouvert, false);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(12.5) })], tours: [] });
+  m.run('RAPPEL_REPETE_HEURES=0.00003');   // ≈ 0,1 seconde : le délai de 2 heures, en accéléré
+  m.run('rappelContinuerQuart()');
+  eq('(délai accéléré) « Je travaille encore » : fermé pour l\'instant', ecranQuart(m).ouvert, false);
+  await attendre(250);
+  await m.run('rafraichirEnCours()');
+  eq('le délai passé, la minuterie de la carte le REDIT : le rappel se rouvre', [ecranQuart(m).ouvert, ecranQuart(m).quel], [true, 'rappel']);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(13) })], tours: [], monde: { serveur: serveurQuart({ fin: iso(0) }) } });
+  m.run('rappelTerminerQuart()');
+  eq('« ■ JE TERMINE » du rappel : l\'écran habituel « Terminer ton quart ? » s\'ouvre, rien n\'est encore envoyé (deux touchers)', [ecranQuart(m).quel, ecranQuart(m).html.includes('■ Terminer ton quart ?'), nbEnvois(m, 'quart_terminer')], ['fin', true, 0]);
+  m.run('fermerEcranQuart()');
+  eq('« Non, continuer » : le rappel ne revient pas tout de suite (on y a déjà répondu)', ecranQuart(m).ouvert, false);
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('puis « ■ JE TERMINE » : le quart se termine normalement (un seul envoi)', [nbEnvois(m, 'quart_terminer'), m.run('enService()')], [1, false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(12.5) })], tours: [] });
+  eq('(départ) le rappel est ouvert', ecranQuart(m).quel, 'rappel');
+  m.donnees.quarts = [];
+  await m.run('chargerMonQuart()');
+  eq('le serveur a fermé le quart (fermeture automatique, ou un autre téléphone) : le rappel se ferme tout seul', [ecranQuart(m).ouvert, m.run('enService()')], [false, false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(5) })], tours: [] });
+  eq('(départ) la suggestion est ouverte', ecranQuart(m).quel, 'pause');
+  m.donnees.quarts = [];
+  await m.run('chargerMonQuart()');
+  eq('le quart est fermé ailleurs : la suggestion se ferme aussi', [ecranQuart(m).ouvert, m.run('enService()')], [false, false]);
+  m.fin();
+}
+{
+  // Un quart oublié depuis la veille : « depuis hier à … »
+  const m = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(15) })], tours: [] });
+  const e = ecranQuart(m);
+  const hier = new Date(Date.now() - 15 * 3600000).toDateString() !== new Date().toDateString();
+  eq('un quart commencé la VEILLE : le rappel le dit (« depuis hier à … »), sinon « depuis … » ; 15 h de travail', [e.quel, hier ? e.html.includes('depuis hier à') : e.html.includes('depuis '), e.html.includes('15 h 00 de travail')], ['rappel', true, true]);
+  m.fin();
+}
+{
+  // Sans réseau, le contrôle continue (le calcul se fait sur le téléphone)
+  const a = await ouvrir({ quarts: [rowQuart('q1', { debut: heures(4.5) })], tours: [] });
+  a.run('fermerEcranQuart()'); await a.run('attendreEcritures()');
+  const surLeTelephone = a.memoire(); a.fin();
+  const b = monde({ enLigne: false, memoire: surLeTelephone });
+  await b.run('loadStops()');
+  eq('on rouvre l\'application SANS réseau, en service depuis 4 h 30 : la suggestion s\'ouvre quand même', ecranQuart(b).quel, 'pause');
+  b.run('fermerEcranQuart()');
+  b.run("_suiviQuart={pour:'u-luc',debut:_suiviQuart.debut,pause:false,prochain:0}");
+  b.run('RAPPEL_REPETE_HEURES=2');
+  await b.run('rafraichirEnCours()');
+  eq('… et la minuterie de la carte contrôle aussi SANS réseau (avant toute lecture du serveur)', ecranQuart(b).quel, 'pause');
+  b.fin();
+}
+{
+  // Le rappel ne perturbe pas l'écran d'accueil ni le punch
+  const m = await ouvrir({ quarts: [], tours: [] });
+  eq('hors service : l\'écran d\'accueil « JE COMMENCE » s\'ouvre comme avant', ecranQuart(m).quel, 'accueil');
+  m.fin();
+}
+
+log('\n=== LE CODE : LE RAPPEL ET LA PAUSE ===');
+{
+  const qe = lire('js/quart-ecrans.js'), qj = lire('js/quart.js'), tj = lire('js/tours.js'), aj = lire('js/arrets.js'), hj = lire('js/hors-reseau.js');
+  vrai('la minuterie de la carte contrôle le rappel AVANT toute lecture du serveur (donc aussi sans réseau)', /if\(!currentUser\) return;\s*\n\s*if\(typeof verifierRappelsQuart==='function'\) verifierRappelsQuart\(\);[^\n]*\n\s*await chargerPositionsVehicules\(\);/.test(tj));
+  vrai('le contrôle se fait aussi à chaque état du quart posé (poserQuart) et à la fermeture d\'un écran (fermerEcranQuart)', /verifierRappelsQuart\(\)/.test(qj) && /function fermerEcranQuart\(\)\{[^]*?verifierRappelsQuart\(\);/.test(qe));
+  vrai('les réglages viennent de la table « reglages » (les 3 clés du quart), lus AVANT le quart au chargement, restaurés de la copie hors réseau', qj.includes("db.from('reglages')") && qj.includes('rappel_en_service_heures') && qj.includes('suggestion_pause_heures') && qj.includes('duree_max_quart_heures') && aj.indexOf('chargerReglagesQuart()') > -1 && aj.indexOf('chargerReglagesQuart()') < aj.indexOf('chargerMonQuart()') && hj.includes('restaurerReglagesQuart()'));
+  vrai('le rappel se répète après 2 heures (RAPPEL_REPETE_HEURES) ; un toucher à côté ne le ferme pas (bgClickQuart)', /RAPPEL_REPETE_HEURES=2;/.test(qe) && /function bgClickQuart\(e\)\{\s*\n\s*if\(_ecranQuart==='rappel'\) return;/.test(qe));
 }
 
 log('\n=== LE CODE : L\'HEURE EST PRISE AVANT LA POSITION ===');

@@ -240,6 +240,4 @@ function applyRole(){
   document.getElementById('btn-nouveau-liste').style.display=isAdmin?'flex':'none';
   document.getElementById('btn-del').style.display=isAdmin?'flex':'none';
   document.getElementById('bb-admin').style.display=isAdmin?'flex':'none';
-  // Ancien suivi GPS : désactivé (il écrit dans une table refaite). Remplacé aux étapes 13 et 18.
-  if(ANCIEN_SUIVI_ACTIF) demarrerTracking();
 }

@@ -1,0 +1,386 @@
+[
+  {
+    "nom": "la position ne part plus que toutes les 30 secondes",
+    "fichier": "js/tracking.js",
+    "de": "let POSITION_ENVOI_S=10; ",
+    "vers": "let POSITION_ENVOI_S=30; "
+  },
+  {
+    "nom": "une lecture du GPS de 60 secondes est encore envoyée",
+    "fichier": "js/tracking.js",
+    "de": "const POSITION_ENVOI_FRAICHE_S=20; ",
+    "vers": "const POSITION_ENVOI_FRAICHE_S=60; "
+  },
+  {
+    "nom": "un envoi sans réponse n'est abandonné qu'après 30 secondes",
+    "fichier": "js/tracking.js",
+    "de": "let POSITION_ENVOI_DELAI_MS=8000; ",
+    "vers": "let POSITION_ENVOI_DELAI_MS=30000; "
+  },
+  {
+    "nom": "un passager envoie aussi la position du camion",
+    "fichier": "js/tracking.js",
+    "de": "  const m=(typeof maPasse==='function')?maPasse():null;\n  if(!m||!m.passe||!m.passe.passe_id) return null;",
+    "vers": "  const m=(typeof maPasse==='function')?(maPasse()||monBord()):null;\n  if(!m||!m.passe||!m.passe.passe_id) return null;"
+  },
+  {
+    "nom": "un départ de passe gardé sans réseau (inconnu du serveur) envoie quand même la position",
+    "fichier": "js/tracking.js",
+    "de": "  if(attente.some(g=>g.type==='debuter_passe'&&g.args&&g.args.passeId===id)) return null;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "n'importe quel départ en attente empêche l'envoi",
+    "fichier": "js/tracking.js",
+    "de": "g.type==='debuter_passe'&&g.args&&g.args.passeId===id",
+    "vers": "g.type==='debuter_passe'&&g.args"
+  },
+  {
+    "nom": "sans réseau, la position part quand même",
+    "fichier": "js/tracking.js",
+    "de": "    if(typeof reseau!=='undefined'&&!reseau.enLigne) return 'hors_reseau';",
+    "vers": "    ;"
+  },
+  {
+    "nom": "une lecture du GPS de n'importe quel âge est envoyée",
+    "fichier": "js/tracking.js",
+    "de": "positionConnue(POSITION_ENVOI_FRAICHE_S)",
+    "vers": "positionConnue(1e9)"
+  },
+  {
+    "nom": "sans lecture du GPS, on envoie quand même",
+    "fichier": "js/tracking.js",
+    "de": "    if(!p) return 'sans_position';",
+    "vers": "    ;"
+  },
+  {
+    "nom": "deux envois peuvent courir en même temps",
+    "fichier": "js/tracking.js",
+    "de": "    _envoiPositionEnCours=true;verrou=true;",
+    "vers": "    verrou=true;"
+  },
+  {
+    "nom": "l'envoi en cours est libéré par un appel qui a été refusé",
+    "fichier": "js/tracking.js",
+    "de": "    if(verrou) _envoiPositionEnCours=false;",
+    "vers": "    _envoiPositionEnCours=false;"
+  },
+  {
+    "nom": "le verrou d'envoi n'est jamais rendu",
+    "fichier": "js/tracking.js",
+    "de": "    _envoiPositionEnCours=true;verrou=true;",
+    "vers": "    _envoiPositionEnCours=true;"
+  },
+  {
+    "nom": "la précision du GPS n'est pas envoyée",
+    "fichier": "js/tracking.js",
+    "de": "p_precision:p.precision}",
+    "vers": "p_precision:null}"
+  },
+  {
+    "nom": "la position part avec l'heure du téléphone",
+    "fichier": "js/tracking.js",
+    "de": "p_precision:p.precision}",
+    "vers": "p_precision:p.precision,p_moment:new Date().toISOString()}"
+  },
+  {
+    "nom": "une panne de réseau ne rend pas l'application « hors réseau »",
+    "fichier": "js/tracking.js",
+    "de": "      if(estErreurReseau(r.error)){signalerEchecReseau(r.error);return 'perdue';}",
+    "vers": "      if(estErreurReseau(r.error)){return 'perdue';}"
+  },
+  {
+    "nom": "une panne de réseau est prise pour un refus du serveur",
+    "fichier": "js/tracking.js",
+    "de": "      if(estErreurReseau(r.error)){",
+    "vers": "      if(false){"
+  },
+  {
+    "nom": "« passe terminée » ne fait plus relire les passes",
+    "fichier": "js/tracking.js",
+    "de": "      if(typeof planifierRechargementTours==='function') planifierRechargementTours();",
+    "vers": "      ;"
+  },
+  {
+    "nom": "« passe terminée » est prise pour un succès",
+    "fichier": "js/tracking.js",
+    "de": "    if(d.statut==='passe_terminee'){",
+    "vers": "    if(false){"
+  },
+  {
+    "nom": "l'appel au serveur n'a plus de délai",
+    "fichier": "js/tracking.js",
+    "de": "avecDelai(db.rpc('envoyer_position',{p_passe_id:passeId,p_lat:p.lat,p_lon:p.lon,p_precision:p.precision}),POSITION_ENVOI_DELAI_MS)",
+    "vers": "db.rpc('envoyer_position',{p_passe_id:passeId,p_lat:p.lat,p_lon:p.lon,p_precision:p.precision})"
+  },
+  {
+    "nom": "démarrer l'envoi deux fois crée deux minuteries",
+    "fichier": "js/tracking.js",
+    "de": "  if(_minuterieEnvoiPosition) return;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "le premier envoi n'est plus immédiat",
+    "fichier": "js/tracking.js",
+    "de": "  tourEnvoiPosition();   // (le camion apparaît tout de suite s'il roule déjà)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la minuterie tourne 10 fois moins souvent",
+    "fichier": "js/tracking.js",
+    "de": "setInterval(tourEnvoiPosition,POSITION_ENVOI_S*1000)",
+    "vers": "setInterval(tourEnvoiPosition,POSITION_ENVOI_S*10000)"
+  },
+  {
+    "nom": "la déconnexion n'arrête pas la minuterie",
+    "fichier": "js/tracking.js",
+    "de": "    clearInterval(_minuterieEnvoiPosition);",
+    "vers": "    ;"
+  },
+  {
+    "nom": "la minuterie arrêtée n'est pas oubliée",
+    "fichier": "js/tracking.js",
+    "de": "    _minuterieEnvoiPosition=null;",
+    "vers": "    ;"
+  },
+  {
+    "nom": "sans personne de connecté, la position part quand même",
+    "fichier": "js/tracking.js",
+    "de": "    if(!currentUser) return 'pas_chauffeur';",
+    "vers": "    ;"
+  },
+  {
+    "nom": "le chargement des arrêts (avec signal) ne démarre plus l'envoi",
+    "fichier": "js/arrets.js",
+    "de": "    if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // la position du camion, si je conduis une passe (étape 18, tracking.js)",
+    "vers": "    ;"
+  },
+  {
+    "nom": "le chargement sans signal ne démarre plus l'envoi",
+    "fichier": "js/arrets.js",
+    "de": "        if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // (elle partira au retour du signal)",
+    "vers": "        ;"
+  },
+  {
+    "nom": "la déconnexion n'arrête plus l'envoi",
+    "fichier": "js/auth.js",
+    "de": "  try{await arreterTracking();}catch(e){}",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la page ne charge plus tracking.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/tracking.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "la notification n'a plus le bon titre",
+    "fichier": "js/tracking.js",
+    "de": "const NOTIFICATION_TITRE='Lapointe Tracker';",
+    "vers": "const NOTIFICATION_TITRE='Using your location';"
+  },
+  {
+    "nom": "la notification n'a plus le bon texte",
+    "fichier": "js/tracking.js",
+    "de": "const NOTIFICATION_MESSAGE='Passe en cours : la position du camion est partagée';",
+    "vers": "const NOTIFICATION_MESSAGE='Cancel to prevent battery drain.';"
+  },
+  {
+    "nom": "la boîte de permission de localisation n'est jamais permise",
+    "fichier": "js/tracking.js",
+    "de": "requestPermissions:!_arrierePlanRefus||_arrierePlanRefus.passeId!==passeId,",
+    "vers": "requestPermissions:false,"
+  },
+  {
+    "nom": "la boîte de permission est redemandée à chaque tentative",
+    "fichier": "js/tracking.js",
+    "de": "requestPermissions:!_arrierePlanRefus||_arrierePlanRefus.passeId!==passeId,",
+    "vers": "requestPermissions:true,"
+  },
+  {
+    "nom": "le suivi du téléphone ignore les lectures immobiles (filtre de 50 m)",
+    "fichier": "js/tracking.js",
+    "de": "stale:false,distanceFilter:0}",
+    "vers": "stale:false,distanceFilter:50}"
+  },
+  {
+    "nom": "le suivi du téléphone démarre avec une lecture périmée",
+    "fichier": "js/tracking.js",
+    "de": "stale:false,distanceFilter:0}",
+    "vers": "stale:true,distanceFilter:0}"
+  },
+  {
+    "nom": "un passager démarre aussi le suivi du téléphone",
+    "fichier": "js/tracking.js",
+    "de": "    const m=(typeof maPasse==='function')?maPasse():null;\n    const passeId=(m&&m.passe)?m.passe.passe_id:null;",
+    "vers": "    const m=(typeof maPasse==='function')?(maPasse()||monBord()):null;\n    const passeId=(m&&m.passe)?m.passe.passe_id:null;"
+  },
+  {
+    "nom": "deux démarrages du suivi peuvent courir en même temps",
+    "fichier": "js/tracking.js",
+    "de": "    if(_suiviArrierePlanOccupe||!currentUser) return;",
+    "vers": "    if(!currentUser) return;"
+  },
+  {
+    "nom": "le verrou de démarrage du suivi n'est jamais rendu",
+    "fichier": "js/tracking.js",
+    "de": "      _suiviArrierePlanOccupe=false;",
+    "vers": "      ;"
+  },
+  {
+    "nom": "un suivi déjà démarré est redémarré à chaque tour",
+    "fichier": "js/tracking.js",
+    "de": "      if(_suiviArrierePlan) return;\n      if(_arrierePlanRefus&&",
+    "vers": "      if(_arrierePlanRefus&&"
+  },
+  {
+    "nom": "le suivi n'est pas arrêté quand ma passe se termine",
+    "fichier": "js/tracking.js",
+    "de": "        if(_suiviArrierePlan) await arreterSuiviArrierePlan();\n        return;",
+    "vers": "        return;"
+  },
+  {
+    "nom": "après une passe, l'ancien refus reste (pas de boîte ni de message pour la nouvelle passe)",
+    "fichier": "js/tracking.js",
+    "de": "        _arrierePlanRefus=null;_arrierePlanAvertie=null;",
+    "vers": "        ;"
+  },
+  {
+    "nom": "après un refus, le suivi est retenté à chaque tour",
+    "fichier": "js/tracking.js",
+    "de": "        if(Date.now()-_arrierePlanRefus.le<ARRIERE_PLAN_REESSAI_MS) return;   // refus récent : on ne harcèle pas",
+    "vers": "        ;"
+  },
+  {
+    "nom": "la permission est regardée à chaque tour (et non une fois par minute)",
+    "fichier": "js/tracking.js",
+    "de": "        _arrierePlanRefus.le=Date.now();                                       // (prochain coup d'œil dans une minute)",
+    "vers": "        ;"
+  },
+  {
+    "nom": "un suivi est retenté même si la localisation est toujours refusée",
+    "fichier": "js/tracking.js",
+    "de": "if(typeof etatPermissionPosition==='function'&&(await etatPermissionPosition())!=='accordee') return;",
+    "vers": ";"
+  },
+  {
+    "nom": "le GPS éteint n'est plus reconnu",
+    "fichier": "js/tracking.js",
+    "de": "if(/services? disabled/i.test(String(erreur.message||''))) avertirArrierePlan(passeId,erreur);",
+    "vers": "if(false) avertirArrierePlan(passeId,erreur);"
+  },
+  {
+    "nom": "le message du GPS éteint est perdu",
+    "fichier": "js/tracking.js",
+    "de": "if(/services? disabled/i.test(m)) return '📍",
+    "vers": "if(false) return '📍"
+  },
+  {
+    "nom": "le message ne dit plus où corriger",
+    "fichier": "js/tracking.js",
+    "de": " (Réglages du téléphone > Applications > Lapointe Tracker > Autorisations)",
+    "vers": ""
+  },
+  {
+    "nom": "la personne est avertie à chaque erreur",
+    "fichier": "js/tracking.js",
+    "de": "  if(_arrierePlanAvertie===passeId) return;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la personne n'est jamais avertie de nouveau, même pour une autre passe",
+    "fichier": "js/tracking.js",
+    "de": "  _arrierePlanAvertie=passeId;\n",
+    "vers": "  _arrierePlanAvertie=1;\n"
+  },
+  {
+    "nom": "une autre erreur du service est prise pour un refus",
+    "fichier": "js/tracking.js",
+    "de": "    if(erreur.code!=='NOT_AUTHORIZED') return;",
+    "vers": "    ;"
+  },
+  {
+    "nom": "un refus n'arrête plus le suivi (la notification reste)",
+    "fichier": "js/tracking.js",
+    "de": "  const p=pluginNatif('BackgroundGeolocation');\n  if(p&&suivi&&suivi.id){try{Promise.resolve(p.removeWatcher({id:suivi.id})).catch(()=>{});}catch(e){}}",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un refus laisse le suivi cru actif",
+    "fichier": "js/tracking.js",
+    "de": "  if(_suiviArrierePlan===suivi) _suiviArrierePlan=null;\n  const p",
+    "vers": "  const p"
+  },
+  {
+    "nom": "les lectures du service ne sont plus gardées",
+    "fichier": "js/tracking.js",
+    "de": "  if(lecture&&typeof lecture.latitude==='number'&&typeof lecture.longitude==='number') noterPosition(lecture.latitude,lecture.longitude,lecture.accuracy,lecture.time);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la précision des lectures du service est perdue",
+    "fichier": "js/tracking.js",
+    "de": "noterPosition(lecture.latitude,lecture.longitude,lecture.accuracy,lecture.time)",
+    "vers": "noterPosition(lecture.latitude,lecture.longitude,null,lecture.time)"
+  },
+  {
+    "nom": "le suivi démarré n'est pas noté (donc démarré à chaque tour)",
+    "fichier": "js/tracking.js",
+    "de": "  _suiviArrierePlan=suivi;\n}",
+    "vers": "  ;\n}"
+  },
+  {
+    "nom": "un plugin qui échoue à démarrer est martelé à chaque tour",
+    "fichier": "js/tracking.js",
+    "de": "    _arrierePlanRefus={passeId,le:Date.now()};   // le plugin lui-même a échoué",
+    "vers": "    ;   // le plugin lui-même a échoué"
+  },
+  {
+    "nom": "la permission « notifications » est redemandée à chaque passe",
+    "fichier": "js/tracking.js",
+    "de": "  if(_notificationsDemandees) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la permission « notifications » est demandée même si elle est accordée",
+    "fichier": "js/tracking.js",
+    "de": "if(e&&(e.notifications==='prompt'||e.notifications==='prompt-with-rationale')) await Promise.resolve(n.request());",
+    "vers": "if(e) await Promise.resolve(n.request());"
+  },
+  {
+    "nom": "« prompt-with-rationale » n'est plus reconnu",
+    "fichier": "js/tracking.js",
+    "de": "e.notifications==='prompt'||e.notifications==='prompt-with-rationale'",
+    "vers": "e.notifications==='prompt'"
+  },
+  {
+    "nom": "la permission « notifications » n'est plus demandée du tout",
+    "fichier": "js/tracking.js",
+    "de": "  await demanderPermissionNotifications();\n  const suivi",
+    "vers": "  const suivi"
+  },
+  {
+    "nom": "l'arrêt du suivi retire un autre suivi",
+    "fichier": "js/tracking.js",
+    "de": "p.removeWatcher({id:s.id})),ARRIERE_PLAN_ARRET_DELAI_MS",
+    "vers": "p.removeWatcher({id:'x'})),ARRIERE_PLAN_ARRET_DELAI_MS"
+  },
+  {
+    "nom": "la déconnexion peut attendre le téléphone sans limite",
+    "fichier": "js/tracking.js",
+    "de": "await avecDelai(Promise.resolve(p.removeWatcher({id:s.id})),ARRIERE_PLAN_ARRET_DELAI_MS);",
+    "vers": "await Promise.resolve(p.removeWatcher({id:s.id}));"
+  },
+  {
+    "nom": "la déconnexion n'arrête plus le suivi du téléphone",
+    "fichier": "js/tracking.js",
+    "de": "  await arreterSuiviArrierePlan();\n}",
+    "vers": "  ;\n}"
+  },
+  {
+    "nom": "la minuterie ne suit plus ma passe (suivi du téléphone)",
+    "fichier": "js/tracking.js",
+    "de": "  majSuiviArrierePlan();       // le suivi du téléphone",
+    "vers": "  ;       // le suivi du téléphone"
+  }
+]

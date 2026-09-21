@@ -59,10 +59,6 @@ function initApp(){
         window._uCk.setLatLng([lat,lon]).setRadius(accuracy);
       }
       geocodeReverse(lat,lon,addrEl);
-		if(ANCIEN_SUIVI_ACTIF){
-		  if(currentUser) envoyerPosition(lat,lon);
-		  verifierProximite(lat,lon);
-		}
     },()=>{dotEl.className='err';lblEl.textContent='Erreur';});
   };
 

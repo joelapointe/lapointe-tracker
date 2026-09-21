@@ -230,7 +230,7 @@ log('\n=== LE TÉLÉPHONE ET LA PAGE : PERMISSIONS, PLUGIN, ORDRE DES FICHIERS =
 {
   const manifeste = fs.readFileSync(RACINE + 'android/app/src/main/AndroidManifest.xml', 'utf8');
   vrai('le manifeste Android déclare la position PRÉCISE et la position APPROXIMATIVE', manifeste.includes('android.permission.ACCESS_FINE_LOCATION') && manifeste.includes('android.permission.ACCESS_COARSE_LOCATION'));
-  vrai('… mais PAS la position en arrière-plan (c\'est l\'étape 18 : une permission spéciale, justifiée à Google Play)', !manifeste.includes('android.permission.ACCESS_BACKGROUND_LOCATION'));
+  vrai('… mais PAS « Toujours autoriser » (permission spéciale, justifiée à Google Play) : le suivi de premier plan de l\'étape 18 suffit', !manifeste.includes('android.permission.ACCESS_BACKGROUND_LOCATION'));
   vrai('… et la permission Internet est toujours là', manifeste.includes('android.permission.INTERNET'));
   const paquet = JSON.parse(fs.readFileSync(RACINE + 'package.json', 'utf8'));
   vrai('le plugin officiel @capacitor/geolocation (version 8, comme Capacitor) est dans package.json', /^\^8\./.test(paquet.dependencies['@capacitor/geolocation'] || ''), JSON.stringify(paquet.dependencies));

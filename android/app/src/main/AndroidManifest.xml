@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <application
         android:allowBackup="true"
@@ -39,10 +40,23 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Étape 17, morceau 3 : la position du téléphone au moment du punch (« Je commence » / « Je termine »), quand l'application est ouverte.
-         Position précise ET approximative (Android 12 et plus laisse la personne choisir « approximative » : le punch s'enregistre alors avec sa précision).
-         Le suivi de la position EN ARRIÈRE-PLAN (ACCESS_BACKGROUND_LOCATION) est l'étape 18 : il n'est PAS déclaré ici. -->
+    <!-- Étape 17, morceau 3 : la position du téléphone au moment du punch (« Je commence » / « Je termine »).
+         Position précise ET approximative (Android 12 et plus laisse la personne choisir « approximative » : le punch s'enregistre alors avec sa précision). -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+
+    <!-- Étape 18, partie 2 : la position du camion envoyée PENDANT LA PASSE, application en arrière-plan ou écran éteint (plugin
+         @capacitor-community/background-geolocation). Elle passe par un SERVICE DE PREMIER PLAN de type « location », démarré application ouverte, avec une
+         notification permanente pendant la passe (« Lapointe Tracker — Passe en cours : la position du camion est partagée »).
+         DÉCISION : ACCESS_BACKGROUND_LOCATION (« Toujours autoriser ») n'est PAS déclarée et n'est pas nécessaire : « Pendant l'utilisation de l'application »
+         suffit, parce que le service de premier plan est démarré depuis l'application ouverte. Ces trois permissions sont aussi déclarées par le plugin ;
+         on les écrit ici pour que le manifeste dise à lui seul ce que l'application demande. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Android 13 et plus : sans cette permission (demandée à l'écran, au début de la passe), la notification permanente resterait cachée. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Le GPS n'est PAS obligatoire pour installer l'application (une tablette sans GPS peut faire le punch, sans position). Le plugin d'arrière-plan
+         déclare le GPS « obligatoire » : tools:replace garde notre choix. -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" tools:replace="android:required" />
 </manifest>

@@ -7,10 +7,6 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 let db, map, stops=[], activeIdx=null, mkrs={};
 let currentUser=null;   // {id, nom, role} de la personne connectée (Supabase Auth), sinon null
 
-// Ancien suivi GPS et complétion automatique des arrêts : ils écrivent dans des tables qui ont été refaites (étapes 6 à 9).
-// Désactivés à l'étape 12 pour ne pas produire d'erreurs ; remplacés par les nouvelles fonctions aux étapes 13, 14 et 18.
-const ANCIEN_SUIVI_ACTIF=false;
-
 // Client « en cours » (étape 13c) : sa zone devient bleue quand un camion de son tour est sur place.
 // Décision de Joé (19 septembre 2026) : 20 m. Les deux autres seuils évitent du bleu à cause d'un vieux point ou d'un GPS imprécis.
 const RAYON_EN_COURS_M=20;         // le camion est à moins de 20 m de l'arrêt

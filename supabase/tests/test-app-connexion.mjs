@@ -115,7 +115,7 @@ log('\n=== CONNEXION D\'UN EMPLOYÉ ===');
   eq('le bouton « Déconnexion » de la barre du haut devient visible ; le nom s\'affiche dans la barre du bas', [m.el('btn-deconnexion').style.display, m.el('btn-deconnexion').attrs.title, m.el('op-name').textContent], ['flex', 'Se déconnecter (Luc)', 'Luc']);
   eq('un employé ne voit pas les boutons d\'administration', ['bb-add', 'btn-nouveau-liste', 'btn-del', 'bb-admin'].map((i) => m.el(i).style.display), ['none', 'none', 'none', 'none']);
   eq('profil gardé pour l\'usage hors réseau : id, nom, rôle seulement', JSON.parse(m.stockage.get('lp_profil')), { id: 'u-1', nom: 'Luc', role: 'employe' });
-  eq('l\'ancien suivi GPS reste désactivé (il écrirait dans une table refaite)', m.appels.demarrerTracking, 0);
+  eq('l\'ancien suivi GPS n\'existe plus (il écrivait dans une table refaite) : la connexion ne démarre aucun suivi (l\'envoi de la position part du chargement des arrêts, étape 18)', m.appels.demarrerTracking, 0);
   eq('le bouton est réactivé', [m.el('login-btn').disabled, m.el('login-btn').textContent], [false, 'Connexion →']);
 }
 

@@ -19,6 +19,7 @@ async function loadStops(){
     if(typeof chargerReglagesQuart==='function') await chargerReglagesQuart();   // rappel, pause, durée maximale d'un quart (étape 17, quart.js) : AVANT le quart, pour que le premier contrôle les connaisse
     if(typeof chargerMonQuart==='function') await chargerMonQuart();   // suis-je en service ? (étape 17, quart.js)
     demarrerRelecturePositions();
+    if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // la position du camion, si je conduis une passe (étape 18, tracking.js)
     await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
     if(!reseau.enLigne) await restaurerDepuisCache();   // le signal a disparu pendant le chargement : on prend les copies pour ce qui manque
     renderAll();
@@ -36,6 +37,7 @@ async function loadStops(){
         updateBar();
         checkProblemes();
         demarrerRelecturePositions();
+        if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // (elle partira au retour du signal)
         return;
       }
       showErr('Pas de réseau, et rien n’est encore gardé sur ce téléphone.<br>Ouvre l’application une première fois avec du signal : elle gardera alors de quoi travailler sans réseau.');

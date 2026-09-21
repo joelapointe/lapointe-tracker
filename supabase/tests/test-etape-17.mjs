@@ -20,6 +20,8 @@ const FILES19 = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.s
   '16-etape14e-photo-probleme.sql', '17-etape15-equipage-precedent.sql', '18-etape16d-heure-des-gestes-sans-reseau.sql', '19-etape16d-annulation-ignoree-precisee.sql'];
 const FICHIER20 = '20-etape17-fin-de-quart-equipage.sql';
 const SQL20 = fs.readFileSync(process.env.SQL20_TEST || (SQL_DIR + FICHIER20), 'utf8');
+const FICHIER21 = '21-etape17-fin-de-quart-equipe-passe-terminee.sql';   // (SQL21_TEST : une copie abîmée, comme SQL20_TEST)
+const SQL21 = fs.readFileSync(process.env.SQL21_TEST || (SQL_DIR + FICHIER21), 'utf8');
 const NETTOYAGE = fs.readFileSync(SQL_DIR + '10-nettoyage-comptes-zztest.sql', 'utf8');
 const MEC = 'Déneigement mécanique';
 
@@ -58,6 +60,7 @@ const commencer = (uid, id, moment) => fn(uid, `quart_commencer($1::uuid,$2::tim
 const terminerQ = (uid, id, moment) => fn(uid, `quart_terminer($1::uuid,$2::timestamptz,46.5::float8,-72.7::float8,null::real)`, [id, moment]);
 const equipier = (uid, passe, user, moment) => fn(uid, `quart_terminer_equipier($1::uuid,$2::uuid,$3::timestamptz,46.5::float8,-72.7::float8,null::real)`, [passe, user, moment]);
 const contester = (uid, quartId, note = null) => fn(uid, `quart_signaler_erreur($1::uuid,$2::text)`, [quartId, note]);
+const completer = (uid, passe, stop, min) => fn(uid, `completer_arret($1::uuid,$2::uuid,$3::timestamptz,'manuel'::text,null::float8,null::float8)`, [passe, stop, at(min)]);
 
 const quartDe = async (uid) => (await q(`select * from quarts where utilisateur_id = $1 order by debut desc limit 1`, [uid]))[0];
 const periodesDe = async (uid) => q(`select * from equipage_periodes where utilisateur_id = $1 order by debut`, [uid]);
@@ -70,7 +73,7 @@ async function nouvellePasse(noms, min = 240) {
   const chauffeur = await emp('Chauffeur' + n);
   const equipe = (await q(`insert into equipes(nom) values ($1) returning id`, ['Camion T' + n]))[0].id;
   const route = (await q(`insert into routes(nom) values ($1) returning id`, ['R17 ' + n]))[0].id;
-  await q(`insert into stops(adresse, route_id, service, lat, lon) values ($1,$2,$3,46.5,-72.7)`, ['A' + n, route, MEC]);
+  const stop = (await q(`insert into stops(adresse, route_id, service, lat, lon) values ($1,$2,$3,46.5,-72.7) returning id`, ['A' + n, route, MEC]))[0].id;
   const passe = uuid();
   await debuter(chauffeur, passe, route, equipe, min);
   const passagers = [];
@@ -80,7 +83,14 @@ async function nouvellePasse(noms, min = 240) {
     if (r.statut !== 'ajoute') throw new Error('décor : ' + nom + ' pas ajouté : ' + JSON.stringify(r));
     passagers.push(u);
   }
-  return { chauffeur, passe, passagers, equipe, route, nom: 'Camion T' + n };
+  return { chauffeur, passe, passagers, equipe, route, stop, nom: 'Camion T' + n };
+}
+// Une passe dont le seul arrêt est complété il y a `minFin` minutes : 100 %, le serveur la ferme TOUT SEUL et l'équipage descend à cette heure-là
+async function passeFermee(noms, minFin = 45) {
+  const s = await nouvellePasse(noms);
+  const r = await completer(s.chauffeur, s.passe, s.stop, minFin);
+  if (!(await q(`select 1 from passes where id = $1 and statut = 'terminee'`, [s.passe])).length) throw new Error('décor : la passe ne s\'est pas fermée à 100 % : ' + JSON.stringify(r));
+  return s;
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -135,6 +145,38 @@ log('=== LE FICHIER LUI-MÊME ===');
   eq('raison_a_valider = « bidon » : refusée', await bidon('raison_a_valider', 'bidon'), 'refusé');
   await q(`update quarts set fin = now(), fin_source = 'delai_max', fin_estimee = true, a_valider = true, raison_a_valider = 'fin_estimee' where utilisateur_id = $1`, [u]);
   pass('l\'ancien monde marche encore : « delai_max » et « fin_estimee » acceptés');
+}
+
+// ═════════════════════════════════════════════════════════════════════
+log('\n=== LE FICHIER 21 : TERMINER L\'ÉQUIPE MÊME QUAND LA PASSE S\'EST DÉJÀ FERMÉE ===');
+{
+  const sansVingt = await prepare(FILES19);
+  await err('sans le fichier 20 : REFUSÉ, avec un message clair', () => sansVingt.exec(SQL21), 'le fichier 20 n\'a pas été exécuté');
+  const donnee = await passeFermee(['Nina']);   // de vraies données AVANT le fichier
+  const empreinte = async () => [
+    (await q(`select count(*)::int n from quarts`))[0].n, (await q(`select count(*)::int n from equipage_periodes`))[0].n, (await q(`select count(*)::int n from passes`))[0].n,
+    (await q(`select md5(coalesce(string_agg(id::text || debut::text || coalesce(fin::text,'') || coalesce(fin_source,'') || a_valider::text, ',' order by id), '')) h from quarts`))[0].h,
+    (await q(`select md5(string_agg(pg_get_functiondef(p.oid), '|' order by p.proname)) h from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('quart_commencer','quart_terminer','quart_signaler_erreur','equipage_ajouter','equipage_retirer','equipage_precedent','terminer_passe','debuter_passe')`))[0].h,
+    (await q(`select md5(coalesce(string_agg(cle || valeur::text, ',' order by cle), '')) h from reglages where cle <> 'fin_equipe_apres_passe_heures'`))[0].h];
+  const av = await empreinte();
+  await db.exec(SQL21);
+  eq('exécuter le fichier 21 : les quarts, les équipages, les passes, les AUTRES fonctions et les autres réglages ne bougent pas', await empreinte(), av);
+  eq('… le réglage s\'ajoute : 3 heures', (await q(`select valeur from reglages where cle = 'fin_equipe_apres_passe_heures'`))[0].valeur, 3);
+  await db.exec(SQL21);
+  eq('ré-exécuter le fichier 21 : accepté, RIEN ne change', await empreinte(), av);
+  await q(`update reglages set valeur = '2'::jsonb where cle = 'fin_equipe_apres_passe_heures'`);   // l'administrateur a changé le réglage
+  await db.exec(SQL21);
+  eq('ré-exécuter le fichier 21 NE REMET PAS à 3 h un réglage que l\'administrateur a changé (2 h)', (await q(`select valeur from reglages where cle = 'fin_equipe_apres_passe_heures'`))[0].valeur, 2);
+  await q(`update reglages set valeur = '3'::jsonb where cle = 'fin_equipe_apres_passe_heures'`);
+  eq('une seule version de quart_terminer_equipier', (await q(`select count(*)::int n from pg_proc where pronamespace = 'public'::regnamespace and proname = 'quart_terminer_equipier'`))[0].n, 1);
+  await err('un visiteur ne peut toujours pas l\'appeler', () => fn(null, `quart_terminer_equipier($1::uuid,$2::uuid,null,null,null,null)`, [uuid(), uuid()], 'anon'), 'permission denied');
+  eq('aucune fonction ouverte au visiteur', (await q(`select count(*)::int n from pg_proc where pronamespace = 'public'::regnamespace and has_function_privilege('anon', oid, 'execute')`))[0].n, 0);
+  vrai('aucune clé secrète ni mot de passe', !/service_role|sb_secret|password/i.test(SQL21));
+  const verif = (await q(SQL21.slice(SQL21.indexOf('select jsonb_build_object(', SQL21.lastIndexOf('-- VÉRIFICATION'))).replace(/;\s*$/, '')))[0].verification;
+  eq('la requête « vérification » du bas : 1 version, gère la passe terminée, employé permis, visiteur refusé, verrouillée, le réglage à 3, aucune fonction ouverte au visiteur',
+    [verif.quart_terminer_equipier_versions, verif.gere_la_passe_terminee, verif.employe_peut_appeler, verif.visiteur_peut_appeler, verif.fonction_verrouillee_search_path, verif.reglages.fin_equipe_apres_passe_heures, verif.fonctions_appelables_par_un_visiteur],
+    [1, true, true, false, true, 3, []]);
+  eq('… et le nombre de quarts existants qu\'elle annonce est exact', verif.quarts_existants, (await q(`select count(*)::int n from quarts`))[0].n);
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -333,6 +375,79 @@ log('\n=== LE CHAUFFEUR TERMINE LE QUART D\'UN PASSAGER ===');
   const r = await equipier(chauffeur, passe, paul, at(4));
   const qp = await quartDe(paul);
   eq('le chauffeur termine le quart que Paul avait commencé lui-même (depuis 5 h)', [r.statut, r.quart_id === idp, qp.fin_source, qp.fin_par === chauffeur], ['termine', true, 'equipage', true]);
+}
+
+// ═════════════════════════════════════════════════════════════════════
+log('\n=== L\'ÉQUIPE APRÈS LA FIN DE LA PASSE (elle s\'est fermée toute seule à 100 %) : FICHIER 21 ===');
+{
+  const s = await passeFermee(['Nina', 'Omar', 'Paul'], 45);
+  const [nina, omar, paul] = s.passagers;
+  const fermee = (await q(`select fin, fin_type from passes where id = $1`, [s.passe]))[0];
+  eq('(décor) la passe s\'est fermée toute seule (100 %) et l\'équipage est descendu à cette heure-là', [fermee.fin_type, ms((await periodesDe(nina))[0].fin) === ms(fermee.fin)], ['complete', true]);
+  eq('(décor) leurs quarts sont toujours OUVERTS : c\'est le problème que ce fichier règle', [(await quartDe(nina)).fin, (await quartDe(omar)).fin], [null, null]);
+  const prec = await fn(s.chauffeur, `equipage_precedent()`);
+  eq('l\'équipage de ma dernière passe (equipage_precedent : ce que l\'application affichera) : cette passe et ses 3 passagers', [prec.passe_id === s.passe, prec.membres.map((x) => x.utilisateur_id).sort()], [true, [nina, omar, paul].sort()]);
+  const m = at(0);   // « JE TERMINE » 45 minutes après la fin de la passe
+  const r = await equipier(s.chauffeur, s.passe, nina, m);
+  eq('« JE TERMINE » 45 min après la fin de la passe : le quart de Nina est terminé', [r.statut, ms(r.fin) === ms(m)], ['termine', true]);
+  const qn = await quartDe(nina);
+  eq('… à l\'heure du GESTE (l\'équipe rentre ensemble), pas à l\'heure où la passe s\'est fermée ; la trace du chauffeur est gardée', [ms(qn.fin) === ms(m), ms(qn.fin) > ms(fermee.fin), qn.fin_source, qn.fin_par === s.chauffeur], [true, true, 'equipage', true]);
+  const ro = await equipier(s.chauffeur, s.passe, omar, m), rp = await equipier(s.chauffeur, s.passe, paul, m);
+  eq('… les deux autres aussi, à la MÊME seconde', [ro.statut, rp.statut, new Set([(await quartDe(nina)).fin, (await quartDe(omar)).fin, (await quartDe(paul)).fin].map(ms)).size], ['termine', 'termine', 1]);
+  eq('renvoyé : « déjà terminé », rien ne bouge', [(await equipier(s.chauffeur, s.passe, nina, m)).statut, ms((await quartDe(nina)).fin) === ms(m)], ['deja_termine', true]);
+}
+{
+  // La limite de temps (3 h par défaut) et le réglage
+  const s = await passeFermee(['Nina', 'Omar'], 200);   // passe fermée il y a 3 h 20
+  const r = await equipier(s.chauffeur, s.passe, s.passagers[0], at(0));
+  eq('la passe s\'est fermée il y a 3 h 20 (plus de 3 h) : REFUSÉ, le quart reste ouvert', [r.statut, r.raison, (await quartDe(s.passagers[0])).fin], ['refuse', 'pas_a_bord', null]);
+  const t = await passeFermee(['Nina'], 170);   // 2 h 50
+  eq('fermée il y a 2 h 50 (moins de 3 h) : accepté', (await equipier(t.chauffeur, t.passe, t.passagers[0], at(0))).statut, 'termine');
+  await q(`update reglages set valeur = '1'::jsonb where cle = 'fin_equipe_apres_passe_heures'`);
+  const u = await passeFermee(['Nina'], 90);   // 1 h 30
+  eq('avec le réglage à 1 h : fermée il y a 1 h 30 : REFUSÉ', (await equipier(u.chauffeur, u.passe, u.passagers[0], at(0))).raison, 'pas_a_bord');
+  await q(`update reglages set valeur = '2'::jsonb where cle = 'fin_equipe_apres_passe_heures'`);
+  eq('… le réglage à 2 h : accepté', (await equipier(u.chauffeur, u.passe, u.passagers[0], at(0))).statut, 'termine');
+  await q(`delete from reglages where cle = 'fin_equipe_apres_passe_heures'`);
+  const w = await passeFermee(['Nina'], 170);
+  eq('sans le réglage (supprimé) : 3 h par défaut', (await equipier(w.chauffeur, w.passe, w.passagers[0], at(0))).statut, 'termine');
+  const x = await passeFermee(['Nina'], 200);   // 3 h 20
+  eq('… et 3 h 20 après la fin de la passe, sans le réglage : REFUSÉ (la valeur par défaut est bien 3 h, pas plus)', (await equipier(x.chauffeur, x.passe, x.passagers[0], at(0))).raison, 'pas_a_bord');
+  await q(`insert into reglages(cle, valeur, description) values ('fin_equipe_apres_passe_heures', '3', 'remis pour la suite des essais')`);
+}
+{
+  // Descendu AVANT la fin de la passe : la règle des 10 minutes (fichier 20) s'applique toujours
+  const s = await nouvellePasse(['Nina', 'Omar']);
+  const [nina, omar] = s.passagers;
+  await retirer(s.chauffeur, uuid(), s.passe, nina, 100);   // Nina descend il y a 100 min, bien avant la fin de la passe
+  await completer(s.chauffeur, s.passe, s.stop, 45);          // la passe se ferme à 100 %
+  const r = await equipier(s.chauffeur, s.passe, nina, at(0));
+  eq('quelqu\'un descendu AVANT la fin de la passe (retiré il y a 100 min) : REFUSÉ (il n\'était plus à bord à la fin)', [r.statut, r.raison, (await quartDe(nina)).fin], ['refuse', 'pas_a_bord', null]);
+  eq('… Omar, lui, était encore à bord à la fin : accepté', (await equipier(s.chauffeur, s.passe, omar, at(0))).statut, 'termine');
+}
+{
+  // La passe a été terminée par le chauffeur lui-même (« JE TERMINE »), les passagers sont terminés plus tard
+  const s = await nouvellePasse(['Nina']);
+  await terminerQ(s.chauffeur, null, at(30));
+  const m = at(5);
+  const r = await equipier(s.chauffeur, s.passe, s.passagers[0], m);
+  eq('le chauffeur a terminé son quart (et donc sa passe) il y a 30 min ; 25 min plus tard il termine celui du passager : accepté, à l\'heure du geste', [r.statut, ms(r.fin) === ms(m)], ['termine', true]);
+}
+{
+  // Les refus et les cas particuliers
+  const s = await passeFermee(['Nina', 'Omar', 'Paul', 'Rita']), t = await nouvellePasse([]);
+  const [nina, omar, paul, rita] = s.passagers;
+  await ajouter(t.chauffeur, uuid(), t.passe, nina, 20);   // Nina monte dans un AUTRE camion après la fin de la passe
+  const a = await equipier(s.chauffeur, s.passe, nina, at(0));
+  eq('elle est maintenant à bord d\'un autre camion : REFUSÉ, le camion est nommé, son quart reste ouvert', [a.statut, a.raison, a.vehicule, (await quartDe(nina)).fin], ['refuse', 'a_bord_ailleurs', t.nom, null]);
+  await terminerQ(omar, null, at(20));   // Omar a terminé son quart LUI-MÊME
+  const b = await equipier(s.chauffeur, s.passe, omar, at(0));
+  eq('Omar a terminé son quart LUI-MÊME 20 min avant : rien à terminer (« pas en quart »), son heure et son origine ne changent pas', [b.statut, ms((await quartDe(omar)).fin) === Date.now() - 20 * 60000 || Math.abs(ms((await quartDe(omar)).fin) - (Date.now() - 20 * 60000)) < 5000, (await quartDe(omar)).fin_source, (await quartDe(omar)).fin_par], ['pas_en_quart', true, 'manuel', null]);
+  await err('le chauffeur d\'un AUTRE camion ne peut pas terminer l\'équipe de cette passe', () => equipier(t.chauffeur, s.passe, paul, at(0)), 'non_autorise');
+  await q(`delete from quarts where utilisateur_id = $1`, [rita]);
+  eq('quelqu\'un sans aucun quart : « pas en quart »', (await equipier(s.chauffeur, s.passe, rita, at(0))).statut, 'pas_en_quart');
+  const c = await equipier(s.chauffeur, s.passe, paul, at(60));   // 15 min AVANT la fin de la passe (fermée il y a 45 min)
+  eq('une heure de geste AVANT la fin de la passe : c\'est l\'heure du geste qui compte (règle du fichier 20, inchangée)', [c.statut, Math.abs(ms(c.fin) - (Date.now() - 60 * 60000)) < 5000], ['termine', true]);
 }
 
 // ═════════════════════════════════════════════════════════════════════

@@ -20,7 +20,7 @@ import { fileURLToPath } from 'url';
 
 const ICI = fileURLToPath(new URL('.', import.meta.url));
 const REEL = fileURLToPath(new URL('../../www/', import.meta.url));
-const COPIE = path.join(os.tmpdir(), 'www-erreurs-volontaires');
+const COPIE = process.env.COPIE_ERREURS || path.join(os.tmpdir(), 'www-erreurs-volontaires');   // (COPIE_ERREURS : un autre dossier, pour lancer plusieurs séries EN PARALLÈLE)
 const TEST = process.argv[2];
 const FICHIER_MUTATIONS = process.argv[3];
 if (!TEST || !FICHIER_MUTATIONS) { console.log('Usage : node erreurs-volontaires.mjs <fichier-de-test.mjs> <mutations.json>'); process.exit(2); }

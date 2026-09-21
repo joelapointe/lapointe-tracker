@@ -66,6 +66,10 @@ log('\n=== LE PUNCH (étape 17) : « JE COMMENCE », LA CONFIRMATION, « JE TERM
   vrai('la fenêtre du punch est SOUS le message flottant (un message d\'erreur reste visible), et sous le résumé de passe et les boîtes de confirmation', z('#quart-overlay') > 0 && z('#quart-overlay') < z('#toast') && z('#quart-overlay') < z('#resume-overlay') && z('#quart-overlay') < z('#confirm-overlay'), [z('#quart-overlay'), z('#toast'), z('#resume-overlay'), z('#confirm-overlay')].join(' / '));
   vrai('… et AU-DESSUS de la carte, de la barre du haut et des fenêtres qui montent du bas (équipage, choix d\'une personne)', z('#quart-overlay') > z('#topbar') && z('#quart-overlay') > z('#equipage-overlay') && z('#quart-overlay') > z('#choix-overlay'), [z('#quart-overlay'), z('#topbar'), z('#equipage-overlay'), z('#choix-overlay')].join(' / '));
   vrai('le gros bouton fait au moins 96 px de haut (un doigt, avec des gants)', Number(derniere('.quart-gros')?.corps.match(/min-height:(\d+)px/)?.[1]) >= 96);
+  const haut = (sel) => Number(derniere(sel)?.corps.match(/min-height:(\d+)px/)?.[1]);
+  vrai('les lignes de l\'équipe (« ☑ Marc ») et « Ce n’est pas exact » font au moins 52 px de haut', haut('.quart-equipier') >= 52 && haut('.quart-signaler') >= 52, [haut('.quart-equipier'), haut('.quart-signaler')].join(' / '));
+  vrai('« OK » de la carte du passager est un GROS bouton aussi (au moins 96 px)', de('.quart-gros.ok').some((r) => Number(r.corps.match(/min-height:(\d+)px/)?.[1]) >= 96));
+  vrai('l\'heure de la confirmation ne se coupe jamais en deux lignes (nowrap)', /white-space:nowrap/.test(derniere('.quart-heure')?.corps ?? ''));
 }
 
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);

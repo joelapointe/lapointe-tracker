@@ -1,0 +1,314 @@
+[
+  {
+    "nom": "équipe : les cases ne sont plus cochées d'avance (passe en cours)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    membres.forEach(x=>{_equipeFin.coches[x.utilisateur_id]=true;});",
+    "vers": "    ;"
+  },
+  {
+    "nom": "équipe : les cases ne sont plus cochées d'avance (passe fermée)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "      jeton.membres.forEach(x=>{jeton.coches[x.utilisateur_id]=true;});",
+    "vers": "      ;"
+  },
+  {
+    "nom": "équipe : je figure dans ma propre liste",
+    "fichier": "js/quart-ecrans.js",
+    "de": "const membres=(equipages[passeId]||[]).filter(x=>x.utilisateur_id!==currentUser.id).map(",
+    "vers": "const membres=(equipages[passeId]||[]).map("
+  },
+  {
+    "nom": "équipe : un passager a aussi une liste",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(typeof monBord==='function'&&monBord()) return;   // un passager ne termine le quart de personne",
+    "vers": "  ;"
+  },
+  {
+    "nom": "équipe : plus de limite de 3 heures pour une passe fermée",
+    "fichier": "js/quart-ecrans.js",
+    "de": "Date.now()-Date.parse(res.fin)<=FIN_EQUIPE_HEURES*3600000",
+    "vers": "true"
+  },
+  {
+    "nom": "équipe : toucher une ligne la coche toujours (jamais de décochage)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  _equipeFin.coches[id]=!_equipeFin.coches[id];",
+    "vers": "  _equipeFin.coches[id]=true;"
+  },
+  {
+    "nom": "équipe : un numéro qui n'est pas dans la liste est accepté",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(!_equipeFin.membres.some(x=>x.utilisateur_id===id)) return;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "équipe : les cases décochées sont ignorées (tout le monde est terminé)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "personnes:e.membres.filter(x=>e.coches[x.utilisateur_id])",
+    "vers": "personnes:e.membres"
+  },
+  {
+    "nom": "équipe : l'heure des passagers est celle du téléphone, pas celle donnée par le serveur pour mon quart",
+    "fichier": "js/quart-ecrans.js",
+    "de": "const bilan=await terminerEquipe(equipe,fin);",
+    "vers": "const bilan=await terminerEquipe(equipe,moment);"
+  },
+  {
+    "nom": "confirmation : ne nomme plus les personnes terminées aussi",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(b.ok.length) l.push('Quart terminé aussi pour : '+b.ok.join(', ')+'.');",
+    "vers": "  ;"
+  },
+  {
+    "nom": "confirmation : ne dit plus « envoyé au retour du signal » pour les personnes en attente",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(b.attente.length) l.push(",
+    "vers": "  if(false) l.push("
+  },
+  {
+    "nom": "confirmation : les refus ne sont plus montrés",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  b.problemes.forEach(t=>l.push('⚠ '+t));",
+    "vers": "  ;"
+  },
+  {
+    "nom": "confirmation : avec un avertissement, elle se ferme quand même toute seule",
+    "fichier": "js/quart-ecrans.js",
+    "de": "lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan)),null,bilan.problemes.length>0);",
+    "vers": "lignesFinQuart(avant,fin,d.passe_fermee).concat(lignesEquipe(bilan)),null,false);"
+  },
+  {
+    "nom": "hors réseau : les gestes des personnes n'ont pas l'heure du toucher (fin de quart)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "{libelle:'■ Quart terminé : '+p.nom,moment});\n    if(g.ok) bilan.ok.push(p.nom);",
+    "vers": "{libelle:'■ Quart terminé : '+p.nom});\n    if(g.ok) bilan.ok.push(p.nom);"
+  },
+  {
+    "nom": "panne : le geste d'une personne passe à la file sans l'heure",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    const g=await enfiler('quart_terminer_equipier',args,{libelle:'■ Quart terminé : '+p.nom,moment});",
+    "vers": "    const g=await enfiler('quart_terminer_equipier',args,{libelle:'■ Quart terminé : '+p.nom});"
+  },
+  {
+    "nom": "hors réseau : un geste qui n'a pas pu être gardé est présenté comme réussi",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(g.ok) bilan.ok.push(p.nom); else bilan.problemes.push(",
+    "vers": "bilan.ok.push(p.nom); if(false) bilan.problemes.push("
+  },
+  {
+    "nom": "un refus du serveur est présenté comme un succès",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(s==='termine'||s==='deja_termine'||s==='pas_en_quart') return {etat:'ok'};\n  return {etat:'refuse',texte:raisonQuartEquipier(p.nom,d)};",
+    "vers": "  return {etat:'ok'};"
+  },
+  {
+    "nom": "une panne de réseau au moment de terminer une personne n'est plus gardée",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(r.error&&estErreurReseau(r.error)){signalerEchecReseau(r.error);return await enAttente();}",
+    "vers": "  if(false){signalerEchecReseau(r.error);return await enAttente();}"
+  },
+  {
+    "nom": "hors réseau : la personne est envoyée au serveur quand même",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(!reseau.enLigne) return await enAttente();",
+    "vers": "  ;"
+  },
+  {
+    "nom": "terminer une personne en ligne sans délai (un serveur muet bloquerait l'écran)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "r=await avecDelai(db.rpc('quart_terminer_equipier',{p_passe_id:passeId,p_utilisateur_id:p.utilisateur_id,p_moment:moment,...positionPrecisionArgs(args)}),FILE_DELAI_DIRECT_MS);",
+    "vers": "r=await db.rpc('quart_terminer_equipier',{p_passe_id:passeId,p_utilisateur_id:p.utilisateur_id,p_moment:moment,...positionPrecisionArgs(args)});"
+  },
+  {
+    "nom": "« JE TERMINE » n'attend plus la lecture de l'équipe (un toucher trop rapide oublierait les passagers)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "(id==='btn-quart-terminer'&&!!_equipeFin&&_equipeFin.chargement)",
+    "vers": "false"
+  },
+  {
+    "nom": "sans réseau : la copie de l'équipe de ma dernière passe n'est plus utilisée",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  const c=await cacheLire('equipeDeFin');",
+    "vers": "  const c=null;"
+  },
+  {
+    "nom": "l'avis du passager n'est plus jamais montré",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    if(avisFin){ouvrirEcranQuart('avis');return;}",
+    "vers": "    ;"
+  },
+  {
+    "nom": "l'avis écrase l'écran ouvert au lieu d'attendre",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    if(_ecranQuart!==null||_envoiQuart) return;   // un écran est déjà ouvert",
+    "vers": "    if(_envoiQuart) return;   // un écran est déjà ouvert"
+  },
+  {
+    "nom": "fermer un écran ne relance plus ce qui attendait (avis, accueil)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  verifierAccueilQuart();   // ce qui attendait (un avis à lire, l'écran d'accueil) passe maintenant",
+    "vers": "  ;"
+  },
+  {
+    "nom": "l'avis lu n'est pas noté sur le téléphone (il reviendrait)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(a&&currentUser) ecrireMemo(CLE_AVIS_VU+currentUser.id,a.quartId);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "l'avis lu reste affiché en mémoire",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(avisFin===a) avisFin=null;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "« Ce n'est pas exact » n'envoie pas le numéro du quart",
+    "fichier": "js/quart-ecrans.js",
+    "de": "{p_quart_id:a.quartId,p_note:null}",
+    "vers": "{p_quart_id:null,p_note:null}"
+  },
+  {
+    "nom": "« Ce n'est pas exact » hors réseau : le geste gardé n'a pas de numéro de quart",
+    "fichier": "js/quart-ecrans.js",
+    "de": "enfiler('quart_signaler_erreur',{quartId:a.quartId},",
+    "vers": "enfiler('quart_signaler_erreur',{quartId:null},"
+  },
+  {
+    "nom": "« Ce n'est pas exact » refusé (déjà validé) : la raison n'est plus dite",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    messageQuart(raisonSignalementQuart(d));",
+    "vers": "    ;"
+  },
+  {
+    "nom": "« Ce n'est pas exact » : le double toucher n'est plus bloqué",
+    "fichier": "js/quart-ecrans.js",
+    "de": "async function signalerErreurFinQuart(){\n  if(_envoiQuart||!avisFin) return;",
+    "vers": "async function signalerErreurFinQuart(){\n  if(!avisFin) return;"
+  },
+  {
+    "nom": "le nom du chauffeur n'est pas échappé sur la carte du passager",
+    "fichier": "js/quart-ecrans.js",
+    "de": "(par?esc(par):'Ton chauffeur')",
+    "vers": "(par?par:'Ton chauffeur')"
+  },
+  {
+    "nom": "« hier à » n'est plus reconnu",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(d.toDateString()===new Date(a.getTime()-86400000).toDateString()) return 'hier à';",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la carte du passager n'affiche plus l'heure en gros",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    '<div class=\"quart-heure\">'+esc(heureCourte(a.fin))+'</div>'+\n    '<button id=\"btn-quart-ok\"",
+    "vers": "    '<button id=\"btn-quart-ok\""
+  },
+  {
+    "nom": "une confirmation avec avertissement se ferme toute seule",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  if(!garder) _tConfirmationQuart=setTimeout(fermerEcranQuart,DELAI_CONFIRMATION_QUART_MS);",
+    "vers": "  _tConfirmationQuart=setTimeout(fermerEcranQuart,DELAI_CONFIRMATION_QUART_MS);"
+  },
+  {
+    "nom": "un message d'erreur de la carte du passager part en message flottant (masqué)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "_ecranQuart==='fin'||_ecranQuart==='avis')?document",
+    "vers": "_ecranQuart==='fin')?document"
+  },
+  {
+    "nom": "mon quart « pas en quart » avec des passagers cochés : l'écran se ferme sans les terminer ni le dire",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(d.statut==='pas_en_quart'&&!equipe.personnes.length){",
+    "vers": "if(d.statut==='pas_en_quart'){"
+  },
+  {
+    "nom": "avis : la limite de 24 heures n'existe plus",
+    "fichier": "js/quart.js",
+    "de": "if(!l||Date.now()-Date.parse(l.fin)>AVIS_FIN_HEURES*3600000) return null;",
+    "vers": "if(!l) return null;"
+  },
+  {
+    "nom": "avis : un quart déjà signalé ou examiné revient",
+    "fichier": "js/quart.js",
+    "de": "    if(l.valide_le||(l.a_valider&&l.raison_a_valider==='fin_contestee')) return null;   // déjà examiné, ou déjà signalé",
+    "vers": "    ;"
+  },
+  {
+    "nom": "avis : un avis déjà lu revient",
+    "fichier": "js/quart.js",
+    "de": "if(lireMemo(CLE_AVIS_VU+currentUser.id)===l.id) return null;",
+    "vers": ";"
+  },
+  {
+    "nom": "avis : lu APRÈS l'écran d'accueil (l'accueil passe devant)",
+    "fichier": "js/quart.js",
+    "de": "    avisFin=await lireAvisFin();   // AVANT de poser le quart : un avis passe avant l'écran d'accueil (quart-ecrans.js)\n    installerQuart(q);",
+    "vers": "    installerQuart(q);\n    avisFin=await lireAvisFin();"
+  },
+  {
+    "nom": "avis : le chauffeur n'est plus nommé (la liste des employés n'est pas lue)",
+    "fichier": "js/quart.js",
+    "de": "if(typeof employes!=='undefined'&&!employes.length&&typeof chargerEmployes==='function') await chargerEmployes();",
+    "vers": ";"
+  },
+  {
+    "nom": "« Retirer » en ligne : la question de fin de journée n'est plus posée",
+    "fichier": "js/equipage-panneau.js",
+    "de": "      await demanderFinJourneeEquipier(p.passeId,membre,(r.data&&r.data.fin)||new Date().toISOString());",
+    "vers": "      ;"
+  },
+  {
+    "nom": "« Retirer » hors réseau : la question de fin de journée n'est plus posée",
+    "fichier": "js/equipage-panneau.js",
+    "de": "  await demanderFinJourneeEquipier(passeId,membre,moment);\n}",
+    "vers": "  ;\n}"
+  },
+  {
+    "nom": "« Retirer » hors réseau : le geste « retirer » n'a pas la même heure que la question",
+    "fichier": "js/equipage-panneau.js",
+    "de": "'👤 Équipage : − '+membre.nom+' ('+vehicule+')',moment});",
+    "vers": "'👤 Équipage : − '+membre.nom+' ('+vehicule+')'});"
+  },
+  {
+    "nom": "« Retirer » en ligne : le quart se termine à l'heure de la réponse, pas à l'heure de la descente donnée par le serveur",
+    "fichier": "js/equipage-panneau.js",
+    "de": "(r.data&&r.data.fin)||new Date().toISOString()",
+    "vers": "new Date().toISOString()"
+  },
+  {
+    "nom": "« Non, son quart continue » termine quand même le quart",
+    "fichier": "js/equipage-panneau.js",
+    "de": "  if(!oui) return;\n  const r=await terminerQuartEquipier(",
+    "vers": "  const r=await terminerQuartEquipier("
+  },
+  {
+    "nom": "les boutons de la question ne sont plus clairs",
+    "fichier": "js/equipage-panneau.js",
+    "de": "'Oui, terminer son quart','Non, son quart continue'",
+    "vers": "'Oui','Non'"
+  },
+  {
+    "nom": "la file : un refus de fin de quart d'une personne est traité comme un succès",
+    "fichier": "js/file-attente.js",
+    "de": "juger:(i,d)=>{const s=d&&d.statut;return (s==='termine'||s==='deja_termine'||s==='pas_en_quart')?null:{raison:raisonQuartEquipier(i.args.nom,d)};}",
+    "vers": "juger:()=>null"
+  },
+  {
+    "nom": "la file : le geste d'une personne part sans l'heure du toucher",
+    "fichier": "js/file-attente.js",
+    "de": "p_utilisateur_id:i.args.userId,p_moment:i.moment,",
+    "vers": "p_utilisateur_id:i.args.userId,"
+  },
+  {
+    "nom": "la file : un refus de « ce n'est pas exact » est traité comme un succès",
+    "fichier": "js/file-attente.js",
+    "de": "juger:(i,d)=>{const s=d&&d.statut;return (s==='signale'||s==='deja_signale')?null:{raison:raisonSignalementQuart(d)};}",
+    "vers": "juger:()=>null"
+  },
+  {
+    "nom": "la copie de l'équipe de ma dernière passe n'est plus gardée",
+    "fichier": "js/passe.js",
+    "de": "lectureReussie('equipeDeFin',{passe_id:(r.data&&r.data.passe_id)||null,",
+    "vers": "void ('equipeDeFin',{passe_id:(r.data&&r.data.passe_id)||null,"
+  }
+]

@@ -108,6 +108,7 @@ async function lireEquipagePrecedent(){
     if(r.error) throw r.error;
     const membres=(r.data&&Array.isArray(r.data.membres))?r.data.membres:[];
     lectureReussie('equipagePrecedent',membres);
+    lectureReussie('equipeDeFin',{passe_id:(r.data&&r.data.passe_id)||null,fin:(r.data&&r.data.fin)||null,membres});   // pour « JE TERMINE » (quart-ecrans.js) : l'équipe de ma dernière passe
     return {indispo:false,precedent:membres.map(m=>({utilisateur_id:m.utilisateur_id,nom:m.nom||'?'})),choix:{},extras:[]};
   }catch(e){
     // Sans signal : l'équipage gardé à la dernière lecture (il ne change qu'à la fin d'une passe)

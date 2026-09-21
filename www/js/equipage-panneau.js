@@ -149,10 +149,25 @@ async function retirerSansReseau(passeId,membre,cle){
     // (le serveur l'a déjà à bord : un « retirer » doit quand même partir, on continue plus bas)
   }
   const vehicule=nomVehiculeDe((passeDuPanneau()||{}).equipeId)||'ce camion';
-  const r=await enfiler('equipage_retirer',{cle,passeId,userId:membre.utilisateur_id,nom:membre.nom,lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null},{libelle:'👤 Équipage : − '+membre.nom+' ('+vehicule+')'});
+  const moment=new Date().toISOString();   // (la question « a terminé sa journée ? » qui suit se rapporte à CETTE heure-là)
+  const r=await enfiler('equipage_retirer',{cle,passeId,userId:membre.utilisateur_id,nom:membre.nom,lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null},{libelle:'👤 Équipage : − '+membre.nom+' ('+vehicule+')',moment});
   if(!r.ok){toast(MESSAGE_GESTE_NON_GARDE);return;}   // jamais « descendu » si rien n'est gardé
   renderAll();majCarte();majPanneauEquipage();
   toast('👤 '+membre.nom+' est descendu'+TEXTE_ATTENTE+texteGardeSeulementEnMemoire(r));
+  await demanderFinJourneeEquipier(passeId,membre,moment);
+}
+
+// Après « ✕ Retirer » (étape 17) : « X a terminé sa journée ? ». « Oui » termine son quart à l'heure de sa descente (le SERVEUR donne cette heure en ligne ;
+// sans réseau, c'est l'heure du toucher) ; « Non », son quart continue (il travaille ailleurs). La réponse par défaut est « Non » (confirmer.js).
+// Jamais posée quand le retrait ANNULE un ajout fait par erreur (moins de 2 minutes : le serveur efface alors aussi le quart ouvert par cet ajout).
+async function demanderFinJourneeEquipier(passeId,membre,moment){
+  if(typeof terminerQuartEquipier!=='function') return;   // (le punch est dans quart-ecrans.js)
+  const oui=await confirmer(membre.nom+' a terminé sa journée ?','Son quart se terminerait à '+heureCourte(moment)+' (l’heure de la descente du camion).','Oui, terminer son quart','Non, son quart continue');
+  if(!oui) return;
+  const r=await terminerQuartEquipier(passeId,{utilisateur_id:membre.utilisateur_id,nom:membre.nom},moment);
+  if(r.etat==='ok') toast('✔ Quart de '+membre.nom+' terminé à '+heureCourte(moment));
+  else if(r.etat==='attente') toast('⏳ Quart de '+membre.nom+' : envoyé au retour du signal');
+  else toast('⚠ '+r.texte);
 }
 
 // « ✕ Retirer » : confirmation, puis equipage_retirer. Dans les 2 premières minutes le serveur ANNULE l'ajout (et, si c'était un
@@ -183,7 +198,10 @@ async function retirerDuVehicule(userId){
     const s=r.data&&r.data.statut;
     if(s==='annule') toast('↩ Ajout de '+membre.nom+' annulé'+(r.data.retour_vehicule_precedent?' · retour dans son camion':''));
     else if(s==='pas_a_bord') toast('👤 '+membre.nom+' n’était plus à bord');
-    else toast('👤 '+membre.nom+' est descendu');
+    else{
+      toast('👤 '+membre.nom+' est descendu');
+      await demanderFinJourneeEquipier(p.passeId,membre,(r.data&&r.data.fin)||new Date().toISOString());
+    }
   }finally{
     showSync(false);
     _equipageOccupe=false;

@@ -21,6 +21,8 @@
 //   debuter_passe {passeId, routeId, equipeId, tache, lat, lon, equipage:[{utilisateur_id, cle_client, forcer, nom}]}
 //   terminer_passe {passeId}                                  equipage_ajouter / equipage_retirer {cle, passeId, userId, nom, lat, lon}
 //   probleme {id, stopId, passeId, note}                      probleme_photo {problemeId}  (+ la photo, gardée dans le geste)
+//   quart_commencer {id, lat, lon, precision}                 quart_terminer {quartId?, lat, lon, precision}   (le punch : quart-ecrans.js)
+//   quart_terminer_equipier {passeId, userId, nom, lat, lon}  quart_signaler_erreur {quartId, note?}          (équipage : quart-ecrans.js)
 const FILE_VERSION=1;
 const FILE_ESSAIS_INCONNUS=5;                              // erreur inconnue : au bout de 5 essais, le geste va dans « non envoyés »
 let FILE_DELAIS_MS=[5000,15000,45000,120000,300000];       // attente entre deux essais quand le serveur ne répond pas bien
@@ -89,6 +91,18 @@ function raisonEquipier(nom,d){
   if(d&&d.statut==='passe_terminee') return 'La passe était déjà terminée.';
   return 'Impossible de faire monter '+(nom||'cette personne')+(d&&d.message?' : '+String(d.message).slice(0,100):'')+'.';
 }
+// Les refus du serveur pour la fin de quart d'un passager et pour « ce n'est pas exact » (aussi utilisés par les écrans, en ligne)
+function raisonQuartEquipier(nom,d){
+  const n=nom||'Cette personne';
+  if(d&&d.raison==='a_bord_ailleurs') return n+' est à bord de « '+(d.vehicule||'un autre camion')+' » : son quart n’a pas été terminé.';
+  if(d&&d.raison==='pas_a_bord') return n+' n’était pas (ou plus) à bord de ta passe : son quart n’a pas été terminé.';
+  return 'Le quart de '+n+' n’a pas pu être terminé'+(d&&d.message?' : '+String(d.message).slice(0,100):'')+'.';
+}
+function raisonSignalementQuart(d){
+  if(d&&d.raison==='deja_valide') return 'L’administrateur a déjà validé ce quart : parle-lui directement.';
+  if(d&&d.raison==='pas_termine_par_un_autre') return 'Ce quart n’a pas été terminé par quelqu’un d’autre : rien à signaler.';
+  return 'Le signalement n’a pas pu être enregistré.';
+}
 const EXECUTEURS={
   completer_arret:{
     appeler:(i)=>db.rpc('completer_arret',{p_passe_id:i.args.passeId,p_stop_id:i.args.stopId,p_moment:i.moment,p_mode:i.args.mode||'manuel',...positionArgs(i.args)}),
@@ -139,6 +153,16 @@ const EXECUTEURS={
   quart_terminer:{
     appeler:(i)=>db.rpc('quart_terminer',{p_quart_id:i.args.quartId||null,p_moment:i.moment,...positionPrecisionArgs(i.args)}),
     juger:()=>null   // « deja_termine » (renvoi) est un succès
+  },
+  // Étape 17 (équipage) : le CHAUFFEUR termine le quart d'une personne à bord de SA passe (SQL 20 et 21) ; « ce n'est pas exact » (SQL 20).
+  // « termine », « deja_termine » et « pas_en_quart » sont des succès (rien de plus à terminer) ; un refus dit pourquoi, en nommant la personne.
+  quart_terminer_equipier:{
+    appeler:(i)=>db.rpc('quart_terminer_equipier',{p_passe_id:i.args.passeId,p_utilisateur_id:i.args.userId,p_moment:i.moment,...positionPrecisionArgs(i.args)}),
+    juger:(i,d)=>{const s=d&&d.statut;return (s==='termine'||s==='deja_termine'||s==='pas_en_quart')?null:{raison:raisonQuartEquipier(i.args.nom,d)};}
+  },
+  quart_signaler_erreur:{
+    appeler:(i)=>db.rpc('quart_signaler_erreur',{p_quart_id:i.args.quartId,p_note:i.args.note||null}),
+    juger:(i,d)=>{const s=d&&d.statut;return (s==='signale'||s==='deja_signale')?null:{raison:raisonSignalementQuart(d)};}
   },
   probleme_photo:{
     appeler:async(i)=>{

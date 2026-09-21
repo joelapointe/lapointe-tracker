@@ -488,3 +488,15 @@
 .quart-actions{margin-top:20px;}
 .quart-ok{width:100%;min-height:52px;margin-top:18px;border:none;border-radius:12px;background:#252d3a;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;cursor:pointer;}
 .quart-heure{font-family:'Barlow Condensed',sans-serif;font-size:64px;font-weight:800;color:var(--text);white-space:nowrap;line-height:1.05;margin:2px 0 10px;}
+/* Étape 17 (équipage) : « Terminer aussi le quart de : ☑ … » sur « JE TERMINE », et la carte du passager « Ton quart a été terminé » */
+.quart-equipe{margin:14px 0 4px;text-align:left;}
+.quart-equipe-titre{font-size:14px;font-weight:600;color:var(--muted);margin:0 0 6px 2px;}
+.quart-equipier{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;margin-bottom:8px;padding:0 14px;border:2px solid #252d3a;border-radius:12px;background:#161c24;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:26px;font-weight:800;text-align:left;cursor:pointer;overflow-wrap:anywhere;}
+.quart-equipier.coche{border-color:var(--green);background:rgba(74,222,128,.12);}
+.quart-equipier:active{filter:brightness(.85);}
+.quart-case{font-size:28px;line-height:1;}
+.quart-gros.ok{background:#252d3a;color:var(--text);min-height:96px;font-size:40px;}
+.quart-signaler{width:100%;min-height:56px;margin-top:14px;border:2px solid rgba(251,146,60,.6);border-radius:12px;background:rgba(251,146,60,.10);color:#fdba74;font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:800;cursor:pointer;}
+.quart-signaler:active{filter:brightness(.85);}
+.quart-signaler:disabled{opacity:.5;cursor:default;}
+.quart-qui{font-size:19px;font-weight:600;color:var(--text);line-height:1.4;margin:8px 0 2px;overflow-wrap:anywhere;}

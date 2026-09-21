@@ -1,8 +1,62 @@
 [
-  { "nom": "la fenêtre du punch passe sous l'encoche et la barre d'accueil d'un iPhone", "fichier": "css/style.css", "de": "padding:calc(20px + var(--sa-top)) 20px calc(20px + var(--sa-bottom));}\n#quart-overlay.open", "vers": "padding:20px;}\n#quart-overlay.open" },
-  { "nom": "la pastille du haut ne reçoit plus les touchers", "fichier": "css/style.css", "de": "white-space:nowrap;pointer-events:all;cursor:pointer;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}\n    #quart-pastille:active", "vers": "white-space:nowrap;pointer-events:none;cursor:pointer;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}\n    #quart-pastille:active" },
-  { "nom": "la fenêtre du punch passe AU-DESSUS du message flottant (les erreurs deviennent invisibles)", "fichier": "css/style.css", "de": "z-index:2800;", "vers": "z-index:3200;" },
-  { "nom": "la fenêtre du punch passe SOUS la barre du haut", "fichier": "css/style.css", "de": "z-index:2800;", "vers": "z-index:500;" },
-  { "nom": "le gros bouton devient petit", "fichier": "css/style.css", "de": "width:100%;min-height:112px;border:none;border-radius:20px;", "vers": "width:100%;min-height:60px;border:none;border-radius:20px;" },
-  { "nom": "la fenêtre du punch ne couvre plus tout l'écran", "fichier": "css/style.css", "de": "#quart-overlay{display:none;position:fixed;inset:0;", "vers": "#quart-overlay{display:none;position:fixed;top:60px;" }
+  {
+    "nom": "la fenêtre du punch passe sous l'encoche et la barre d'accueil d'un iPhone",
+    "fichier": "css/style.css",
+    "de": "padding:calc(20px + var(--sa-top)) 20px calc(20px + var(--sa-bottom));}\n#quart-overlay.open",
+    "vers": "padding:20px;}\n#quart-overlay.open"
+  },
+  {
+    "nom": "la pastille du haut ne reçoit plus les touchers",
+    "fichier": "css/style.css",
+    "de": "white-space:nowrap;pointer-events:all;cursor:pointer;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}\n    #quart-pastille:active",
+    "vers": "white-space:nowrap;pointer-events:none;cursor:pointer;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}\n    #quart-pastille:active"
+  },
+  {
+    "nom": "la fenêtre du punch passe AU-DESSUS du message flottant (les erreurs deviennent invisibles)",
+    "fichier": "css/style.css",
+    "de": "z-index:2800;",
+    "vers": "z-index:3200;"
+  },
+  {
+    "nom": "la fenêtre du punch passe SOUS la barre du haut",
+    "fichier": "css/style.css",
+    "de": "z-index:2800;",
+    "vers": "z-index:500;"
+  },
+  {
+    "nom": "le gros bouton devient petit",
+    "fichier": "css/style.css",
+    "de": "width:100%;min-height:112px;border:none;border-radius:20px;",
+    "vers": "width:100%;min-height:60px;border:none;border-radius:20px;"
+  },
+  {
+    "nom": "la fenêtre du punch ne couvre plus tout l'écran",
+    "fichier": "css/style.css",
+    "de": "#quart-overlay{display:none;position:fixed;inset:0;",
+    "vers": "#quart-overlay{display:none;position:fixed;top:60px;"
+  },
+  {
+    "nom": "les lignes de l'équipe deviennent petites",
+    "fichier": "css/style.css",
+    "de": "width:100%;min-height:56px;margin-bottom:8px;padding:0 14px;border:2px solid #252d3a;",
+    "vers": "width:100%;min-height:30px;margin-bottom:8px;padding:0 14px;border:2px solid #252d3a;"
+  },
+  {
+    "nom": "« Ce n'est pas exact » devient petit",
+    "fichier": "css/style.css",
+    "de": ".quart-signaler{width:100%;min-height:56px;",
+    "vers": ".quart-signaler{width:100%;min-height:30px;"
+  },
+  {
+    "nom": "« OK » de la carte du passager n'est plus un gros bouton",
+    "fichier": "css/style.css",
+    "de": ".quart-gros.ok{background:#252d3a;color:var(--text);min-height:96px;",
+    "vers": ".quart-gros.ok{background:#252d3a;color:var(--text);min-height:50px;"
+  },
+  {
+    "nom": "l'heure de la confirmation peut se couper en deux lignes",
+    "fichier": "css/style.css",
+    "de": "font-size:64px;font-weight:800;color:var(--text);white-space:nowrap;",
+    "vers": "font-size:64px;font-weight:800;color:var(--text);white-space:normal;"
+  }
 ]

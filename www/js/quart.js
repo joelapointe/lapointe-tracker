@@ -7,6 +7,9 @@
 let monQuart=null;          // {id, debut, debut_source, a_valider, raison_a_valider, local} : le quart ouvert affiché, sinon null
 let _quartServeur=null;     // la copie du serveur, telle quelle (jamais modifiée)
 let _quartConnu=false;      // a-t-on déjà su (du serveur ou de la copie du téléphone) si on est en service ?
+let avisFin=null;           // {quartId, fin, parId} : un quart TERMINÉ PAR QUELQU'UN D'AUTRE (le chauffeur) que la personne n'a pas encore lu (étape 17, équipage)
+const AVIS_FIN_HEURES=24;                  // on n'annonce que les fins des dernières 24 heures
+const CLE_AVIS_VU='lp_avis_quart_vu:';     // + numéro de l'employé : le dernier avis lu (« OK » ou « Ce n'est pas exact »)
 
 // Lit MON quart ouvert. En cas d'échec (pas de réseau…), on GARDE ce qu'on savait. Renvoie true si la lecture a réussi.
 async function chargerMonQuart(){
@@ -16,12 +19,29 @@ async function chargerMonQuart(){
     if(error) throw error;
     const ouverts=(Array.isArray(data)?data:[]).filter(x=>x&&!x.fin);   // (un quart fini n'est jamais « en cours », quoi que réponde le serveur)
     const q=ouverts.length?ouverts[0]:null;
+    avisFin=await lireAvisFin();   // AVANT de poser le quart : un avis passe avant l'écran d'accueil (quart-ecrans.js)
     installerQuart(q);
     lectureReussie('quart',q);   // (la copie gardée reste celle du serveur : jamais le résultat superposé)
     return true;
   }catch(e){
     signalerEchecReseau(e);
     return false;
+  }
+}
+// Mon dernier quart TERMINÉ PAR LE CHAUFFEUR (fin_source « equipage », SQL 20) dans les dernières 24 h, s'il n'a pas encore été lu, contesté ou examiné
+// par l'administrateur. Un passager sans téléphone en main le découvre ici. En cas d'échec de lecture, on GARDE ce qu'on savait.
+async function lireAvisFin(){
+  try{
+    const{data,error}=await db.from('quarts').select('id, fin, fin_source, fin_par, a_valider, raison_a_valider, valide_le').eq('utilisateur_id',currentUser.id).eq('fin_source','equipage').order('fin',{ascending:false}).limit(1);
+    if(error) throw error;
+    const l=(Array.isArray(data)?data:[]).filter(x=>x&&x.fin&&x.fin_source==='equipage').sort((a,b)=>Date.parse(b.fin)-Date.parse(a.fin))[0];
+    if(!l||Date.now()-Date.parse(l.fin)>AVIS_FIN_HEURES*3600000) return null;
+    if(l.valide_le||(l.a_valider&&l.raison_a_valider==='fin_contestee')) return null;   // déjà examiné, ou déjà signalé
+    if(lireMemo(CLE_AVIS_VU+currentUser.id)===l.id) return null;                            // déjà lu
+    if(typeof employes!=='undefined'&&!employes.length&&typeof chargerEmployes==='function') await chargerEmployes();   // pour nommer le chauffeur
+    return {quartId:l.id,fin:l.fin,parId:l.fin_par||null};
+  }catch(e){
+    return avisFin;
   }
 }
 function installerQuart(q){

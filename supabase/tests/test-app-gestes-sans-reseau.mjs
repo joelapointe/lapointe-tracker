@@ -30,6 +30,7 @@ const REPONSES = {
   completer_arret: { statut: 'complete' }, annuler_arret: { statut: 'annule' }, terminer_passe: { statut: 'terminee' },
   debuter_passe: { statut: 'debutee', equipage: [] }, equipage_ajouter: { statut: 'ajoute' }, equipage_retirer: { statut: 'retire' },
   probleme_attacher_photo: { statut: 'ok' }, quart_commencer: { statut: 'commence' }, quart_terminer: { statut: 'termine' },
+  quart_terminer_equipier: { statut: 'termine' }, quart_signaler_erreur: { statut: 'signale' },
 };
 
 // Un monde : faux navigateur + faux serveur (avec ou sans signal) + faux stockage du téléphone
@@ -55,13 +56,13 @@ function monde(o = {}) {
     equipage_periodes: [{ passe_id: 'p-luc', role: 'chauffeur', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } }],
   };
   // appels.envois : chaque appel d'un geste au serveur, dans l'ordre [{nom, args, t}] ; appels.lectures : les lectures (tables)
-  const appels = { envois: [], lectures: [], sondes: [], toasts: [], confirmations: [], erreurs: [], evenements: [], uploads: [], reload: 0, signOut: 0, enCours: 0, maxEnCours: 0 };
+  const appels = { envois: [], lectures: [], sondes: [], toasts: [], confirmations: [], questionsFin: [], erreurs: [], evenements: [], uploads: [], reload: 0, signOut: 0, enCours: 0, maxEnCours: 0 };
   const echec = () => { throw new Error('Failed to fetch'); };
   const GESTES = Object.keys(REPONSES);
   const fauxDb = {
     rpc: async (nom, args) => {
       if (nom === 'tours_en_cours') { appels.lectures.push(nom); appels.evenements.push('L:' + nom); if (!etat.enLigne) echec(); return { data: donnees.tours, error: null }; }
-      if (nom === 'equipage_precedent') { if (!etat.enLigne) echec(); return { data: null, error: null }; }
+      if (nom === 'equipage_precedent') { if (o.delaiPrecedentMs) await attendre(o.delaiPrecedentMs); if (!etat.enLigne) echec(); return { data: donnees.equipagePrecedent ?? null, error: null }; }
       if (!GESTES.includes(nom)) return { data: null, error: { message: 'inconnu' } };
       const n = appels.envois.filter((x) => x.nom === nom).length;
       appels.envois.push({ nom, args, t: Date.now() }); appels.evenements.push('E:' + nom);
@@ -106,7 +107,7 @@ function monde(o = {}) {
     fetch: async (url) => { appels.sondes.push(url); if (!etat.enLigne) throw new Error('Failed to fetch'); return { status: 200 }; },
     L: { divIcon: (opt) => opt, marker: (ll, opt) => { const m = { ll, opt, addTo() { return m; }, on() {}, setLatLng() { return m; }, setIcon() { return m; }, bindPopup() { return m; }, setPopupContent() { return m; } }; return m; }, polygon: () => ({ addTo() { return this; } }) },
     __map: { removeLayer() {}, flyTo() {} }, __fauxDb: fauxDb, setStatus() {}, hideLoading() {}, showErr: (m) => appels.erreurs.push(m),
-    __toasts: appels.toasts, __confirmations: appels.confirmations,
+    __toasts: appels.toasts, __confirmations: appels.confirmations, __questionsFin: appels.questionsFin, __reponseFin: { oui: false },
     crypto: { randomUUID: () => crypto.randomUUID() },
   };
   const ctx = vm.createContext(sandbox);
@@ -114,7 +115,7 @@ function monde(o = {}) {
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map;', ctx);
   vm.runInContext('currentUser = ' + JSON.stringify(o.utilisateur ?? LUC) + ';', ctx);
-  vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return true; };', ctx);
+  vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { if (/a terminé sa journée/.test(String(a[0]))) { __questionsFin.push(a); return !!__reponseFin.oui; } __confirmations.push(a); return true; };', ctx);
   // Sans signal au départ : l'application le SAIT déjà (comme après une lecture qui a échoué) ; les tests le rétablissent à la main
   if (!etat.enLigne) vm.runInContext('reseau.enLigne = false; reseau.donneesDe = new Date().toISOString();', ctx);
   if (o.memoire) vm.runInContext('Object.assign(_memoire, ' + JSON.stringify(o.memoire) + ');', ctx);
@@ -132,6 +133,7 @@ function monde(o = {}) {
     envoisGestes: () => appels.envois.map((x) => x.nom + (x.args?.p_stop_id ? ':' + x.args.p_stop_id : '')),
     attentes: () => w.run('gestesEnAttente().map(g=>g.libelle)'),
     refus: () => w.run('gestesNonEnvoyes().map(g=>({libelle:g.libelle,raison:g.refus.raison}))'),
+    repondreFin: (oui) => { sandbox.__reponseFin.oui = oui; },   // « X a terminé sa journée ? » : « Non » par défaut (les anciens tests n'en parlent pas)
     fin: () => vm.runInContext('arreterFile();arreterSonde();', ctx),
   };
   tousLesMondes.push(w);
@@ -150,6 +152,8 @@ async function ouvrir(o = {}) {
   if (o.tours) m.donnees.tours = o.tours;
   if (o.equipes) m.donnees.equipes = o.equipes;
   m.donnees.quarts = o.quarts ?? [];   // (étape 17 : mes quarts, côté serveur)
+  if (o.equipagePrecedent) m.donnees.equipagePrecedent = o.equipagePrecedent;   // (étape 17 : l'équipe de ma dernière passe, comme la donne equipage_precedent)
+  if (o.utilisateurs) m.donnees.utilisateurs = o.utilisateurs;
   if (o.equipages) m.donnees.equipage_periodes = o.equipages.map((x) => ({ ...x }));   // (une copie : le faux serveur en modifie le contenu, les autres scénarios ne doivent pas le voir)
   await m.run('loadStops()');
   await attendre(80);   // la copie anticipée de l'écran « Débuter » (arrière-plan, passe.js) doit être finie : sinon sa lecture réussie remettrait l'application « en ligne » APRÈS que le test a coupé le signal
@@ -1438,7 +1442,7 @@ log('\n=== L\'ÉTAT DU QUART SE RELIT TOUT SEUL, ET SURVIT À LA FERMETURE DE L\
   const avant = m.appels.lectures.filter((x) => x === 'quarts').length;
   m.run('_tickRelecture=3');
   await m.run('rafraichirEnCours()');   // le 4e passage (une fois par minute) relit aussi mon quart
-  eq('une fois par minute : mon quart est relu (l\'administrateur ou le serveur a pu le fermer)', m.appels.lectures.filter((x) => x === 'quarts').length - avant, 1);
+  eq('une fois par minute : mon quart est relu (l\'administrateur ou le serveur a pu le fermer), avec la lecture de l\'avis « quart terminé par le chauffeur » : 2 lectures de mes quarts', m.appels.lectures.filter((x) => x === 'quarts').length - avant, 2);
   m.donnees.quarts = [];
   m.run('_tickRelecture=3');
   await m.run('rafraichirEnCours()');
@@ -1826,6 +1830,317 @@ log('\n=== « ■ JE TERMINE » SANS RÉSEAU : MA PASSE SE FERME À L\'ÉCRAN, J
   await m.enfiler('quart_terminer', { quartId: 'q-serveur' });
   eq('un « Je termine » en attente alors que le serveur n\'a déjà plus ni quart ni passe : rien de plus à l\'écran (pas de plantage, pas en service)', [m.run('monQuart'), m.run('maPasse()'), m.run('enService()'), m.run('tours[0].en_cours')], [null, null, false, false]);
   m.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 17, ÉQUIPAGE : « TERMINER AUSSI LE QUART DE… », « A TERMINÉ SA JOURNÉE ? », L'AVIS DU PASSAGER
+// ══════════════════════════════════════════════════════════════════════
+const EQ_EQUIPE = [{ passe_id: 'p-luc', role: 'chauffeur', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } }, { passe_id: 'p-luc', role: 'passager', utilisateur_id: 'u-marc', utilisateurs: { nom: 'Marc' } }, { passe_id: 'p-luc', role: 'passager', utilisateur_id: 'u-nina', utilisateurs: { nom: 'Nina' } }];
+const nbCoches = (e) => (e.html.match(/class="quart-equipier coche"/g) || []).length;
+const equipiers = (m) => m.appels.envois.filter((x) => x.nom === 'quart_terminer_equipier').map((x) => x.args);
+const toursFermes = () => [tourInit({ en_cours: false, passes: [], faits: 2, pourcentage: 100, arrets_faits: ['s1', 's2'], mes_passes_annulables: [] })];
+const equipePrecedente = (minFin) => ({ passe_id: 'p-fermee', fin: iso(minFin), membres: [{ utilisateur_id: 'u-marc', nom: 'Marc' }, { utilisateur_id: 'u-nina', nom: 'Nina' }] });
+
+log('\n=== « ■ JE TERMINE » : « TERMINER AUSSI LE QUART DE : » (cochés d\'avance) ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE });
+  m.run('pastilleQuartTouchee()');
+  const e = ecranQuart(m);
+  eq('avec deux passagers à bord de MA passe : la liste les montre, les deux COCHÉS d\'avance (jamais moi)', [e.html.includes('Terminer aussi le quart de :'), nbCoches(e), e.html.includes('☑</span> Marc'), e.html.includes('☑</span> Nina'), e.html.includes('Luc</button>')], [true, 2, true, true, false]);
+  eq('… chaque ligne est un gros bouton qui bascule la case', /class="quart-equipier coche" aria-pressed="true" onclick="basculerEquipierQuart\('u-marc'\)"/.test(e.html), true);
+  m.run('basculerEquipierQuart(\'u-nina\')');
+  const f = ecranQuart(m);
+  eq('toucher « Nina » la décoche (elle continue ailleurs) : Marc reste coché', [nbCoches(f), f.html.includes('☐</span> Nina'), f.html.includes('☑</span> Marc')], [1, true, true]);
+  m.run('basculerEquipierQuart(\'u-nina\')');
+  eq('… la retoucher la recoche', nbCoches(ecranQuart(m)), 2);
+  m.run('basculerEquipierQuart(\'u-inconnu\')');
+  eq('un numéro qui n\'est pas dans la liste ne change rien (et n\'entre pas dans les cases)', [nbCoches(ecranQuart(m)), m.run('Object.keys(_equipeFin.coches).sort()')], [2, ['u-marc', 'u-nina']]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')] });   // moi seul à bord
+  m.run('pastilleQuartTouchee()');
+  eq('seul à bord : pas de liste', ecranQuart(m).html.includes('Terminer aussi'), false);
+  m.fin();
+  const p = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: tourPassager(), equipes: E1E2, equipages: EQ_PASSAGER, equipagePrecedent: equipePrecedente(20) });   // (même avec une équipe récente d'une ancienne passe à moi)
+  p.run('pastilleQuartTouchee()'); await attendre(30);
+  eq('un PASSAGER n\'a pas de liste (il ne termine le quart de personne)', ecranQuart(p).html.includes('Terminer aussi'), false);
+  p.fin();
+}
+
+log('\n=== « ■ JE TERMINE » AVEC L\'ÉQUIPE : EN LIGNE ===');
+{
+  const finServeur = iso(1);
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: serveurQuart({ fin: finServeur, passeFermee: 'p-luc' }) } });
+  m.run('lastPos=[46.5,-72.8]');
+  m.run('pastilleQuartTouchee()');
+  m.run('basculerEquipierQuart(\'u-nina\')');   // Nina continue ailleurs : décochée
+  await m.run('terminerQuart()');
+  eq('le chauffeur d\'abord, PUIS chaque personne cochée (Marc seulement : Nina est décochée)', m.appels.evenements.filter((x) => x === 'E:quart_terminer' || x === 'E:quart_terminer_equipier'), ['E:quart_terminer', 'E:quart_terminer_equipier']);
+  const a = equipiers(m)[0];
+  eq('Marc : la passe, la personne, la MÊME heure que celle donnée par le serveur pour mon quart, la position', [a.p_passe_id, a.p_utilisateur_id, a.p_moment, a.p_lat, a.p_lon], ['p-luc', 'u-marc', finServeur, 46.5, -72.8]);
+  const e = ecranQuart(m);
+  eq('la confirmation dit que le quart de Marc est terminé aussi (rien sur Nina), et se ferme toute seule (aucun avertissement)', [e.html.includes('Quart terminé aussi pour : Marc.'), e.html.includes('Nina'), m.run('_tConfirmationQuart') !== null], [true, false, true]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: serveurQuart({ fin: iso(1), passeFermee: 'p-luc' }) } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('les deux cochés d\'avance : les deux quarts sont terminés, à la même heure', [equipiers(m).map((x) => x.p_utilisateur_id).sort(), new Set(equipiers(m).map((x) => x.p_moment)).size], [['u-marc', 'u-nina'], 1]);
+  eq('… la confirmation les nomme', ecranQuart(m).html.includes('Quart terminé aussi pour : Marc, Nina.'), true);
+  m.fin();
+}
+for (const [nom, reponse, texte] of [
+  ['à bord d\'un autre camion', { data: { statut: 'refuse', raison: 'a_bord_ailleurs', vehicule: 'Camion 2' }, error: null }, '⚠ Marc est à bord de « Camion 2 » : son quart n’a pas été terminé.'],
+  ['pas (ou plus) à bord', { data: { statut: 'refuse', raison: 'pas_a_bord' }, error: null }, '⚠ Marc n’était pas (ou plus) à bord de ta passe : son quart n’a pas été terminé.'],
+  ['compte refusé', { data: null, error: { code: 'P0001', message: 'non_autorise' } }, '⚠ Le quart de Marc n’a pas pu être terminé : Ton compte ne peut pas faire ce geste.']]) {
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: { ...serveurQuart({ fin: iso(1), passeFermee: 'p-luc' }), quart_terminer_equipier: (a) => (a.p_utilisateur_id === 'u-marc' ? reponse : { data: { statut: 'termine' }, error: null }) } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  const e = ecranQuart(m);
+  eq(`refus « ${nom} » : le message NOMME la personne et dit pourquoi ; Nina, elle, est terminée`, [e.html.includes(texte), e.html.includes('Quart terminé aussi pour : Nina.')], [true, true]);
+  eq('… la confirmation NE se ferme PAS toute seule (elle porte un avertissement à lire) ; mon propre quart est bien terminé', [m.run('_tConfirmationQuart'), m.run('enService()')], [null, false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: { ...serveurQuart({ fin: iso(1), passeFermee: 'p-luc' }), quart_terminer_equipier: (a) => ({ data: { statut: a.p_utilisateur_id === 'u-marc' ? 'deja_termine' : 'pas_en_quart' }, error: null }) } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  const e = ecranQuart(m);
+  eq('« déjà terminé » et « pas en quart » sont des succès silencieux : aucun avertissement, la confirmation se ferme toute seule', [e.html.includes('⚠'), m.run('_tConfirmationQuart') !== null], [false, true]);
+  m.fin();
+}
+{
+  // Mon propre quart était déjà terminé (« pas en quart ») : mon équipe, elle, doit quand même être terminée
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: { quart_terminer: (a, n, d) => { d.quarts = []; return { data: { statut: 'pas_en_quart' }, error: null }; } } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('mon quart était déjà terminé : mon équipe est QUAND MÊME terminée, et la confirmation le dit (pas seulement « tu n\'étais pas en service »)', [equipiers(m).length, ecranQuart(m).quel, ecranQuart(m).html.includes('Quart terminé aussi pour : Marc, Nina.')], [2, 'confirmation', true]);
+  m.fin();
+}
+{
+  // Mon quart est terminé sur le serveur, PUIS le signal disparaît : les quarts des autres passent à la file, avec la MÊME heure
+  let mm;
+  const finServeur = iso(1);
+  const base = serveurQuart({ fin: finServeur, passeFermee: 'p-luc' });
+  const serveur = { ...base, quart_terminer: (a, n, d) => { const r = base.quart_terminer(a, n, d); mm.reseau(false); return r; } };
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur } }); mm = m;
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('le signal disparaît juste après mon quart : Marc et Nina passent à la file, avec l\'heure du serveur', [m.run('gestesEnAttente().map(g=>g.type)'), m.run('gestesEnAttente().map(g=>g.moment)')], [['quart_terminer_equipier', 'quart_terminer_equipier'], [finServeur, finServeur]]);
+  eq('… la confirmation le dit', ecranQuart(m).html.includes('⏳ Marc, Nina : envoyé au retour du signal.'), true);
+  m.fin();
+}
+
+log('\n=== « ■ JE TERMINE » AVEC L\'ÉQUIPE : SANS RÉSEAU ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE }); coupe(m);
+  m.run('__opts=[];{const o=enfiler;enfiler=(t,a,op)=>{__opts.push([t,op]);return o(t,a,op);};}');   // (on note les options données à chaque geste)
+  m.run('pastilleQuartTouchee()');
+  m.run('basculerEquipierQuart(\'u-nina\')');
+  await m.run('terminerQuart()');
+  const g = m.run('gestesEnAttente().map(g=>[g.type,g.args.userId||g.args.quartId,g.moment])');
+  eq('gardés dans l\'ordre : mon quart, puis Marc (Nina est décochée), avec la MÊME heure', [g.map((x) => x[0]), g[1][1], new Set(g.map((x) => x[2])).size], [['quart_terminer', 'quart_terminer_equipier'], 'u-marc', 1]);
+  const opts = m.run('__opts');
+  eq('… chaque geste reçoit EXPLICITEMENT l\'heure du toucher (jamais celle d\'un instant plus tard)', [opts.filter((x) => x[0] === 'quart_terminer' || x[0] === 'quart_terminer_equipier').every((x) => typeof x[1].moment === 'string'), new Set(opts.map((x) => x[1].moment)).size], [true, 1]);
+  const e = ecranQuart(m);
+  eq('rien n\'est envoyé ; la confirmation nomme Marc et dit ⏳', [m.appels.envois.length, e.html.includes('Quart terminé aussi pour : Marc.'), e.html.includes('⏳ Envoyé au retour du signal')], [0, true, true]);
+  eq('la liste des gestes en attente nomme la personne', m.attentes(), ['■ Quart terminé', '■ Quart terminé : Marc']);
+  m.reseau(true);
+  await attendreQue(() => m.attentes().length === 0 && nbEnvois(m, 'quart_terminer_equipier') === 1);
+  eq('au retour du signal : partis dans l\'ordre (moi d\'abord)', m.appels.evenements.filter((x) => x.startsWith('E:quart_')), ['E:quart_terminer', 'E:quart_terminer_equipier']);
+  eq('… et chaque geste part avec l\'heure du TOUCHER (la même pour moi et pour Marc)', [envoi(m, 'quart_terminer').p_moment === g[0][2], equipiers(m)[0].p_moment === g[1][2], g[0][2] === g[1][2]], [true, true, true]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE, monde: { serveur: { quart_terminer_equipier: () => ({ data: { statut: 'refuse', raison: 'a_bord_ailleurs', vehicule: 'Camion 2' }, error: null }) } } }); coupe(m);
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  m.reseau(true);
+  vrai('un refus au retour du signal : noté dans « non envoyés »', await attendreQue(() => m.refus().length === 2 && m.attentes().length === 0));
+  eq('… avec le NOM de chaque personne et la raison', m.refus().map((x) => x.raison).sort(), ['Marc est à bord de « Camion 2 » : son quart n’a pas été terminé.', 'Nina est à bord de « Camion 2 » : son quart n’a pas été terminé.']);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], equipes: E1E2, equipages: EQ_EQUIPE }); coupe(m);
+  m.run('pastilleQuartTouchee()');
+  m.run('{let n=0;const o=magasinEcrire;magasinEcrire=async(...a)=>(++n<=1?o(...a):false);}');   // le 1er geste est gardé, les suivants ne le sont pas
+  await m.run('terminerQuart()');
+  eq('si le téléphone ne peut pas garder le quart d\'une personne : la confirmation le dit (à refaire), elle reste affichée', [ecranQuart(m).html.includes('⚠ Le quart de Marc n’a pas pu être gardé sur le téléphone : à refaire plus tard.'), m.run('_tConfirmationQuart')], [true, null]);
+  m.fin();
+}
+
+log('\n=== « ■ JE TERMINE » : LA PASSE S\'EST FERMÉE TOUTE SEULE (l\'équipe de ma dernière passe) ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: toursFermes(), equipes: E1E2, equipages: [], equipagePrecedent: equipePrecedente(20) });
+  m.run('pastilleQuartTouchee()'); await attendre(30);
+  const e = ecranQuart(m);
+  eq('ma passe est déjà fermée (100 %) : l\'équipe de ma dernière passe (fermée il y a 20 min) est proposée, cochée', [e.html.includes('Terminer aussi le quart de :'), nbCoches(e)], [true, 2]);
+  await m.run('terminerQuart()');
+  const a = equipiers(m);
+  eq('le serveur reçoit LA PASSE FERMÉE (celle de cette équipe) pour chaque personne', [a.length, a.every((x) => x.p_passe_id === 'p-fermee')], [2, true]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: toursFermes(), equipes: E1E2, equipages: [], equipagePrecedent: equipePrecedente(200) });
+  m.run('pastilleQuartTouchee()'); await attendre(30);
+  eq('ma passe s\'est fermée il y a 3 h 20 (plus de 3 h) : pas de liste', ecranQuart(m).html.includes('Terminer aussi'), false);
+  m.fin();
+  const n = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: toursFermes(), equipes: E1E2, equipages: [] });
+  n.run('pastilleQuartTouchee()'); await attendre(30);
+  eq('aucune passe terminée avant : pas de liste (et pas d\'erreur)', [ecranQuart(n).html.includes('Terminer aussi'), n.appels.erreurs.length], [false, 0]);
+  n.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: toursFermes(), equipes: E1E2, equipages: [], equipagePrecedent: equipePrecedente(20), monde: { delaiPrecedentMs: 80 } });
+  m.run('pastilleQuartTouchee()');
+  eq('pendant la lecture de l\'équipe, « JE TERMINE » est grisé (jamais un toucher trop rapide qui oublierait les passagers)', m.el('btn-quart-terminer').disabled, true);
+  await attendre(250);
+  eq('… puis la liste s\'affiche et le bouton est utilisable', [nbCoches(ecranQuart(m)), m.el('btn-quart-terminer').disabled], [2, false]);
+  m.fin();
+}
+{
+  // Sans réseau : la copie de l'équipe gardée à la dernière lecture (l'écran « Débuter » la relit à chaque ouverture)
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: toursFermes(), equipes: E1E2, equipages: [], equipagePrecedent: equipePrecedente(20) });
+  await m.run('attendreEcritures()'); coupe(m);
+  m.run('pastilleQuartTouchee()'); await attendre(30);
+  eq('sans réseau : la copie gardée de l\'équipe de ma dernière passe est proposée', nbCoches(ecranQuart(m)), 2);
+  await m.run('terminerQuart()');
+  eq('… « JE TERMINE » garde mon quart puis les deux quarts, pour la passe fermée', m.run('gestesEnAttente().map(g=>g.type+(g.args.passeId?":"+g.args.passeId:""))'), ['quart_terminer', 'quart_terminer_equipier:p-fermee', 'quart_terminer_equipier:p-fermee']);
+  m.fin();
+}
+
+log('\n=== « ✕ RETIRER » : « X A TERMINÉ SA JOURNÉE ? » ===');
+{
+  const finR = iso(0.5);
+  const serveur = { equipage_retirer: () => ({ data: { statut: 'retire', fin: finR }, error: null }) };
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { serveur } });
+  await m.run('ouvrirEquipage()');
+  await retirerEq(m, 'u-nina');
+  const q = m.appels.questionsFin[0] || [];
+  eq('après le retrait : la question est posée, avec l\'heure de la descente et des boutons clairs (sans « il » ni « elle »)', [m.appels.questionsFin.length, q[0], (q[1] || '').includes(heureDe(m, finR)), q[2], q[3]], [1, 'Nina a terminé sa journée ?', true, 'Oui, terminer son quart', 'Non, son quart continue']);
+  eq('« Non » (la réponse par défaut) : le quart de Nina n\'est pas touché', nbEnvois(m, 'quart_terminer_equipier'), 0);
+  m.fin();
+  const n = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { serveur } }); n.repondreFin(true);
+  await n.run('ouvrirEquipage()'); await retirerEq(n, 'u-nina');
+  const a = equipiers(n)[0];
+  eq('« Oui » : le quart de Nina est terminé à l\'heure de sa DESCENTE donnée par le serveur (pas l\'heure de la réponse), pour MA passe', [equipiers(n).length, a.p_passe_id, a.p_utilisateur_id, a.p_moment], [1, 'p-luc', 'u-nina', finR]);
+  eq('… le message le dit', dernier(n).startsWith('✔ Quart de Nina terminé à ' + heureDe(n, finR)), true);
+  n.fin();
+  const r = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { serveur: { ...serveur, quart_terminer_equipier: () => ({ data: { statut: 'refuse', raison: 'a_bord_ailleurs', vehicule: 'Camion 2' }, error: null }) } } }); r.repondreFin(true);
+  await r.run('ouvrirEquipage()'); await retirerEq(r, 'u-nina');
+  eq('« Oui » mais le serveur refuse (elle est déjà dans un autre camion) : le message le dit', dernier(r), '⚠ Nina est à bord de « Camion 2 » : son quart n’a pas été terminé.');
+  r.fin();
+}
+for (const [nom, statut] of [['annule un ajout fait par erreur', 'annule'], ['n\'était plus à bord', 'pas_a_bord']]) {
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA, monde: { serveur: { equipage_retirer: () => ({ data: { statut }, error: null }) } } }); m.repondreFin(true);
+  await m.run('ouvrirEquipage()'); await retirerEq(m, 'u-nina');
+  eq(`le retrait « ${nom} » : AUCUNE question (rien à terminer)`, [m.appels.questionsFin.length, nbEnvois(m, 'quart_terminer_equipier')], [0, 0]);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux({ equipages: EQ_AVEC_NINA }); coupe(m); m.repondreFin(true);
+  m.run('__opts=[];{const o=enfiler;enfiler=(t,a,op)=>{__opts.push([t,op]);return o(t,a,op);};}');
+  await m.run('ouvrirEquipage()'); await retirerEq(m, 'u-nina');
+  const g = m.run('gestesEnAttente().map(g=>[g.type,g.moment])');
+  const optsR = m.run('__opts');
+  eq('le geste « retirer » reçoit EXPLICITEMENT l\'heure du toucher (celle de la question), et rien n\'est envoyé sans réseau', [typeof optsR.find((x) => x[0] === 'equipage_retirer')[1].moment, optsR.find((x) => x[0] === 'equipage_retirer')[1].moment === g[1][1], m.appels.envois.length], ['string', true, 0]);
+  eq('sans réseau : « retirer » puis « terminer son quart », gardés avec la MÊME heure ; message ⏳', [g.map((x) => x[0]), g[0][1] === g[1][1], dernier(m).startsWith('⏳ Quart de Nina')], [['equipage_retirer', 'quart_terminer_equipier'], true, true]);
+  m.fin();
+}
+{
+  const m = await ouvrirDeux(); coupe(m); m.repondreFin(true);
+  await m.run('ouvrirEquipage()');
+  await ajouterEq(m, 'u-nina', 'Nina');
+  await retirerEq(m, 'u-nina');
+  eq('un ajout pas encore parti puis retiré : rien à envoyer, AUCUNE question', [m.appels.questionsFin.length, m.attentes().length], [0, 0]);
+  m.fin();
+}
+
+log('\n=== LE PASSAGER : « LUC A TERMINÉ TON QUART À 16 H 05 » ===');
+const quartTermineParChauffeur = (o = {}) => rowQuart('q-fini', { debut: iso(300), fin: iso(10), fin_source: 'equipage', fin_par: 'u-marc', ...o });
+{
+  const m = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [] });
+  const e = ecranQuart(m);
+  eq('un quart terminé par le chauffeur : la carte s\'ouvre à l\'ouverture, AVANT l\'écran d\'accueil (qui attend)', [e.quel, e.plein, m.run('_accueilQuartPour')], ['avis', false, null]);
+  eq('… elle NOMME le chauffeur et l\'heure de fin (en gros), avec « OK » et « Ce n’est pas exact »', [e.html.includes('Marc a terminé ton quart à'), e.html.includes('<div class="quart-heure">' + heureDe(m, m.run('avisFin.fin')) + '</div>'), e.html.includes('id="btn-quart-ok"'), e.html.includes('Ce n’est pas exact')], [true, true, true, true]);
+  m.run('avisFinLu()');
+  eq('« OK » : la carte se ferme, l\'écran d\'accueil (qui attendait) s\'ouvre ; l\'avis est noté comme lu sur le téléphone', [ecranQuart(m).quel, m.run('avisFin'), m.stockage['lp_avis_quart_vu:u-luc']], ['accueil', null, 'q-fini']);
+  const n = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [], monde: { stockage: { ...m.stockage } } });
+  eq('à la prochaine ouverture : la carte ne revient PAS (déjà lue), l\'écran d\'accueil s\'ouvre', [ecranQuart(n).quel, n.run('avisFin')], ['accueil', null]);
+  n.fin(); m.fin();
+}
+for (const [nom, o] of [['plus de 24 heures', { fin: iso(60 * 25) }], ['déjà signalé par la personne', { a_valider: true, raison_a_valider: 'fin_contestee' }], ['déjà examiné par l\'administrateur', { valide_le: iso(5) }], ['terminé par la personne elle-même', { fin_source: 'manuel', fin_par: null }]]) {
+  const m = await ouvrir({ quarts: [quartTermineParChauffeur(o)], tours: [] });
+  eq(`un quart terminé par le chauffeur mais ${nom} : aucune carte, l'écran d'accueil s'ouvre`, [ecranQuart(m).quel, m.run('avisFin')], ['accueil', null]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [quartTermineParChauffeur({ fin_par: null })], tours: [] });
+  eq('chauffeur inconnu : « Ton chauffeur a terminé ton quart à »', ecranQuart(m).html.includes('Ton chauffeur a terminé ton quart à'), true);
+  m.fin();
+  const n = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [], utilisateurs: [{ id: 'u-luc', nom: 'Luc', actif: true }, { id: 'u-marc', nom: '<b>Marc</b>', actif: true }] });
+  eq('le nom du chauffeur (vient de la base) est échappé', [ecranQuart(n).html.includes('&lt;b&gt;Marc&lt;/b&gt; a terminé ton quart'), ecranQuart(n).html.includes('<b>')], [true, false]);
+  n.fin();
+  eq('« à » aujourd\'hui, « hier à » hier, « le … à » avant', [n.run('quandQuart(new Date().toISOString())'), n.run('quandQuart(new Date(Date.now()-86400000).toISOString())'), n.run('quandQuart(new Date(Date.now()-5*86400000).toISOString())').startsWith('le ')], ['à', 'hier à', true]);
+}
+{
+  // « Ce n'est pas exact »
+  const m = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [] });
+  await m.run('signalerErreurFinQuart()');
+  const a = envoi(m, 'quart_signaler_erreur'), e = ecranQuart(m);
+  eq('« Ce n’est pas exact » : le serveur reçoit le numéro de MON quart (une seule fois)', [nbEnvois(m, 'quart_signaler_erreur'), a.p_quart_id], [1, 'q-fini']);
+  eq('la confirmation : « C’est signalé », l\'administrateur va vérifier, sans ⏳ ; l\'avis est lu', [e.quel, e.html.includes('C’est signalé'), e.html.includes('L’administrateur va vérifier ton quart.'), e.html.includes('⏳'), m.run('avisFin'), m.stockage['lp_avis_quart_vu:u-luc']], ['confirmation', true, true, false, null, 'q-fini']);
+  m.fin();
+  const n = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [] }); coupe(n);
+  n.run('fermerEcranQuart(); ouvrirEcranQuart(\'avis\')');
+  await n.run('signalerErreurFinQuart()');
+  eq('sans réseau : le signalement est GARDÉ (rien d\'envoyé), la confirmation dit ⏳', [n.appels.envois.length, n.run('gestesEnAttente().map(g=>[g.type,g.args.quartId])'), ecranQuart(n).html.includes('⏳ Envoyé au retour du signal')], [0, [['quart_signaler_erreur', 'q-fini']], true]);
+  n.reseau(true);
+  vrai('… au retour du signal, il part', await attendreQue(() => n.attentes().length === 0 && nbEnvois(n, 'quart_signaler_erreur') === 1));
+  n.fin();
+}
+{
+  // Signalé sans réseau, MAIS l'administrateur avait déjà validé le quart : refusé au retour du signal, avec la raison
+  const m = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [], monde: { serveur: { quart_signaler_erreur: () => ({ data: { statut: 'refuse', raison: 'deja_valide' }, error: null }) } } }); coupe(m);
+  m.run('fermerEcranQuart(); ouvrirEcranQuart(\'avis\')');
+  await m.run('signalerErreurFinQuart()');
+  m.reseau(true);
+  vrai('un signalement gardé puis refusé au retour du signal (déjà validé) : noté dans « non envoyés »', await attendreQue(() => m.refus().length === 1 && m.attentes().length === 0));
+  eq('… avec la raison en français', m.refus()[0].raison, 'L’administrateur a déjà validé ce quart : parle-lui directement.');
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [], monde: { serveur: { quart_signaler_erreur: () => ({ data: { statut: 'refuse', raison: 'deja_valide' }, error: null }) } } });
+  await m.run('signalerErreurFinQuart()');
+  eq('l\'administrateur a déjà validé ce quart : la raison est dans l\'écran (lui parler directement) ; l\'avis est lu ; « OK » ferme', [ecranQuart(m).msg, m.run('avisFin'), ecranQuart(m).quel], ['L’administrateur a déjà validé ce quart : parle-lui directement.', null, 'avis']);
+  m.fin();
+  const n = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [], monde: { delaiEnvoiMs: 60 } });
+  const p1 = n.run('signalerErreurFinQuart()');
+  await attendre(20);
+  eq('pendant l\'envoi, « OK » et « Ce n’est pas exact » sont grisés', [n.el('btn-quart-ok').disabled, n.el('btn-quart-signaler').disabled], [true, true]);
+  await Promise.all([p1, n.run('signalerErreurFinQuart()')]);
+  eq('deux touchers presque en même temps : UN seul envoi', nbEnvois(n, 'quart_signaler_erreur'), 1);
+  n.fin();
+}
+{
+  // L'avis arrive PENDANT la séance (la relecture d'une minute)
+  const m = await ouvrir({ quarts: [], tours: [] });   // l'écran d'accueil est ouvert
+  m.donnees.quarts.push(quartTermineParChauffeur());
+  m.run('_tickRelecture=3'); await m.run('rafraichirEnCours()');
+  eq('l\'avis arrive PENDANT que l\'écran d\'accueil est ouvert : il attend (rien n\'est écrasé)', [ecranQuart(m).quel, m.run('avisFin!==null')], ['accueil', true]);
+  m.run('fermerEcranQuart()');
+  eq('« voir la carte » : la carte de l\'avis s\'ouvre alors', ecranQuart(m).quel, 'avis');
+  m.fin();
+  const n = await ouvrir({ quarts: [], tours: [] });
+  n.run('fermerEcranQuart()');   // rien d'ouvert : la carte de l'avis s'ouvre dans la minute
+  n.donnees.quarts.push(quartTermineParChauffeur());
+  n.run('_tickRelecture=3'); await n.run('rafraichirEnCours()');
+  eq('aucun écran ouvert : la carte s\'ouvre à la relecture suivante (dans la minute)', ecranQuart(n).quel, 'avis');
+  n.fin();
+}
+
+log('\n=== LE CODE : L\'ÉQUIPAGE PASSE PAR LES MÊMES RÈGLES QUE LES AUTRES GESTES ===');
+{
+  const qe = lire('js/quart-ecrans.js'), fa = lire('js/file-attente.js'), ep = lire('js/equipage-panneau.js');
+  vrai('la fin de quart d\'une personne et « ce n’est pas exact » n\'appellent le serveur qu\'avec un délai (avecDelai) et passent par la file en cas de panne', /avecDelai\(db\.rpc\('quart_terminer_equipier'/.test(qe) && /avecDelai\(db\.rpc\('quart_signaler_erreur'/.test(qe) && /enfiler\('quart_terminer_equipier'/.test(qe) && /enfiler\('quart_signaler_erreur'/.test(qe));
+  vrai('la file connaît les deux gestes (exécuteurs) et donne leurs raisons en français', /quart_terminer_equipier:\{/.test(fa) && /quart_signaler_erreur:\{/.test(fa) && fa.includes('function raisonQuartEquipier') && fa.includes('function raisonSignalementQuart'));
+  vrai('« Retirer » pose la question de fin de journée, avec « Non » par défaut (confirmer) et sans « il » ni « elle » dans les boutons', ep.includes('demanderFinJourneeEquipier') && ep.includes('Oui, terminer son quart') && ep.includes('Non, son quart continue'));
 }
 
 log('\n=== LE CODE : LE PUNCH PASSE PAR LES MÊMES RÈGLES QUE LES AUTRES GESTES ===');

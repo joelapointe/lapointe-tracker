@@ -8,8 +8,8 @@
   {
     "nom": "l'écran d'accueil n'est marqué « vu » que s'il s'ouvre (il reviendrait après « Je termine »)",
     "fichier": "js/quart-ecrans.js",
-    "de": "  _accueilQuartPour=currentUser.id;\n  if(!enService()) ouvrirEcranQuart('accueil');",
-    "vers": "  if(!enService()){_accueilQuartPour=currentUser.id;ouvrirEcranQuart('accueil');}"
+    "de": "    _accueilQuartPour=currentUser.id;\n    if(!enService()) ouvrirEcranQuart('accueil');",
+    "vers": "    if(!enService()){_accueilQuartPour=currentUser.id;ouvrirEcranQuart('accueil');}"
   },
   {
     "nom": "l'écran d'accueil s'ouvre même si je suis déjà en service",
@@ -20,8 +20,8 @@
   {
     "nom": "l'écran d'accueil s'ouvre avant de savoir si je suis en service",
     "fichier": "js/quart-ecrans.js",
-    "de": "if(!currentUser||!_quartConnu) return;\n  synchroniserEcranQuart();",
-    "vers": "if(!currentUser) return;\n  synchroniserEcranQuart();"
+    "de": "if(!currentUser||!_quartConnu||_verificationQuart) return;",
+    "vers": "if(!currentUser||_verificationQuart) return;"
   },
   {
     "nom": "l'écran d'accueil ne se ferme plus quand je suis devenu en service",
@@ -146,8 +146,8 @@
   {
     "nom": "« Je commence » réussi : le quart n'est pas posé tout de suite (une relecture qui échoue dit « hors service »)",
     "fichier": "js/quart-ecrans.js",
-    "de": "    installerQuart(q);\n    lectureReussie('quart',q);\n    montrerConfirmationQuart('Quart commencé à '",
-    "vers": "    lectureReussie('quart',q);\n    montrerConfirmationQuart('Quart commencé à '"
+    "de": "    installerQuart(q);\n    lectureReussie('quart',q);\n    montrerConfirmationQuart('Quart commencé à',heureCourte(debut)",
+    "vers": "    lectureReussie('quart',q);\n    montrerConfirmationQuart('Quart commencé à',heureCourte(debut)"
   },
   {
     "nom": "« chevauchement » n'est plus reconnu",
@@ -176,14 +176,14 @@
   {
     "nom": "« pas en quart » n'est plus reconnu",
     "fichier": "js/quart-ecrans.js",
-    "de": "if(d.statut==='pas_en_quart'){fermerEcranQuart();toast('Tu n’étais pas en service.');return;}",
+    "de": "if(d.statut==='pas_en_quart'&&!equipe.personnes.length){fermerEcranQuart();toast('Tu n’étais pas en service.');return;}",
     "vers": "if(false){fermerEcranQuart();toast('Tu n’étais pas en service.');return;}"
   },
   {
     "nom": "« déjà terminé » est présenté comme un quart qui vient de se terminer",
     "fichier": "js/quart-ecrans.js",
-    "de": "(d.statut==='deja_termine'?'Quart déjà terminé à ':'Quart terminé à ')",
-    "vers": "('Quart terminé à ')"
+    "de": "d.statut==='deja_termine'?'Quart déjà terminé à':'Quart terminé à'",
+    "vers": "'Quart terminé à'"
   },
   {
     "nom": "la confirmation de fin oublie la passe terminée aussi",
@@ -212,7 +212,7 @@
   {
     "nom": "un message d'erreur s'affiche toujours en message flottant (invisible sous l'écran d'accueil)",
     "fichier": "js/quart-ecrans.js",
-    "de": "const z=(_ecranQuart==='accueil'||_ecranQuart==='fin')?document.getElementById('quart-msg'):null;",
+    "de": "const z=(_ecranQuart==='accueil'||_ecranQuart==='fin'||_ecranQuart==='avis')?document.getElementById('quart-msg'):null;",
     "vers": "const z=null;"
   },
   {
@@ -224,8 +224,8 @@
   {
     "nom": "le gros bouton n'est jamais grisé pendant l'envoi",
     "fichier": "js/quart-ecrans.js",
-    "de": "if(b) b.disabled=_envoiQuart;",
-    "vers": "if(b) b.disabled=false;"
+    "de": "b.disabled=_envoiQuart||(id==='btn-quart-terminer'",
+    "vers": "b.disabled=false||(id==='btn-quart-terminer'"
   },
   {
     "nom": "la position du punch n'est pas envoyée",
@@ -290,7 +290,7 @@
   {
     "nom": "l'heure de la confirmation n'est plus sur sa propre ligne (elle pourrait se couper en deux)",
     "fichier": "js/quart-ecrans.js",
-    "de": "    '<div class=\"quart-heure\">'+esc(heure)+'</div>'+\n",
+    "de": "    (heure?'<div class=\"quart-heure\">'+esc(heure)+'</div>':'')+\n",
     "vers": ""
   },
   {

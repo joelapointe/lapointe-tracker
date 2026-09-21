@@ -48,7 +48,7 @@
 <div id="map"></div>
 <div id="topbar">
   <div id="logo">LAPOINTE <em>TRACKER</em></div>
-  <div id="quart-pastille" role="status" aria-live="polite" style="display:none"></div>
+  <button id="quart-pastille" type="button" onclick="pastilleQuartTouchee()" style="display:none"></button>
   <div id="topbar-droite">
     <div id="gps-pill"><div id="gps-dot"></div><span id="gps-lbl">GPS</span></div>
     <button id="btn-deconnexion" type="button" onclick="doLogout()" aria-label="Se déconnecter">Déconnexion</button>
@@ -293,6 +293,11 @@
   </div>
 </div>
 
+<!-- LE PUNCH (quart-ecrans.js) : « JE COMMENCE » à l'ouverture, la confirmation de l'heure, « JE TERMINE » -->
+<div id="quart-overlay" role="dialog" aria-modal="true" aria-labelledby="quart-titre" onclick="bgClickQuart(event)">
+  <div id="quart-boite"></div>
+</div>
+
 <div id="toast"></div>
 
 <!-- MON COMPTE : l'employé change lui-même son NIP -->
@@ -326,6 +331,7 @@
 <script src="js/equipage.js"></script>
 <script src="js/equipage-panneau.js"></script>
 <script src="js/quart.js"></script>
+<script src="js/quart-ecrans.js"></script>
 <script src="js/passe.js"></script>
 <script src="js/resume-passe.js"></script>
 <script src="js/arrets.js"></script>

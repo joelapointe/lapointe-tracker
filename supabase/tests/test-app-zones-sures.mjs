@@ -56,5 +56,17 @@ log('\n=== LE BAS DE L\'ÉCRAN : RIEN NE PASSE SOUS LA BARRE D\'ACCUEIL ===');
   eq('… et elles sont bien toutes alignées en bas', listeFenetres.every((s) => /align-items:flex-end/.test(de(s).find((r) => /align-items/.test(r.corps))?.corps ?? '')), true);
 }
 
+log('\n=== LE PUNCH (étape 17) : « JE COMMENCE », LA CONFIRMATION, « JE TERMINE » ===');
+{
+  const punch = derniere('#quart-overlay')?.corps ?? '';
+  eq('la fenêtre du punch laisse la place à l\'encoche (haut) ET à la barre d\'accueil (bas) d\'un iPhone', [punch.includes('var(--sa-top)'), punch.includes('var(--sa-bottom)')], [true, true]);
+  eq('… elle couvre tout l\'écran (position fixe, inset:0)', [/position:fixed/.test(punch), /inset:0/.test(punch)], [true, true]);
+  eq('la pastille du haut reste CLIQUABLE (la barre du haut ne laisse passer aucun toucher, sauf ce qui le demande)', de('#quart-pastille').some((r) => /pointer-events:all/.test(r.corps)), true);
+  const z = (sel) => Number((de(sel).map((r) => r.corps.match(/z-index:(\d+)/)?.[1]).filter(Boolean).pop()));
+  vrai('la fenêtre du punch est SOUS le message flottant (un message d\'erreur reste visible), et sous le résumé de passe et les boîtes de confirmation', z('#quart-overlay') > 0 && z('#quart-overlay') < z('#toast') && z('#quart-overlay') < z('#resume-overlay') && z('#quart-overlay') < z('#confirm-overlay'), [z('#quart-overlay'), z('#toast'), z('#resume-overlay'), z('#confirm-overlay')].join(' / '));
+  vrai('… et AU-DESSUS de la carte, de la barre du haut et des fenêtres qui montent du bas (équipage, choix d\'une personne)', z('#quart-overlay') > z('#topbar') && z('#quart-overlay') > z('#equipage-overlay') && z('#quart-overlay') > z('#choix-overlay'), [z('#quart-overlay'), z('#topbar'), z('#equipage-overlay'), z('#choix-overlay')].join(' / '));
+  vrai('le gros bouton fait au moins 96 px de haut (un doigt, avec des gants)', Number(derniere('.quart-gros')?.corps.match(/min-height:(\d+)px/)?.[1]) >= 96);
+}
+
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);
 process.exit(ko ? 1 : 0);

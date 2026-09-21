@@ -104,6 +104,14 @@ function appliquerGesteAuxTours(lus,g,luLe){
     if(!t) return;   // déjà terminée : rien à faire
     t.passes=t.passes.filter(p=>p.passe_id!==a.passeId);
     if(!t.passes.length) t.en_cours=false;   // plus aucun camion : le tour reste affiché, terminé (étape 14c) ; les autres camions le continuent
+  }else if(g.type==='quart_terminer'){
+    // « Je termine » (étape 17) : le serveur ferme aussi la passe que je conduis (fin_quart) et me sort du camion où je suis passager
+    lus.forEach(t=>{
+      if(!tourEnCours(t)) return;
+      const restent=t.passes.filter(p=>!p.je_suis_chauffeur);
+      restent.forEach(p=>{if(p.je_suis_a_bord) p.je_suis_a_bord=false;});   // (une copie : la copie du serveur n'est jamais touchée)
+      if(restent.length!==t.passes.length){t.passes=restent;if(!restent.length) t.en_cours=false;}
+    });
   }else if(g.type==='debuter_passe'){
     debuterLocalement(lus,a);
   }

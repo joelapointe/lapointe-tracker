@@ -33,6 +33,7 @@ function poserQuart(){
   if(!_quartConnu) return;   // pas encore lu : rien à superposer
   monQuart=superposerQuart(_quartServeur);
   majPastilleQuart();
+  if(typeof verifierAccueilQuart==='function') verifierAccueilQuart();   // l'écran d'accueil « JE COMMENCE » (quart-ecrans.js)
 }
 
 // Renvoie la copie du serveur si rien n'attend, sinon une COPIE où les gestes en attente sont appliqués, dans l'ordre où ils ont été faits.

@@ -110,7 +110,7 @@ function monde(o = {}) {
     crypto: { randomUUID: () => crypto.randomUUID() },
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/quart.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/auth.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/quart.js', 'js/quart-ecrans.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/problemes.js', 'js/photos.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map;', ctx);
   vm.runInContext('currentUser = ' + JSON.stringify(o.utilisateur ?? LUC) + ';', ctx);
@@ -1460,6 +1460,382 @@ log('\n=== L\'ÉTAT DU QUART SE RELIT TOUT SEUL, ET SURVIT À LA FERMETURE DE L\
   await d.run('loadStops()');
   eq('un « Je commence » fait sans réseau AVANT la fermeture de l\'application : toujours là à la réouverture', [d.run('monQuart.id'), d.run('monQuart.local'), d.attentes().length], ['q-avant-fermeture', true, 1]);
   d.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 17, MORCEAU 2 : LES GROS BOUTONS DU PUNCH (« JE COMMENCE » / « JE TERMINE »)
+// ══════════════════════════════════════════════════════════════════════
+const ecranQuart = (m) => ({ ouvert: m.el('quart-overlay').classList.contains('open'), plein: m.el('quart-overlay').classList.contains('plein'), html: m.el('quart-boite').innerHTML, quel: m.run('_ecranQuart'), msg: m.el('quart-msg').textContent });
+const nbEnvois = (m, nom) => m.appels.envois.filter((x) => x.nom === nom).length;
+const envoi = (m, nom) => m.appels.envois.find((x) => x.nom === nom)?.args;
+// La confirmation : le titre (« Quart commencé à ») ET l'heure EN GROS sur sa propre ligne (jamais coupée en deux)
+const confirme = (e, titre, heure) => e.html.includes('>' + titre + '</div>') && e.html.includes('<div class="quart-heure">' + heure + '</div>');
+const rowQuart = (id, o = {}) => ({ id, utilisateur_id: 'u-luc', debut: iso(90), fin: null, debut_source: 'manuel', a_valider: false, raison_a_valider: null, ...o });
+// Moi, passager du camion 2 (celui d'Eric)
+const EQ_PASSAGER = [{ passe_id: 'p-eric', role: 'chauffeur', utilisateur_id: 'u-eric', utilisateurs: { nom: 'Eric' } }, { passe_id: 'p-eric', role: 'passager', utilisateur_id: 'u-luc', utilisateurs: { nom: 'Luc' } }];
+const tourPassager = () => [tourInit({ passes: [{ ...PASSE_ERIC, je_suis_a_bord: true }] })];
+// Un serveur qui applique vraiment « Je commence » et « Je termine » (pour voir ce que l'écran devient quand il a le dernier mot)
+const serveurQuart = (o = {}) => ({
+  quart_commencer: (a, n, d) => { d.quarts.push(rowQuart(a.p_id, { debut: o.debut })); return { data: { statut: 'commence', quart_id: a.p_id, debut: o.debut }, error: null }; },
+  quart_terminer: (a, n, d) => {
+    const q = d.quarts.find((x) => !x.fin);
+    d.quarts = d.quarts.filter((x) => x !== q);
+    d.tours.forEach((t) => { t.passes = t.passes.filter((p) => !p.je_suis_chauffeur); if (!t.passes.length) t.en_cours = false; });
+    d.equipage_periodes = d.equipage_periodes.filter((x) => x.utilisateur_id !== 'u-luc');
+    return { data: { statut: 'termine', quart_id: q?.id ?? null, fin: o.fin, passe_fermee: o.passeFermee ?? null }, error: null };
+  },
+});
+
+log('\n=== L\'ÉCRAN D\'ACCUEIL « ▶ JE COMMENCE » : UNE FOIS À L\'OUVERTURE, JAMAIS BLOQUANT ===');
+{
+  const m = await ouvrir({ quarts: [], tours: [] });
+  const e = ecranQuart(m);
+  eq('pas en service à l\'ouverture : l\'écran d\'accueil s\'ouvre, en PLEIN écran', [e.ouvert, e.plein, e.quel], [true, true, 'accueil']);
+  eq('… il salue la personne par son nom, offre le gros bouton « ▶ JE COMMENCE » et le petit lien « voir la carte »', [e.html.includes('Bonjour, Luc'), e.html.includes('▶ JE COMMENCE'), e.html.includes('voir la carte')], [true, true, true]);
+  eq('… le gros bouton lance « commencerQuart », le lien ferme l\'écran', [/id="btn-quart-commencer"[^>]*onclick="commencerQuart\(\)"/.test(e.html), /onclick="fermerEcranQuart\(\)">voir la carte/.test(e.html)], [true, true]);
+  m.run('fermerEcranQuart()');
+  eq('« voir la carte » : l\'écran se ferme', ecranQuart(m).ouvert, false);
+  await m.run('loadStops()'); await m.run('chargerMonQuart()');
+  m.run('_tickRelecture=3'); await m.run('rafraichirEnCours()');
+  eq('… et il ne revient PAS tout seul (rechargement des arrêts, relecture du quart, relecture d\'une minute)', [ecranQuart(m).ouvert, m.run('_accueilQuartPour')], [false, 'u-luc']);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')] });
+  eq('déjà en service (quart ouvert) : pas d\'écran d\'accueil', [ecranQuart(m).ouvert, m.run('_accueilQuartPour')], [false, 'u-luc']);
+  m.fin();
+  const n = await ouvrir({ quarts: [] });   // (tours par défaut : une passe à moi en cours)
+  eq('une passe à moi en cours (donc en service) : pas d\'écran d\'accueil non plus', [n.run('enService()'), ecranQuart(n).ouvert], [true, false]);
+  n.fin();
+  const c = monde({ enLigne: false });
+  await c.run('loadStops()');
+  eq('on ne SAIT pas si je suis en service (aucune lecture, aucune copie, pas de réseau) : pas d\'écran d\'accueil', [c.run('_quartConnu'), ecranQuart(c).ouvert], [false, false]);
+  c.run('verifierAccueilQuart()');
+  eq('… même si on demande à l\'écran d\'accueil de se décider : il attend de savoir, et ne se marque pas « vu »', [ecranQuart(c).ouvert, c.run('_accueilQuartPour')], [false, null]);
+  c.run('pastilleQuartTouchee()');
+  eq('… et toucher la pastille le dit au lieu de deviner', [dernier(c), ecranQuart(c).ouvert], ['Je ne sais pas encore si tu es en service : un instant…', false]);
+  c.fin();
+}
+{
+  const a = await ouvrir({ quarts: [], tours: [] }); await a.run('attendreEcritures()');
+  const surLeTelephone = a.memoire(); a.fin();
+  const b = monde({ enLigne: false, memoire: surLeTelephone });
+  await b.run('loadStops()');
+  const e = ecranQuart(b);
+  eq('on rouvre l\'application SANS réseau (la copie dit « pas en service ») : l\'écran d\'accueil s\'ouvre, avec la note « pas de réseau »', [e.ouvert, e.quel, e.html.includes('Pas de réseau : l’heure est gardée')], [true, 'accueil', true]);
+  b.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [] });
+  m.run('fermerEcranQuart()');
+  m.run('currentUser={id:\'u-marc\',nom:\'Marc\',role:\'employe\'}; poserQuart()');
+  eq('une AUTRE personne se connecte sur le même téléphone (sans recharger la page) : l\'écran d\'accueil s\'ouvre pour elle, à son nom', [ecranQuart(m).ouvert, ecranQuart(m).html.includes('Bonjour, Marc'), m.run('_accueilQuartPour')], [true, true, 'u-marc']);
+  m.fin();
+}
+
+log('\n=== LA PASTILLE DU HAUT EST UN BOUTON ===');
+{
+  const m = await ouvrir({ quarts: [], tours: [] });
+  m.run('fermerEcranQuart()'); m.run('pastilleQuartTouchee()');
+  eq('hors service : toucher la pastille rouvre l\'écran d\'accueil', ecranQuart(m).quel, 'accueil');
+  m.fin();
+  const n = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [] });
+  n.run('pastilleQuartTouchee()');
+  const e = ecranQuart(n);
+  eq('en service : toucher la pastille ouvre « ■ JE TERMINE » (une fenêtre, pas l\'écran plein), avec « Non, continuer »', [e.quel, e.plein, e.html.includes('■ JE TERMINE'), e.html.includes('Non, continuer')], ['fin', false, true, true]);
+  eq('… il dit depuis quelle heure et la durée ; sans passe, aucun avertissement de passe', [e.html.includes('En service depuis ' + heureDe(n, n.run('monQuart.debut'))), /1 h 3\d de travail/.test(e.html), e.html.includes('sera terminée aussi')], [true, true, false]);
+  n.run('fermerEcranQuart()');
+  eq('« Non, continuer » ferme sans rien faire : toujours en service, aucun envoi', [ecranQuart(n).ouvert, n.run('enService()'), n.appels.envois.length], [false, true, 0]);
+  n.fin();
+  const p = await ouvrir({ quarts: [rowQuart('q-serveur', { a_valider: true, raison_a_valider: 'ouvert_par_passe', debut_source: 'passe' })], tours: tourPassager(), equipes: E1E2, equipages: EQ_PASSAGER });
+  p.run('pastilleQuartTouchee()');
+  eq('passager d\'un camion : « Tu descends de « Camion 2 » » ; un quart ouvert automatiquement l\'explique', [ecranQuart(p).html.includes('Tu descends de « Camion 2 ».'), ecranQuart(p).html.includes('s’est ouvert automatiquement')], [true, true]);
+  p.fin();
+  const q = await ouvrir({ quarts: [], tours: [] });
+  q.run('fermerEcranQuart()');
+  q.run('bgClickQuart({target:document.getElementById(\'quart-overlay\')})');
+  eq('un toucher à côté de la fenêtre ne ferme PAS l\'écran d\'accueil (seulement « voir la carte »)', ecranQuart(q).ouvert, false);
+  q.run('pastilleQuartTouchee(); bgClickQuart({target:document.getElementById(\'quart-overlay\')})');
+  eq('… (l\'écran d\'accueil rouvert résiste à un toucher à côté)', ecranQuart(q).ouvert, true);
+  q.fin();
+  const r = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [] });
+  r.run('pastilleQuartTouchee(); bgClickQuart({target:document.getElementById(\'quart-overlay\')})');
+  eq('… alors qu\'un toucher à côté de « JE TERMINE » l\'annule (« Non, continuer »)', [ecranQuart(r).ouvert, r.run('enService()')], [false, true]);
+  r.fin();
+}
+{
+  // L'état change SOUS un écran ouvert : l'écran devenu inutile se ferme
+  const m = await ouvrir({ quarts: [], tours: [] });
+  eq('(décor) l\'écran d\'accueil est ouvert', ecranQuart(m).quel, 'accueil');
+  await m.enfiler('quart_commencer', { id: 'q-ailleurs' });   // (un « Je commence » arrive par un autre chemin)
+  eq('je suis maintenant en service : l\'écran d\'accueil, devenu inutile, se ferme tout seul', [m.run('enService()'), ecranQuart(m).ouvert], [true, false]);
+  m.fin();
+  const n = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [] });
+  n.run('pastilleQuartTouchee()');
+  n.donnees.quarts = [];   // l'administrateur (ou la fermeture automatique) a terminé mon quart
+  await n.run('chargerMonQuart()');
+  eq('mon quart est terminé ailleurs pendant que « JE TERMINE » est ouvert : la fenêtre se ferme (il n\'y a plus rien à terminer)', [n.run('enService()'), ecranQuart(n).ouvert], [false, false]);
+  n.fin();
+}
+{
+  // Les noms viennent de la base : jamais du HTML brut dans l'écran
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')] });
+  m.run('currentUser={id:\'u-luc\',nom:\'<b>Luc</b>\',role:\'employe\'}; routes[0].nom=\'<u>Charette</u>\'; fermerEcranQuart()');
+  m.run('pastilleQuartTouchee()');
+  const fin = ecranQuart(m).html;
+  eq('le nom de la route (dans « JE TERMINE ») est échappé', [fin.includes('&lt;u&gt;Charette&lt;/u&gt;'), fin.includes('<u>')], [true, false]);
+  m.run('fermerEcranQuart(); ouvrirEcranQuart(\'accueil\')');
+  const acc = ecranQuart(m).html;
+  eq('le nom de la personne (dans l\'écran d\'accueil) est échappé', [acc.includes('Bonjour, &lt;b&gt;Luc&lt;/b&gt;'), acc.includes('<b>')], [true, false]);
+  m.fin();
+}
+
+log('\n=== « ▶ JE COMMENCE » EN LIGNE : L\'HEURE DU SERVEUR, LA CONFIRMATION, JAMAIS DEUX QUARTS ===');
+{
+  const debutServeur = iso(3);
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: serveurQuart({ debut: debutServeur }) } });
+  m.run('lastPos=[46.5,-72.8]');
+  await m.run('commencerQuart()'); await attendre(30);
+  const a = envoi(m, 'quart_commencer'), e = ecranQuart(m);
+  eq('UN envoi : le numéro du quart (fabriqué par le téléphone), la position, SANS heure (c\'est celle du serveur)', [nbEnvois(m, 'quart_commencer'), typeof a.p_id, 'p_moment' in a, a.p_lat, a.p_lon, a.p_precision], [1, 'string', false, 46.5, -72.8, null]);
+  eq('la confirmation dit l\'heure du SERVEUR (pas celle du téléphone), sans ⏳', [e.quel, confirme(e, 'Quart commencé à', heureDe(m, debutServeur)), e.html.includes('⏳'), e.html.includes('✔')], ['confirmation', true, false, true]);
+  eq('la pastille : en service depuis cette heure, sans ⏳ ; c\'est le quart du serveur (pas un quart « local »)', [pastille(m).classe, pastille(m).texte, m.run('monQuart.id') === a.p_id, m.run('monQuart.local')], ['quart-on', '🟢 Depuis ' + heureDe(m, debutServeur), true, undefined]);
+  eq('rien en attente ; l\'écran d\'accueil ne revient pas', [m.attentes().length, m.run('_accueilQuartPour')], [0, 'u-luc']);
+  await m.run('attendreEcritures()');
+  eq('la copie du téléphone garde ce quart (pour une ouverture sans réseau plus tard)', m.memoire()[cleQuart(m)]?.data?.id, a.p_id);
+  m.run('fermerEcranQuart()');
+  eq('« OK » ferme la confirmation', ecranQuart(m).ouvert, false);
+  await m.run('commencerQuart()');
+  eq('« Je commence » alors que je suis déjà en service : rien n\'est envoyé de plus, et on le dit', [nbEnvois(m, 'quart_commencer'), dernier(m)], [1, 'Tu es déjà en service.']);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: serveurQuart({ debut: iso(3) }) } });
+  m.run('DELAI_CONFIRMATION_QUART_MS=80');
+  await m.run('commencerQuart()');
+  eq('la confirmation est affichée', ecranQuart(m).quel, 'confirmation');
+  await attendre(250);
+  eq('… et elle se ferme toute seule après quelques secondes (ici 80 ms)', [ecranQuart(m).ouvert, m.run('_ecranQuart')], [false, null]);
+  m.fin();
+}
+{
+  // La réponse du serveur arrive, PUIS le signal disparaît : la relecture de contrôle échoue, mais je suis quand même en service (le quart est posé tout de suite)
+  let mm;
+  const debutServeur = iso(3);
+  const serveur = { quart_commencer: (a, n, d) => { d.quarts.push(rowQuart(a.p_id, { debut: debutServeur })); mm.reseau(false); return { data: { statut: 'commence', quart_id: a.p_id, debut: debutServeur }, error: null }; } };
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur } }); mm = m;
+  await m.run('commencerQuart()'); await attendre(60);
+  eq('le serveur répond puis le signal disparaît : je suis en service (pas « hors service »), sans ⏳ (le serveur a le quart)', [m.run('enService()'), pastille(m).classe, pastille(m).texte.includes('⏳'), m.attentes().length], [true, 'quart-on', false, 0]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [], monde: { delaiEnvoiMs: 60, serveur: serveurQuart({ debut: iso(3) }) } });
+  const premier = m.run('commencerQuart()');
+  await attendre(20);
+  eq('pendant l\'envoi, le gros bouton est grisé (et il redevient utilisable ensuite)', m.el('btn-quart-commencer').disabled, true);
+  await Promise.all([premier, m.run('commencerQuart()')]);
+  eq('deux touchers presque en même temps : UN seul envoi (jamais deux quarts)', nbEnvois(m, 'quart_commencer'), 1);
+  eq('… et le bouton est de nouveau utilisable', m.el('btn-quart-commencer').disabled, false);
+  m.fin();
+}
+
+log('\n=== « ▶ JE COMMENCE » : LES REFUS DU SERVEUR ET LES PANNES ===');
+{
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: { quart_commencer: () => ({ data: { statut: 'chevauchement' }, error: null }) } } });
+  await m.run('commencerQuart()');
+  const e = ecranQuart(m);
+  eq('« chevauchement » : message clair DANS l\'écran, JAMAIS de fausse confirmation, pas en service, bouton utilisable', [e.quel, e.msg.includes('chevauche un autre de tes quarts'), m.run('enService()'), m.el('btn-quart-commencer').disabled], ['accueil', true, false, false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: { quart_commencer: (a, n, d) => { d.quarts.push(rowQuart('q-autre-tel', { debut: iso(20) })); return { data: { statut: 'deja_en_quart', quart_id: 'q-autre-tel' }, error: null }; } } } });
+  await m.run('commencerQuart()');
+  eq('« déjà en quart » (commencé sur un autre appareil) : l\'écran se ferme, message, et c\'est CE quart-là qui est le mien', [ecranQuart(m).ouvert, dernier(m), m.run('monQuart.id')], [false, 'Tu étais déjà en service.', 'q-autre-tel']);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: { quart_commencer: () => ({ data: null, error: { code: 'P0001', message: 'non_autorise' } }) } } });
+  await m.run('commencerQuart()');
+  eq('le serveur REFUSE (compte désactivé) : message dans l\'écran, rien n\'est gardé, pas en service', [ecranQuart(m).msg, m.attentes().length, m.run('enService()')], ['❌ Ton compte ne peut pas faire ce geste.', 0, false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [], monde: { serveur: { quart_commencer: () => new Promise(() => {}) } } });
+  m.run('FILE_DELAI_DIRECT_MS=40');
+  await m.run('commencerQuart()');
+  eq('le serveur ne répond pas (10 s dans l\'application) : le geste passe à la file avec le MÊME numéro que l\'envoi direct (jamais deux quarts)', [nbEnvois(m, 'quart_commencer'), m.run('gestesEnAttente().map(g=>g.type)'), m.run('gestesEnAttente()[0].args.id') === envoi(m, 'quart_commencer').p_id], [1, ['quart_commencer'], true]);
+  eq('… la confirmation dit ⏳, et je suis en service tout de suite (⏳ sur la pastille)', [ecranQuart(m).html.includes('⏳ Envoyé au retour du signal'), pastille(m).classe, pastille(m).texte.endsWith(' ⏳')], [true, 'quart-on', true]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [] });
+  m.reseau(false);   // le signal disparaît AU MOMENT du toucher (l'application ne le sait pas encore)
+  await m.run('commencerQuart()');
+  eq('le signal disparaît au toucher : le geste passe à la file, la confirmation dit ⏳', [m.run('gestesEnAttente().map(g=>g.type)'), ecranQuart(m).html.includes('⏳ Envoyé au retour du signal'), m.run('reseau.enLigne')], [['quart_commencer'], true, false]);
+  m.fin();
+}
+
+log('\n=== « ▶ JE COMMENCE » SANS RÉSEAU : EN SERVICE TOUT DE SUITE, L\'HEURE EST GARDÉE ===');
+{
+  const m = await ouvrir({ quarts: [], tours: [] }); coupe(m);
+  m.run('lastPos=[46.5,-72.8]');
+  m.run('fermerEcranQuart()'); m.run('pastilleQuartTouchee()');   // (l'écran d'accueil rouvert, cette fois sans réseau)
+  eq('(l\'écran d\'accueil, rouvert sans réseau, dit la note « pas de réseau »)', ecranQuart(m).html.includes('Pas de réseau : l’heure est gardée'), true);
+  await m.run('commencerQuart()');
+  const g = m.run('gestesEnAttente()[0]'), e = ecranQuart(m);
+  eq('rien n\'est envoyé ; UN geste gardé : « Je commence », avec le numéro du quart et la position', [m.appels.envois.length, m.run('gestesEnAttente().map(g=>g.type)'), typeof g.args.id, g.args.lat, g.args.lon], [0, ['quart_commencer'], 'string', 46.5, -72.8]);
+  eq('la confirmation dit l\'heure du TÉLÉPHONE (celle du geste) ET « ⏳ Envoyé au retour du signal »', [e.quel, confirme(e, 'Quart commencé à', heureDe(m, g.moment)), e.html.includes('⏳ Envoyé au retour du signal'), Math.abs(Date.parse(g.moment) - Date.now()) < 5000], ['confirmation', true, true, true]);
+  eq('la pastille : en service avec ⏳ ; le quart affiché est le quart LOCAL', [pastille(m).classe, pastille(m).texte.endsWith(' ⏳'), m.run('monQuart.id') === g.args.id, m.run('monQuart.local')], ['quart-on', true, true, true]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [], tours: [] }); coupe(m);
+  m.run('magasinEcrire=async()=>false');
+  await m.run('commencerQuart()');
+  eq('« Je commence » sans pouvoir garder le geste : JAMAIS « commencé » (pas en service, message d\'erreur dans l\'écran, bouton utilisable)', [m.run('enService()'), m.attentes().length, ecranQuart(m).msg, m.el('btn-quart-commencer').disabled], [false, 0, '❌ Le téléphone n’a pas pu garder ce geste. Réessaie.', false]);
+  m.fin();
+}
+
+log('\n=== « ■ JE TERMINE » EN LIGNE : L\'HEURE DU SERVEUR, MA PASSE TERMINÉE AUSSI ===');
+{
+  const finServeur = iso(2);
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], monde: { serveur: serveurQuart({ fin: finServeur, passeFermee: 'p-luc' }) } });
+  m.run('lastPos=[46.5,-72.8]');
+  m.run('__ouv=[];{const o=ouvrirEcranQuart;ouvrirEcranQuart=(q)=>{__ouv.push(q);o(q);};}');   // (on note les écrans ouverts)
+  m.run('pastilleQuartTouchee()');
+  const e0 = ecranQuart(m);
+  eq('avec une passe en cours : l\'écran dit qu\'elle sera terminée aussi (numéro et route)', e0.html.includes('Ta passe n° 1 (Charette) sera terminée aussi.'), true);
+  eq('… le gros bouton rouge lance « terminerQuart »', /id="btn-quart-terminer"[^>]*onclick="terminerQuart\(\)"/.test(e0.html), true);
+  await m.run('terminerQuart()');
+  const a = envoi(m, 'quart_terminer'), e = ecranQuart(m);
+  eq('UN envoi : le numéro de MON quart, la position, SANS heure (c\'est celle du serveur)', [nbEnvois(m, 'quart_terminer'), a.p_quart_id, 'p_moment' in a, a.p_lat, a.p_lon], [1, 'q-serveur', false, 46.5, -72.8]);
+  eq('la confirmation dit l\'heure du SERVEUR, la durée (du début à cette heure) et que la passe est terminée aussi, sans ⏳', [e.quel, confirme(e, 'Quart terminé à', heureDe(m, finServeur)), /Durée : 1 h 2\d/.test(e.html), e.html.includes('Ta passe n° 1 a été terminée aussi.'), e.html.includes('⏳')], ['confirmation', true, true, true, false]);
+  eq('je ne suis plus en service (ni quart, ni passe) : pastille « hors service » ; l\'écran d\'accueil ne revient pas tout seul', [m.run('monQuart'), m.run('maPasse()'), pastille(m).classe, e.quel], [null, null, 'quart-off', 'confirmation']);
+  await attendre(80);   // (le résumé d'une passe se lit en ligne : il arriverait après un instant)
+  eq('AUCUN résumé de passe (je viens de la terminer moi-même)', m.el('resume-overlay').classList.contains('open'), false);
+  eq('l\'écran d\'accueil ne s\'est JAMAIS rouvert pendant tout ça (seulement « JE TERMINE », puis la confirmation)', m.run('__ouv'), ['fin']);
+  await m.run('attendreEcritures()');
+  eq('la copie du téléphone dit « pas en service » ; rien en attente', [m.memoire()[cleQuart(m)]?.data, m.attentes().length], [null, 0]);
+  m.fin();
+}
+{
+  // Le serveur termine le quart, PUIS le signal disparaît : la relecture échoue, mais la copie du téléphone doit dire « pas en service »
+  // (sinon, rouvert sans réseau, le téléphone montrerait encore un quart ouvert)
+  let mm;
+  const serveur = { quart_terminer: (a, n, d) => { d.quarts = []; mm.reseau(false); return { data: { statut: 'termine', quart_id: 'q-serveur', fin: iso(1), passe_fermee: null }, error: null }; } };
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [], monde: { serveur } }); mm = m;
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()'); await m.run('attendreEcritures()');
+  eq('le serveur termine puis le signal disparaît : je ne suis plus en service, et la copie du téléphone le dit aussi (pas de quart « fantôme » à la réouverture)', [m.run('enService()'), m.memoire()[cleQuart(m)]?.data], [false, null]);
+  m.fin();
+}
+{
+  const fin30 = iso(30);
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [], monde: { serveur: { quart_terminer: (a, n, d) => { d.quarts = []; return { data: { statut: 'deja_termine', quart_id: 'q-serveur', fin: fin30 }, error: null }; } } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('« déjà terminé » (un renvoi, ou terminé sur un autre appareil) : la confirmation le dit, avec l\'heure de fin déjà enregistrée ; plus en service', [confirme(ecranQuart(m), 'Quart déjà terminé à', heureDe(m, fin30)), m.run('enService()')], [true, false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [], monde: { serveur: { quart_terminer: (a, n, d) => { d.quarts = []; return { data: { statut: 'pas_en_quart' }, error: null }; } } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('« pas en quart » (rien à terminer) : l\'écran se ferme et le message le dit', [ecranQuart(m).ouvert, dernier(m)], [false, 'Tu n’étais pas en service.']);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [], monde: { serveur: { quart_terminer: (a, n, d) => { d.quarts = []; return { data: null, error: { code: 'P0001', message: 'quart_introuvable' } }; } } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('« quart introuvable » (fermé entre-temps par le serveur ou l\'administrateur) : l\'écran se remet à jour, se ferme, et le dit', [ecranQuart(m).ouvert, dernier(m), m.run('enService()')], [false, 'Ce quart n’existe plus : il était déjà terminé.', false]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: [], monde: { serveur: { quart_terminer: () => ({ data: null, error: { code: 'P0001', message: 'non_autorise' } }) } } });
+  m.run('pastilleQuartTouchee()'); await m.run('terminerQuart()');
+  eq('le serveur REFUSE : message dans l\'écran, JAMAIS « terminé », toujours en service, bouton utilisable, rien en attente', [ecranQuart(m).msg, m.run('enService()'), m.el('btn-quart-terminer').disabled, m.attentes().length], ['❌ Ton compte ne peut pas faire ce geste.', true, false, 0]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], monde: { delaiEnvoiMs: 60, serveur: serveurQuart({ fin: iso(1), passeFermee: 'p-luc' }) } });
+  m.run('pastilleQuartTouchee()');
+  await Promise.all([m.run('terminerQuart()'), m.run('terminerQuart()')]);
+  eq('deux touchers presque en même temps : UN seul envoi', nbEnvois(m, 'quart_terminer'), 1);
+  m.fin();
+  const n = await ouvrir({ quarts: [], tours: [] });
+  await n.run('terminerQuart()');
+  eq('pas en service : « Je termine » ne fait rien, et le dit', [nbEnvois(n, 'quart_terminer'), dernier(n)], [0, 'Tu n’es pas en service.']);
+  n.fin();
+}
+
+log('\n=== « ■ JE TERMINE » SANS RÉSEAU : MA PASSE SE FERME À L\'ÉCRAN, JE SORS DU CAMION ===');
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')] }); coupe(m);   // (tours par défaut : MA passe p-luc en cours)
+  m.run('__ouv=[];{const o=ouvrirEcranQuart;ouvrirEcranQuart=(q)=>{__ouv.push(q);o(q);};}');
+  m.run('pastilleQuartTouchee()');
+  eq('(l\'écran de fin dit la note « pas de réseau »)', ecranQuart(m).html.includes('Pas de réseau : l’heure est gardée'), true);
+  await m.run('terminerQuart()');
+  const e = ecranQuart(m), g = m.run('gestesEnAttente()[0]');
+  eq('rien n\'est envoyé ; UN geste gardé : terminer MON quart (numéro connu), avec l\'heure du geste', [m.appels.envois.length, m.run('gestesEnAttente().map(g=>[g.type,g.args.quartId])'), Math.abs(Date.parse(g.moment) - Date.now()) < 5000], [0, [['quart_terminer', 'q-serveur']], true]);
+  eq('je ne suis plus en service (ni quart, ni passe) : pastille « hors service »', [m.run('monQuart'), m.run('maPasse()'), m.run('enService()'), pastille(m).classe], [null, null, false, 'quart-off']);
+  eq('ma passe est fermée à l\'écran : le bandeau offre « Débuter » et plus « Terminer », le tour n\'a plus de camion', [m.el('passe-bandeau').innerHTML.includes('btn-debuter'), m.el('passe-bandeau').innerHTML.includes('btn-terminer'), m.run('tours[0].passes.length'), m.run('tours[0].en_cours')], [true, false, 0, false]);
+  eq('je suis sorti du camion (plus d\'équipage pour ma passe)', m.run('equipages[\'p-luc\']'), undefined);
+  eq('AUCUN résumé de passe (je viens de terminer moi-même)', m.el('resume-overlay').classList.contains('open'), false);
+  eq('l\'écran d\'accueil ne s\'est JAMAIS rouvert pendant tout ça', m.run('__ouv'), ['fin']);
+  eq('la confirmation : l\'heure du téléphone, ⏳, la durée, ma passe terminée aussi', [e.quel, confirme(e, 'Quart terminé à', heureDe(m, g.moment)), e.html.includes('⏳ Envoyé au retour du signal'), /Durée : 1 h 3\d/.test(e.html), e.html.includes('Ta passe n° 1 a été terminée aussi.')], ['confirmation', true, true, true, true]);
+  eq('les copies du serveur sont INTACTES (quart ouvert, passe en cours)', [m.run('_quartServeur.id'), m.run('_toursServeur[0].passes.length')], ['q-serveur', 1]);
+  m.fin();
+}
+{
+  // Un quart ouvert PAR LA PASSE (sans numéro connu du téléphone) : « Je termine » vise « mon quart ouvert »
+  const m = await ouvrir({ tours: [], equipes: E1E2, quarts: [] }); coupe(m);
+  await debuterHors(m);
+  m.run('fermerEcranQuart()');
+  m.run('pastilleQuartTouchee()');
+  await m.run('terminerQuart()');
+  eq('« Je termine » : le geste vise « mon quart ouvert » (numéro vide), après le début de la passe', [m.run('gestesEnAttente().map(g=>g.type)'), m.run('gestesEnAttente()[1].args.quartId')], [['debuter_passe', 'quart_terminer'], null]);
+  eq('… la passe débutée hors réseau est terminée aussi ; je ne suis plus en service', [m.run('maPasse()'), m.run('enService()')], [null, false]);
+  m.fin();
+}
+{
+  // Passager d'un camion : « Je termine » me fait descendre ; le camion continue pour les autres
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')], tours: tourPassager(), equipes: E1E2, equipages: EQ_PASSAGER }); coupe(m);
+  eq('(décor) je suis passager du camion 2, pas chauffeur', [m.run('monBord()!==null'), m.run('maPasse()')], [true, null]);
+  m.run('pastilleQuartTouchee()');
+  await m.run('terminerQuart()');
+  eq('après « Je termine » : plus à bord (le camion continue avec Eric) et plus en service', [m.run('monBord()'), nomsA(m, 'p-eric'), m.run('enService()')], [null, ['Eric'], false]);
+  eq('… la confirmation ne parle pas de passe (ce n\'est pas la mienne)', ecranQuart(m).html.includes('Ta passe'), false);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')] });
+  m.reseau(false);   // le signal disparaît AU MOMENT du toucher
+  m.run('pastilleQuartTouchee()');
+  await m.run('terminerQuart()');
+  eq('le signal disparaît au toucher : le geste passe à la file, ma passe est fermée à l\'écran, la confirmation dit ⏳', [m.run('gestesEnAttente().map(g=>g.type)'), m.run('maPasse()'), ecranQuart(m).html.includes('⏳ Envoyé au retour du signal')], [['quart_terminer'], null, true]);
+  m.fin();
+}
+{
+  const m = await ouvrir({ quarts: [rowQuart('q-serveur')] }); coupe(m);
+  m.run('magasinEcrire=async()=>false');
+  m.run('pastilleQuartTouchee()');
+  await m.run('terminerQuart()');
+  eq('« Je termine » sans pouvoir garder le geste : JAMAIS « terminé » (toujours en service, ma passe reste, message d\'erreur dans l\'écran, bouton utilisable)', [m.run('enService()'), m.run('maPasse()!==null'), m.attentes().length, ecranQuart(m).msg, m.el('btn-quart-terminer').disabled], [true, true, 0, '❌ Le téléphone n’a pas pu garder ce geste. Réessaie.', false]);
+  m.fin();
+}
+{
+  // Le serveur a DÉJÀ tout fait (la réponse s'était perdue) et le geste attend encore : rien n'est appliqué deux fois
+  const m = await ouvrir({ quarts: [], tours: [tourInit({ en_cours: false, passes: [], faits: 0 })] }); coupe(m);
+  await m.enfiler('quart_terminer', { quartId: 'q-serveur' });
+  eq('un « Je termine » en attente alors que le serveur n\'a déjà plus ni quart ni passe : rien de plus à l\'écran (pas de plantage, pas en service)', [m.run('monQuart'), m.run('maPasse()'), m.run('enService()'), m.run('tours[0].en_cours')], [null, null, false, false]);
+  m.fin();
+}
+
+log('\n=== LE CODE : LE PUNCH PASSE PAR LES MÊMES RÈGLES QUE LES AUTRES GESTES ===');
+{
+  const qe = lire('js/quart-ecrans.js'), page = lire('index.html'), tj = lire('js/tours.js'), vj = lire('js/vehicules.js');
+  vrai('« Je commence » et « Je termine » n\'appellent le serveur qu\'avec un délai (avecDelai) et passent par la file en cas de panne', /avecDelai\(db\.rpc\('quart_commencer'/.test(qe) && /avecDelai\(db\.rpc\('quart_terminer'/.test(qe) && qe.includes('commencerQuartSansReseau') && qe.includes('terminerQuartSansReseau'));
+  vrai('la page a son écran du punch, charge quart-ecrans.js (après quart.js), et la pastille est un BOUTON qui ouvre le bon écran', page.includes('id="quart-overlay"') && page.indexOf('js/quart.js') < page.indexOf('js/quart-ecrans.js') && /<button id="quart-pastille" type="button" onclick="pastilleQuartTouchee\(\)"/.test(page));
+  vrai('un « quart_terminer » en attente ferme aussi ma passe (tours.js) et me sort du camion (vehicules.js)', tj.includes('g.type===\'quart_terminer\'') && vj.includes('g.type===\'quart_terminer\''));
+  vrai('l\'écran d\'accueil est décidé quand l\'état du quart est posé (poserQuart) : un seul endroit', /verifierAccueilQuart\(\)/.test(lire('js/quart.js')));
+  vrai('aucune fonction du punch ne porte le nom d\'une fonction d\'un autre fichier (tout est global)', ['terminerSansReseau', 'commencerSansReseau'].every((n) => !new RegExp('function ' + n + '\\b').test(qe)));
 }
 
 log('\n=== LE CODE : UN SEUL ENDROIT POSE LE QUART, ET LA PAGE A SA PASTILLE ===');

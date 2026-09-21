@@ -56,7 +56,8 @@
     }
     #topbar-droite{display:flex;align-items:center;gap:8px;margin-left:auto;}
     /* La pastille « En service » (étape 17) : à la place du logo, à gauche */
-    #quart-pastille{align-items:center;min-height:32px;padding:0 12px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;white-space:nowrap;pointer-events:none;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}
+    #quart-pastille{align-items:center;min-height:36px;padding:0 12px;border-radius:999px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;white-space:nowrap;pointer-events:all;cursor:pointer;border:1px solid var(--border);background:rgba(26,31,38,.92);color:var(--text);}
+    #quart-pastille:active{filter:brightness(.85);}
     #quart-pastille.quart-on{border-color:rgba(74,222,128,.6);background:rgba(20,60,36,.92);color:#bbf7d0;}
     #quart-pastille.quart-off{color:var(--muted);}
     @media (max-width:359px){#quart-pastille{padding:0 9px;font-size:14px;}}
@@ -463,3 +464,27 @@
 .geste-ref .geste-raison{color:#fecaca;}
 .geste-fermer{margin-top:8px;min-height:44px;width:100%;border:none;border-radius:10px;background:#252d3a;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:800;cursor:pointer;}
 #map,.leaflet-container{background:#0c1117;}
+
+/* Étape 17, morceau 2 : le punch — « JE COMMENCE » à l'ouverture (écran plein), la confirmation de l'heure, « JE TERMINE » (quart-ecrans.js).
+   Sous le message flottant (3000) pour qu'un message d'erreur reste visible ; sous le résumé de passe (3600) et les boîtes de confirmation (4000). */
+#quart-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(4px);z-index:2800;align-items:center;justify-content:center;padding:calc(20px + var(--sa-top)) 20px calc(20px + var(--sa-bottom));}
+#quart-overlay.open{display:flex;}
+#quart-overlay.plein{background:var(--bg);backdrop-filter:none;}
+#quart-boite{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px 20px 20px;width:100%;max-width:380px;max-height:100%;overflow-y:auto;text-align:center;}
+#quart-overlay.plein #quart-boite{background:none;border:none;max-width:420px;padding:0;}
+.quart-salut{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--text);line-height:1.1;overflow-wrap:anywhere;}
+.quart-sous{font-size:15px;color:var(--muted);line-height:1.5;margin:8px 0 22px;overflow-wrap:anywhere;}
+.quart-info{font-size:15px;color:var(--text);line-height:1.5;margin:0 0 6px;overflow-wrap:anywhere;}
+.quart-gros{display:flex;align-items:center;justify-content:center;width:100%;min-height:112px;border:none;border-radius:20px;font-family:'Barlow Condensed',sans-serif;font-size:44px;font-weight:800;letter-spacing:.5px;cursor:pointer;}
+.quart-gros.commence{background:var(--green);color:#052e16;}
+.quart-gros.termine{background:var(--red);color:#fff;}
+.quart-gros:active{filter:brightness(.85);}
+.quart-gros:disabled{opacity:.5;cursor:default;}
+.quart-lien{display:block;width:100%;min-height:52px;margin-top:14px;background:none;border:none;color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:700;text-decoration:underline;cursor:pointer;}
+.quart-msg{min-height:20px;margin-top:12px;font-size:14px;color:#fecaca;line-height:1.4;overflow-wrap:anywhere;}
+.quart-coche{font-size:72px;line-height:1;color:var(--green);margin-bottom:6px;}
+.quart-note{font-size:13px;color:var(--muted);line-height:1.45;margin:6px 0 0;overflow-wrap:anywhere;}
+.quart-avert{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:rgba(251,146,60,.12);border:1px solid rgba(251,146,60,.45);color:#fdba74;font-size:14px;line-height:1.4;text-align:left;overflow-wrap:anywhere;}
+.quart-actions{margin-top:20px;}
+.quart-ok{width:100%;min-height:52px;margin-top:18px;border:none;border-radius:12px;background:#252d3a;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;cursor:pointer;}
+.quart-heure{font-family:'Barlow Condensed',sans-serif;font-size:64px;font-weight:800;color:var(--text);white-space:nowrap;line-height:1.05;margin:2px 0 10px;}

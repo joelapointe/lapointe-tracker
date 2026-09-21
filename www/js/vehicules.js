@@ -87,6 +87,8 @@ function appliquerGesteAuxEquipages(eq,g){
   }else if(g.type==='equipage_retirer'){
     if(!eq[a.passeId]) return;
     eq[a.passeId]=eq[a.passeId].filter(x=>x.utilisateur_id!==a.userId||x.role==='chauffeur');   // le chauffeur ne se retire pas
+  }else if(g.type==='quart_terminer'){
+    if(currentUser) retirerDesEquipages(eq,currentUser.id,null);   // « Je termine » (étape 17) : je quitte mon camion (le serveur ferme ma place à bord)
   }
 }
 // Renvoie la copie du serveur si rien n'attend, sinon une COPIE avec les gestes en attente appliqués (dans l'ordre où ils ont été faits)

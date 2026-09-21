@@ -1,0 +1,314 @@
+[
+  {
+    "nom": "l'écran d'accueil revient à chaque changement d'état (plus de « une seule fois »)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(_accueilQuartPour===currentUser.id) return;",
+    "vers": "if(false) return;"
+  },
+  {
+    "nom": "l'écran d'accueil n'est marqué « vu » que s'il s'ouvre (il reviendrait après « Je termine »)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  _accueilQuartPour=currentUser.id;\n  if(!enService()) ouvrirEcranQuart('accueil');",
+    "vers": "  if(!enService()){_accueilQuartPour=currentUser.id;ouvrirEcranQuart('accueil');}"
+  },
+  {
+    "nom": "l'écran d'accueil s'ouvre même si je suis déjà en service",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(!enService()) ouvrirEcranQuart('accueil');",
+    "vers": "ouvrirEcranQuart('accueil');"
+  },
+  {
+    "nom": "l'écran d'accueil s'ouvre avant de savoir si je suis en service",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(!currentUser||!_quartConnu) return;\n  synchroniserEcranQuart();",
+    "vers": "if(!currentUser) return;\n  synchroniserEcranQuart();"
+  },
+  {
+    "nom": "l'écran d'accueil ne se ferme plus quand je suis devenu en service",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(_ecranQuart==='accueil'&&enService()) fermerEcranQuart();",
+    "vers": "if(false) fermerEcranQuart();"
+  },
+  {
+    "nom": "« JE TERMINE » ne se ferme plus quand mon quart est terminé ailleurs",
+    "fichier": "js/quart-ecrans.js",
+    "de": "else if(_ecranQuart==='fin'&&!enService()) fermerEcranQuart();",
+    "vers": "else if(false) fermerEcranQuart();"
+  },
+  {
+    "nom": "un toucher à côté ferme aussi l'écran d'accueil",
+    "fichier": "js/quart-ecrans.js",
+    "de": "&&_ecranQuart&&_ecranQuart!=='accueil') fermerEcranQuart();",
+    "vers": "&&_ecranQuart) fermerEcranQuart();"
+  },
+  {
+    "nom": "la pastille en service ouvre l'écran d'accueil au lieu de « JE TERMINE »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(enService()){ouvrirEcranQuart('fin');return;}",
+    "vers": "if(enService()){ouvrirEcranQuart('accueil');return;}"
+  },
+  {
+    "nom": "la pastille devine quand l'état est inconnu",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(_quartConnu){ouvrirEcranQuart('accueil');return;}",
+    "vers": "if(true){ouvrirEcranQuart('accueil');return;}"
+  },
+  {
+    "nom": "le nom de la personne n'est pas échappé dans l'écran d'accueil",
+    "fichier": "js/quart-ecrans.js",
+    "de": "Bonjour'+(nom?', '+esc(nom):'')",
+    "vers": "Bonjour'+(nom?', '+nom:'')"
+  },
+  {
+    "nom": "le nom de la route n'est pas échappé dans « JE TERMINE »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "esc(nomRoute(m.tour.route_id)||'route')",
+    "vers": "(nomRoute(m.tour.route_id)||'route')"
+  },
+  {
+    "nom": "« JE TERMINE » ne prévient plus que la passe sera terminée aussi",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(m) h+='<div class=\"quart-avert\">🚜 Ta passe n° '",
+    "vers": "if(false) h+='<div class=\"quart-avert\">🚜 Ta passe n° '"
+  },
+  {
+    "nom": "« JE TERMINE » ne dit plus que le passager descend du camion",
+    "fichier": "js/quart-ecrans.js",
+    "de": "else if(b) h+='<div class=\"quart-avert\">Tu descends de « '",
+    "vers": "else if(false) h+='<div class=\"quart-avert\">Tu descends de « '"
+  },
+  {
+    "nom": "« JE TERMINE » n'explique plus un quart ouvert automatiquement",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(q&&q.a_valider) h+='<div class=\"quart-note\">Ce quart s’est ouvert automatiquement",
+    "vers": "if(false) h+='<div class=\"quart-note\">Ce quart s’est ouvert automatiquement"
+  },
+  {
+    "nom": "l'écran d'accueil ne dit plus « pas de réseau »",
+    "fichier": "js/quart-ecrans.js",
+    "de": "(reseau.enLigne?'':NOTE_HORS_RESEAU_QUART)+",
+    "vers": "''+"
+  },
+  {
+    "nom": "« Je commence » : le double toucher n'est plus bloqué",
+    "fichier": "js/quart-ecrans.js",
+    "de": "async function commencerQuart(){\n  if(_envoiQuart||!currentUser) return;",
+    "vers": "async function commencerQuart(){\n  if(!currentUser) return;"
+  },
+  {
+    "nom": "« Je termine » : le double toucher n'est plus bloqué",
+    "fichier": "js/quart-ecrans.js",
+    "de": "async function terminerQuart(){\n  if(_envoiQuart||!currentUser) return;",
+    "vers": "async function terminerQuart(){\n  if(!currentUser) return;"
+  },
+  {
+    "nom": "« Je commence » alors que je suis déjà en service envoie quand même",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(enService()){fermerEcranQuart();toast('Tu es déjà en service.');return;}",
+    "vers": "if(false){fermerEcranQuart();toast('Tu es déjà en service.');return;}"
+  },
+  {
+    "nom": "« Je termine » alors que je ne suis pas en service envoie quand même",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(!q&&!m){fermerEcranQuart();toast('Tu n’es pas en service.');return;}",
+    "vers": "if(false){fermerEcranQuart();toast('Tu n’es pas en service.');return;}"
+  },
+  {
+    "nom": "« Je commence » en ligne envoie l'heure du téléphone",
+    "fichier": "js/quart-ecrans.js",
+    "de": "db.rpc('quart_commencer',{p_id:id,...positionPrecisionArgs(args)})",
+    "vers": "db.rpc('quart_commencer',{p_id:id,p_moment:moment,...positionPrecisionArgs(args)})"
+  },
+  {
+    "nom": "« Je termine » en ligne envoie l'heure du téléphone",
+    "fichier": "js/quart-ecrans.js",
+    "de": "db.rpc('quart_terminer',{p_quart_id:args.quartId,...positionPrecisionArgs(args)})",
+    "vers": "db.rpc('quart_terminer',{p_quart_id:args.quartId,p_moment:moment,...positionPrecisionArgs(args)})"
+  },
+  {
+    "nom": "« Je termine » n'envoie plus le numéro de mon quart",
+    "fichier": "js/quart-ecrans.js",
+    "de": "{p_quart_id:args.quartId,",
+    "vers": "{p_quart_id:null,"
+  },
+  {
+    "nom": "« Je commence » : à la panne, la file reçoit un NOUVEAU numéro de quart (deux quarts possibles)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "signalerEchecReseau(r.error);return await commencerQuartSansReseau(args,moment);",
+    "vers": "signalerEchecReseau(r.error);return await commencerQuartSansReseau({...args,id:nouvelId()},moment);"
+  },
+  {
+    "nom": "la confirmation dit l'heure du téléphone au lieu de celle du serveur",
+    "fichier": "js/quart-ecrans.js",
+    "de": "const debut=d.debut||moment;",
+    "vers": "const debut=moment;"
+  },
+  {
+    "nom": "« Je commence » réussi : le quart n'est pas posé tout de suite (une relecture qui échoue dit « hors service »)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    installerQuart(q);\n    lectureReussie('quart',q);\n    montrerConfirmationQuart('Quart commencé à '",
+    "vers": "    lectureReussie('quart',q);\n    montrerConfirmationQuart('Quart commencé à '"
+  },
+  {
+    "nom": "« chevauchement » n'est plus reconnu",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(d.statut==='chevauchement'){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "« déjà en quart » n'est plus reconnu",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(d.statut==='deja_en_quart'){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "« quart introuvable » à la fin de quart n'est plus reconnu",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(r.error&&String(r.error.message||'').includes('quart_introuvable')){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "après « Je termine », la copie du téléphone garde l'ancien quart ouvert",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    lectureReussie('quart',null);",
+    "vers": "    ;"
+  },
+  {
+    "nom": "« pas en quart » n'est plus reconnu",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(d.statut==='pas_en_quart'){fermerEcranQuart();toast('Tu n’étais pas en service.');return;}",
+    "vers": "if(false){fermerEcranQuart();toast('Tu n’étais pas en service.');return;}"
+  },
+  {
+    "nom": "« déjà terminé » est présenté comme un quart qui vient de se terminer",
+    "fichier": "js/quart-ecrans.js",
+    "de": "(d.statut==='deja_termine'?'Quart déjà terminé à ':'Quart terminé à ')",
+    "vers": "('Quart terminé à ')"
+  },
+  {
+    "nom": "la confirmation de fin oublie la passe terminée aussi",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if((avant&&avant.passe)||passeFermee) l.push(",
+    "vers": "if(false) l.push("
+  },
+  {
+    "nom": "la confirmation de fin oublie la durée",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(duree) l.push('Durée : '+duree);",
+    "vers": "if(false) l.push('Durée : '+duree);"
+  },
+  {
+    "nom": "hors réseau : « Je termine » laisse ouvrir un faux résumé de passe",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  _passeVue=null;   // je viens de terminer moi-même : pas de résumé de passe\n  renderAll();",
+    "vers": "  renderAll();"
+  },
+  {
+    "nom": "en ligne : « Je termine » laisse ouvrir un faux résumé de passe",
+    "fichier": "js/quart-ecrans.js",
+    "de": "  _passeVue=null;   // je viens de terminer moi-même : pas de résumé de passe (remis à zéro APRÈS les relectures : un dessin intermédiaire aurait pu le reposer)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un message d'erreur s'affiche toujours en message flottant (invisible sous l'écran d'accueil)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "const z=(_ecranQuart==='accueil'||_ecranQuart==='fin')?document.getElementById('quart-msg'):null;",
+    "vers": "const z=null;"
+  },
+  {
+    "nom": "la confirmation ne se ferme jamais toute seule",
+    "fichier": "js/quart-ecrans.js",
+    "de": "_tConfirmationQuart=setTimeout(fermerEcranQuart,DELAI_CONFIRMATION_QUART_MS);",
+    "vers": ";"
+  },
+  {
+    "nom": "le gros bouton n'est jamais grisé pendant l'envoi",
+    "fichier": "js/quart-ecrans.js",
+    "de": "if(b) b.disabled=_envoiQuart;",
+    "vers": "if(b) b.disabled=false;"
+  },
+  {
+    "nom": "la position du punch n'est pas envoyée",
+    "fichier": "js/quart-ecrans.js",
+    "de": "return {lat:lastPos?lastPos[0]:null,lon:lastPos?lastPos[1]:null,precision:null};",
+    "vers": "return {lat:null,lon:null,precision:null};"
+  },
+  {
+    "nom": "« Je commence » en ligne sans délai (un serveur muet bloquerait l'écran)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "r=await avecDelai(db.rpc('quart_commencer',{p_id:id,...positionPrecisionArgs(args)}),FILE_DELAI_DIRECT_MS);",
+    "vers": "r=await db.rpc('quart_commencer',{p_id:id,...positionPrecisionArgs(args)});"
+  },
+  {
+    "nom": "l'écran d'accueil n'est plus décidé quand l'état du quart est posé",
+    "fichier": "js/quart.js",
+    "de": "if(typeof verifierAccueilQuart==='function') verifierAccueilQuart();",
+    "vers": ";"
+  },
+  {
+    "nom": "hors réseau : « Je termine » ne ferme plus ma passe à l'écran",
+    "fichier": "js/tours.js",
+    "de": "}else if(g.type==='quart_terminer'){",
+    "vers": "}else if(g.type==='quart_terminer_x'){"
+  },
+  {
+    "nom": "hors réseau : « Je termine » me laisse « à bord » d'un camion de passager",
+    "fichier": "js/tours.js",
+    "de": "restent.forEach(p=>{if(p.je_suis_a_bord) p.je_suis_a_bord=false;});",
+    "vers": ";"
+  },
+  {
+    "nom": "hors réseau : « Je termine » ne ferme plus ma passe de chauffeur",
+    "fichier": "js/tours.js",
+    "de": "if(restent.length!==t.passes.length){t.passes=restent;if(!restent.length) t.en_cours=false;}",
+    "vers": "if(false){t.passes=restent;if(!restent.length) t.en_cours=false;}"
+  },
+  {
+    "nom": "hors réseau : « Je termine » me laisse dans la liste de l'équipage du camion",
+    "fichier": "js/vehicules.js",
+    "de": "    if(currentUser) retirerDesEquipages(eq,currentUser.id,null);   // « Je termine » (étape 17)",
+    "vers": "    ;   // « Je termine » (étape 17)"
+  },
+  {
+    "nom": "la pastille n'est plus un bouton",
+    "fichier": "index.html",
+    "de": "<button id=\"quart-pastille\" type=\"button\" onclick=\"pastilleQuartTouchee()\" style=\"display:none\"></button>",
+    "vers": "<div id=\"quart-pastille\" style=\"display:none\"></div>"
+  },
+  {
+    "nom": "la fenêtre du punch a disparu de la page",
+    "fichier": "index.html",
+    "de": "<div id=\"quart-overlay\" role=\"dialog\"",
+    "vers": "<div id=\"quart-overlay-x\" role=\"dialog\""
+  },
+  {
+    "nom": "la page ne charge plus quart-ecrans.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/quart-ecrans.js\"></script>",
+    "vers": ""
+  },
+  {
+    "nom": "l'heure de la confirmation n'est plus sur sa propre ligne (elle pourrait se couper en deux)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "    '<div class=\"quart-heure\">'+esc(heure)+'</div>'+\n",
+    "vers": ""
+  },
+  {
+    "nom": "« déjà terminé » est présenté comme un quart qui vient de se terminer",
+    "fichier": "js/quart-ecrans.js",
+    "de": "d.statut==='deja_termine'?'Quart déjà terminé à':'Quart terminé à'",
+    "vers": "'Quart terminé à'"
+  },
+  {
+    "nom": "la confirmation de fin dit l'heure du serveur en ligne : elle prend celle du téléphone",
+    "fichier": "js/quart-ecrans.js",
+    "de": "const fin=d.fin||moment;",
+    "vers": "const fin=moment;"
+  },
+  {
+    "nom": "hors réseau, la confirmation de début ne dit pas ⏳",
+    "fichier": "js/quart-ecrans.js",
+    "de": "montrerConfirmationQuart('Quart commencé à',heureCourte(moment),[],'⏳ Envoyé au retour du signal'+texteGardeSeulementEnMemoire(r));",
+    "vers": "montrerConfirmationQuart('Quart commencé à',heureCourte(moment),[]);"
+  }
+]

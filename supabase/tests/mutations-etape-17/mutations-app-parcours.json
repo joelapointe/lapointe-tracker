@@ -1,0 +1,686 @@
+[
+  {
+    "nom": "la lecture s'arrête à la première tranche de 1000",
+    "fichier": "js/parcours.js",
+    "de": "if(!data||data.length<1000) break;",
+    "vers": "break;"
+  },
+  {
+    "nom": "les tranches font 500 lignes au lieu de 1000",
+    "fichier": "js/parcours.js",
+    "de": ".range(de,de+999)",
+    "vers": ".range(de,de+499)"
+  },
+  {
+    "nom": "les tronçons ne sont plus triés",
+    "fichier": "js/parcours.js",
+    "de": ".order('de_arret_id').order('vers_arret_id').range(de,de+999)",
+    "vers": ".range(de,de+999)"
+  },
+  {
+    "nom": "la lecture se répète à chaque chargement (plus de délai de 5 minutes)",
+    "fichier": "js/parcours.js",
+    "de": "if(!forcer&&segmentsParcours.length&&Date.now()-_segmentsLusLe<PARCOURS_RELECTURE_MS) return true;",
+    "vers": ""
+  },
+  {
+    "nom": "« forcer » ne force plus rien",
+    "fichier": "js/parcours.js",
+    "de": "const forcer=!!(opt&&opt.forcer);",
+    "vers": "const forcer=false;"
+  },
+  {
+    "nom": "les tronçons lus ne sont pas installés",
+    "fichier": "js/parcours.js",
+    "de": "    installerSegments(tout);\n    _segmentsLusLe=Date.now();",
+    "vers": "    _segmentsLusLe=Date.now();"
+  },
+  {
+    "nom": "la copie pour le hors réseau n'est plus gardée",
+    "fichier": "js/parcours.js",
+    "de": "    lectureReussie('parcours',tout);\n",
+    "vers": ""
+  },
+  {
+    "nom": "le temps réel n'est jamais démarré",
+    "fichier": "js/parcours.js",
+    "de": "    demarrerCanalParcours();   // le temps réel seulement",
+    "vers": "    // le temps réel seulement"
+  },
+  {
+    "nom": "une erreur du serveur (table absente) est prise pour une lecture réussie",
+    "fichier": "js/parcours.js",
+    "de": "      if(error) throw error;\n      tout.push(...(data||[]));",
+    "vers": "      tout.push(...(data||[]));"
+  },
+  {
+    "nom": "un échec de réseau n'est plus signalé",
+    "fichier": "js/parcours.js",
+    "de": "  }catch(e){\n    signalerEchecReseau(e);\n    return false;\n  }\n}\n// Démarrer sans signal",
+    "vers": "  }catch(e){\n    return false;\n  }\n}\n// Démarrer sans signal"
+  },
+  {
+    "nom": "une copie illisible remplace les tronçons connus",
+    "fichier": "js/parcours.js",
+    "de": "if(c&&Array.isArray(c.data)) installerSegments(c.data);",
+    "vers": "if(c) installerSegments(c.data);"
+  },
+  {
+    "nom": "le canal temps réel a le nom du canal des arrêts",
+    "fichier": "js/parcours.js",
+    "de": "db.channel('parcours-changes')",
+    "vers": "db.channel('stops-changes')"
+  },
+  {
+    "nom": "le canal temps réel écoute la table des arrêts",
+    "fichier": "js/parcours.js",
+    "de": "table:'parcours_segments'},()=>planifierRechargementParcours())",
+    "vers": "table:'stops'},()=>planifierRechargementParcours())"
+  },
+  {
+    "nom": "le canal temps réel est ouvert à chaque lecture (en double)",
+    "fichier": "js/parcours.js",
+    "de": "if(_canalParcours||!db||typeof db.channel!=='function') return;",
+    "vers": "if(!db||typeof db.channel!=='function') return;"
+  },
+  {
+    "nom": "une rafale d'avis du temps réel fait plusieurs relectures",
+    "fichier": "js/parcours.js",
+    "de": "  clearTimeout(_tRechargeParcours);\n",
+    "vers": ""
+  },
+  {
+    "nom": "le tracé n'est pas redessiné après une relecture du temps réel",
+    "fichier": "js/parcours.js",
+    "de": "    await chargerSegments({forcer:true});\n    majParcours();\n  },PARCOURS_ATTENTE_RELECTURE_MS);",
+    "vers": "    await chargerSegments({forcer:true});\n  },PARCOURS_ATTENTE_RELECTURE_MS);"
+  },
+  {
+    "nom": "un client déplacé de moins de 1 degré ne périme plus rien",
+    "fichier": "js/parcours.js",
+    "de": "const PARCOURS_EPSILON=1e-7; ",
+    "vers": "const PARCOURS_EPSILON=1; "
+  },
+  {
+    "nom": "la latitude de départ n'est plus comparée",
+    "fichier": "js/parcours.js",
+    "de": "!!s&&memePosition(s.de_lat,a.lat)&&memePosition(s.de_lon,a.lon)",
+    "vers": "!!s&&memePosition(s.de_lon,a.lon)"
+  },
+  {
+    "nom": "la longitude de départ n'est plus comparée",
+    "fichier": "js/parcours.js",
+    "de": "&&memePosition(s.de_lon,a.lon)&&memePosition(s.vers_lat,b.lat)",
+    "vers": "&&memePosition(s.vers_lat,b.lat)"
+  },
+  {
+    "nom": "la latitude d'arrivée n'est plus comparée",
+    "fichier": "js/parcours.js",
+    "de": "&&memePosition(s.vers_lat,b.lat)&&memePosition(s.vers_lon,b.lon)",
+    "vers": "&&memePosition(s.vers_lon,b.lon)"
+  },
+  {
+    "nom": "la longitude d'arrivée n'est plus comparée",
+    "fichier": "js/parcours.js",
+    "de": "&&memePosition(s.vers_lon,b.lon);",
+    "vers": ";"
+  },
+  {
+    "nom": "la suite d'une route mélange les types de service",
+    "fichier": "js/parcours.js",
+    "de": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon));",
+    "vers": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.lat&&s.lon));"
+  },
+  {
+    "nom": "la suite mélange les routes",
+    "fichier": "js/parcours.js",
+    "de": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon));",
+    "vers": "return enOrdre(stops.filter(s=>s.actif!==false&&s.service===service&&s.lat&&s.lon));"
+  },
+  {
+    "nom": "la suite contient des arrêts archivés",
+    "fichier": "js/parcours.js",
+    "de": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon));",
+    "vers": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.service===service&&s.lat&&s.lon));"
+  },
+  {
+    "nom": "la suite contient des arrêts sans position",
+    "fichier": "js/parcours.js",
+    "de": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon));",
+    "vers": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service));"
+  },
+  {
+    "nom": "la suite ne suit plus l'ordre choisi",
+    "fichier": "js/parcours.js",
+    "de": "return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon));",
+    "vers": "return stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon);"
+  },
+  {
+    "nom": "après la déconnexion, le tracé reste",
+    "fichier": "js/parcours.js",
+    "de": "  if(!currentUser) return [];\n  const t=(typeof monTourEnCours",
+    "vers": "  const t=(typeof monTourEnCours"
+  },
+  {
+    "nom": "le tracé commence toujours au premier client (même s'il est fait)",
+    "fichier": "js/parcours.js",
+    "de": "const k=suite.findIndex(s=>!estFait(s));",
+    "vers": "const k=0;"
+  },
+  {
+    "nom": "le tracé oublie le premier tronçon (du prochain client au suivant)",
+    "fichier": "js/parcours.js",
+    "de": "for(let i=k;i+1<suite.length;i++){\n    const s=_indexSegments",
+    "vers": "for(let i=k+1;i+1<suite.length;i++){\n    const s=_indexSegments"
+  },
+  {
+    "nom": "un tronçon d'un seul point est dessiné",
+    "fichier": "js/parcours.js",
+    "de": "Array.isArray(s.trace)&&s.trace.length>=2&&",
+    "vers": "Array.isArray(s.trace)&&s.trace.length>=1&&"
+  },
+  {
+    "nom": "un tronçon périmé est dessiné",
+    "fichier": "js/parcours.js",
+    "de": "&&segmentValide(s,suite[i],suite[i+1])) sortie.push(s);",
+    "vers": ") sortie.push(s);"
+  },
+  {
+    "nom": "la ligne n'est plus cyan",
+    "fichier": "js/parcours.js",
+    "de": "const COULEUR_TRACE='#22d3ee';",
+    "vers": "const COULEUR_TRACE='#ff0000';"
+  },
+  {
+    "nom": "le contour n'est plus sombre",
+    "fichier": "js/parcours.js",
+    "de": "const COULEUR_CONTOUR_TRACE='#0b1220';",
+    "vers": "const COULEUR_CONTOUR_TRACE='#ffffff';"
+  },
+  {
+    "nom": "la ligne est trop fine",
+    "fichier": "js/parcours.js",
+    "de": "{color:COULEUR_TRACE,weight:4,",
+    "vers": "{color:COULEUR_TRACE,weight:1,"
+  },
+  {
+    "nom": "le contour n'est pas plus épais que la ligne",
+    "fichier": "js/parcours.js",
+    "de": "{color:COULEUR_CONTOUR_TRACE,weight:8,",
+    "vers": "{color:COULEUR_CONTOUR_TRACE,weight:4,"
+  },
+  {
+    "nom": "la ligne capte les touchers (les marqueurs deviennent inaccessibles)",
+    "fichier": "js/parcours.js",
+    "de": "{color:COULEUR_TRACE,weight:4,opacity:.95,lineCap:'round',lineJoin:'round',interactive:false}",
+    "vers": "{color:COULEUR_TRACE,weight:4,opacity:.95,lineCap:'round',lineJoin:'round',interactive:true}"
+  },
+  {
+    "nom": "le contour capte les touchers",
+    "fichier": "js/parcours.js",
+    "de": "{color:COULEUR_CONTOUR_TRACE,weight:8,opacity:.6,lineCap:'round',lineJoin:'round',interactive:false}",
+    "vers": "{color:COULEUR_CONTOUR_TRACE,weight:8,opacity:.6,lineCap:'round',lineJoin:'round',interactive:true}"
+  },
+  {
+    "nom": "la mention Geoapify / OpenStreetMap n'est plus posée",
+    "fichier": "js/parcours.js",
+    "de": "    poserAttribution();\n  }catch(e){_traceCouche=null;}",
+    "vers": "  }catch(e){_traceCouche=null;}"
+  },
+  {
+    "nom": "la mention ne cite plus Geoapify",
+    "fichier": "js/parcours.js",
+    "de": "Itinéraires © <a href=\"https://www.geoapify.com/\" target=\"_blank\" rel=\"noopener\">Geoapify</a> · ",
+    "vers": ""
+  },
+  {
+    "nom": "la mention ne cite plus OpenStreetMap",
+    "fichier": "js/parcours.js",
+    "de": "Données © contributeurs <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\" rel=\"noopener\">OpenStreetMap</a>",
+    "vers": "Données © contributeurs"
+  },
+  {
+    "nom": "la mention n'est jamais retirée",
+    "fichier": "js/parcours.js",
+    "de": "  if(!_attributionPosee) return;\n  try{map.attributionControl.removeAttribution(ATTRIBUTION_TRACE);}catch(e){}\n  _attributionPosee=false;",
+    "vers": "  return;"
+  },
+  {
+    "nom": "la carte est redessinée même si rien n'a changé",
+    "fichier": "js/parcours.js",
+    "de": "  if(signature===_traceSignature) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la signature du dessin n'est jamais mise à jour",
+    "fichier": "js/parcours.js",
+    "de": "  _traceSignature=signature;\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'ancienne couche n'est pas retirée",
+    "fichier": "js/parcours.js",
+    "de": "  if(_traceCouche){try{map.removeLayer(_traceCouche);}catch(e){}_traceCouche=null;}",
+    "vers": "  if(_traceCouche){_traceCouche=null;}"
+  },
+  {
+    "nom": "les lignes cachées restent affichées",
+    "fichier": "js/parcours.js",
+    "de": "const troncons=traceVisible?tronconsAffiches():[];",
+    "vers": "const troncons=tronconsAffiches();"
+  },
+  {
+    "nom": "le bouton ne s'allume plus",
+    "fichier": "js/parcours.js",
+    "de": "    bouton.classList.toggle('on',traceVisible);",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton ne se grise plus sans passe",
+    "fichier": "js/parcours.js",
+    "de": "bouton.classList.toggle('inactif',!enPasse());",
+    "vers": "bouton.classList.toggle('inactif',false);"
+  },
+  {
+    "nom": "le bouton ne dit plus s'il est enfoncé (accessibilité)",
+    "fichier": "js/parcours.js",
+    "de": "    bouton.setAttribute('aria-pressed',traceVisible?'true':'false');\n",
+    "vers": ""
+  },
+  {
+    "nom": "le choix de cacher n'est pas gardé sur le téléphone",
+    "fichier": "js/parcours.js",
+    "de": "  ecrireMemo(CLE_TRACE_VISIBLE,traceVisible?'1':'0');\n",
+    "vers": ""
+  },
+  {
+    "nom": "le choix gardé est ignoré au démarrage",
+    "fichier": "js/parcours.js",
+    "de": "let traceVisible=lireMemo(CLE_TRACE_VISIBLE)!=='0';",
+    "vers": "let traceVisible=true;"
+  },
+  {
+    "nom": "le message « Tracé caché » est faux",
+    "fichier": "js/parcours.js",
+    "de": "'🛣 Tracé caché'",
+    "vers": "'🛣 Tracé effacé'"
+  },
+  {
+    "nom": "sans passe, le bouton n'explique plus rien",
+    "fichier": "js/parcours.js",
+    "de": "if(!enPasse()) suite=' · il apparaît pendant une passe';",
+    "vers": "if(false) suite=' · il apparaît pendant une passe';"
+  },
+  {
+    "nom": "sans tronçon, le bouton n'explique plus rien",
+    "fichier": "js/parcours.js",
+    "de": "else if(!tronconsAffiches().length) suite=' · rien à tracer pour l’instant';",
+    "vers": "else if(false) suite=' · rien à tracer pour l’instant';"
+  },
+  {
+    "nom": "un employé peut faire calculer le tracé",
+    "fichier": "js/parcours.js",
+    "de": "function estAdminApp(){return !!(currentUser&&currentUser.role==='admin');}",
+    "vers": "function estAdminApp(){return !!currentUser;}"
+  },
+  {
+    "nom": "deux calculs peuvent courir en même temps",
+    "fichier": "js/parcours.js",
+    "de": "if(!estAdminApp()||_majParcoursEnCours) return null;",
+    "vers": "if(!estAdminApp()) return null;"
+  },
+  {
+    "nom": "sans réseau, le calcul est quand même demandé",
+    "fichier": "js/parcours.js",
+    "de": "if(!reseau.enLigne){\n    if(manuel) toast('📴 Pas de réseau : le tracé ne peut pas être mis à jour maintenant.');\n    return null;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "sans réseau, le bouton ne dit rien",
+    "fichier": "js/parcours.js",
+    "de": "if(manuel) toast('📴 Pas de réseau : le tracé ne peut pas être mis à jour maintenant.');",
+    "vers": ""
+  },
+  {
+    "nom": "le calcul automatique se répète (boucle qui martèle le service)",
+    "fichier": "js/parcours.js",
+    "de": "if(!manquants.length||signature===_dernierEssaiAuto) return null;",
+    "vers": "if(!manquants.length) return null;"
+  },
+  {
+    "nom": "le calcul automatique se lance même si rien ne manque",
+    "fichier": "js/parcours.js",
+    "de": "if(!manquants.length||signature===_dernierEssaiAuto) return null;",
+    "vers": "if(signature===_dernierEssaiAuto) return null;"
+  },
+  {
+    "nom": "la situation ne compte plus les positions (un arrêt déplacé ne relance rien)",
+    "fichier": "js/parcours.js",
+    "de": ".map(m=>[m.cle,m.de.lat,m.de.lon,m.vers.lat,m.vers.lon].join(','))",
+    "vers": ".map(m=>[m.cle].join(','))"
+  },
+  {
+    "nom": "le bouton ne dit plus « déjà à jour » même s'il y a des « sans route »",
+    "fichier": "js/parcours.js",
+    "de": "}else if(!manquants.length&&!aDesSansRoute){",
+    "vers": "}else if(!manquants.length){"
+  },
+  {
+    "nom": "le bouton n'appelle rien quand tout est à jour mais le dit quand même sans tester",
+    "fichier": "js/parcours.js",
+    "de": "    toast('✔ Le tracé est déjà à jour.');\n    return {calcules:0};",
+    "vers": "    return {calcules:0};"
+  },
+  {
+    "nom": "« refaire_sans_route » est envoyé à chaque tour",
+    "fichier": "js/parcours.js",
+    "de": "manuel&&tour===0?{refaire_sans_route:true}:{}",
+    "vers": "manuel?{refaire_sans_route:true}:{}"
+  },
+  {
+    "nom": "« refaire_sans_route » n'est jamais envoyé",
+    "fichier": "js/parcours.js",
+    "de": "manuel&&tour===0?{refaire_sans_route:true}:{}",
+    "vers": "{}"
+  },
+  {
+    "nom": "le calcul automatique envoie « refaire_sans_route »",
+    "fichier": "js/parcours.js",
+    "de": "manuel&&tour===0?{refaire_sans_route:true}:{}",
+    "vers": "tour===0?{refaire_sans_route:true}:{}"
+  },
+  {
+    "nom": "jusqu'à 60 appels de suite au lieu de 6",
+    "fichier": "js/parcours.js",
+    "de": "const PARCOURS_TOURS_MAX=6; ",
+    "vers": "const PARCOURS_TOURS_MAX=60; "
+  },
+  {
+    "nom": "un seul appel même s'il en reste",
+    "fichier": "js/parcours.js",
+    "de": "const PARCOURS_TOURS_MAX=6; ",
+    "vers": "const PARCOURS_TOURS_MAX=1; "
+  },
+  {
+    "nom": "on continue d'appeler même sans aucun progrès",
+    "fichier": "js/parcours.js",
+    "de": "||((Number(r.calcules)||0)+(Number(r.sans_route)||0))===0) break;",
+    "vers": ") break;"
+  },
+  {
+    "nom": "on continue d'appeler même quand la limite est atteinte",
+    "fichier": "js/parcours.js",
+    "de": "if(!(bilan.restants>0)||bilan.limite||",
+    "vers": "if(!(bilan.restants>0)||"
+  },
+  {
+    "nom": "la limite atteinte n'est pas retenue",
+    "fichier": "js/parcours.js",
+    "de": "bilan.limite=!!r.limite_atteinte;",
+    "vers": "bilan.limite=false;"
+  },
+  {
+    "nom": "le voyant de synchro reste allumé après le calcul",
+    "fichier": "js/parcours.js",
+    "de": "    _majParcoursEnCours=false;\n    if(manuel) showSync(false);",
+    "vers": "    _majParcoursEnCours=false;"
+  },
+  {
+    "nom": "le verrou n'est jamais rendu",
+    "fichier": "js/parcours.js",
+    "de": "    _majParcoursEnCours=false;\n    if(manuel) showSync(false);",
+    "vers": "    if(manuel) showSync(false);"
+  },
+  {
+    "nom": "les nouveaux tronçons ne sont pas relus après le calcul",
+    "fichier": "js/parcours.js",
+    "de": "  await chargerSegments({forcer:true});   // les nouveaux tronçons",
+    "vers": "  // les nouveaux tronçons"
+  },
+  {
+    "nom": "les lignes ne sont pas redessinées après le calcul",
+    "fichier": "js/parcours.js",
+    "de": "  majParcours();\n  if(typeof majBoutonTraceAdmin==='function') majBoutonTraceAdmin();",
+    "vers": "  if(typeof majBoutonTraceAdmin==='function') majBoutonTraceAdmin();"
+  },
+  {
+    "nom": "un tronçon calculé compte pour zéro dans le message",
+    "fichier": "js/parcours.js",
+    "de": "bilan.calcules+=Number(r.calcules)||0;",
+    "vers": "bilan.calcules+=0;"
+  },
+  {
+    "nom": "le message ne parle plus des couples sans route",
+    "fichier": "js/parcours.js",
+    "de": "if(bilan.sans_route) m+=' · '+bilan.sans_route+' sans route trouvée';",
+    "vers": ""
+  },
+  {
+    "nom": "le message ne parle plus des échecs du service",
+    "fichier": "js/parcours.js",
+    "de": "if(bilan.echecs) m+=' · '+bilan.echecs+' à refaire (service indisponible)';",
+    "vers": ""
+  },
+  {
+    "nom": "le message ne parle plus de la limite",
+    "fichier": "js/parcours.js",
+    "de": "if(bilan.limite) m+=' · limite du service atteinte : réessaie plus tard';",
+    "vers": "if(false) m+='';"
+  },
+  {
+    "nom": "le message ne dit plus ce qui reste",
+    "fichier": "js/parcours.js",
+    "de": "else if(bilan.restants>0&&!bilan.echecs) m+=' · il en reste '+bilan.restants;",
+    "vers": ""
+  },
+  {
+    "nom": "le message d'erreur n'est plus montré",
+    "fichier": "js/parcours.js",
+    "de": "if(erreur&&!bilan.calcules) toast(messageErreurParcours(erreur));",
+    "vers": "if(false) toast('');"
+  },
+  {
+    "nom": "le mode automatique parle (message d'erreur inutile)",
+    "fichier": "js/parcours.js",
+    "de": "  if(manuel){\n    if(erreur&&!bilan.calcules)",
+    "vers": "  if(true){\n    if(erreur&&!bilan.calcules)"
+  },
+  {
+    "nom": "une fonction absente (404) n'est plus reconnue",
+    "fichier": "js/parcours.js",
+    "de": "      if(c.status===404) return {code:'fonction_absente',message:''};\n",
+    "vers": ""
+  },
+  {
+    "nom": "une absence de réponse n'est plus reconnue comme un problème de réseau",
+    "fichier": "js/parcours.js",
+    "de": "if(err&&err.name==='FunctionsFetchError'){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "une absence de réponse ne prévient pas le téléphone qu'il est hors réseau",
+    "fichier": "js/parcours.js",
+    "de": "    signalerEchecReseau(err.context||err);\n    return {code:'reseau',message:''};",
+    "vers": "    return {code:'reseau',message:''};"
+  },
+  {
+    "nom": "une réponse « ok: false » est prise pour un succès",
+    "fichier": "js/parcours.js",
+    "de": "if(!d||d.ok!==true) return {erreur:",
+    "vers": "if(!d) return {erreur:"
+  },
+  {
+    "nom": "le message « pas administrateur » est faux",
+    "fichier": "js/parcours.js",
+    "de": "if(e.code==='non_autorise') return '❌ Réservé à l’administrateur.';",
+    "vers": "if(e.code==='non_autorise') return '❌ Erreur.';"
+  },
+  {
+    "nom": "le message de clé manquante ne montre plus celui du serveur",
+    "fichier": "js/parcours.js",
+    "de": "return '❌ '+(e.message||'La clé Geoapify pose problème.');",
+    "vers": "return '❌ La clé Geoapify pose problème.';"
+  },
+  {
+    "nom": "le message « pas de réseau » est faux",
+    "fichier": "js/parcours.js",
+    "de": "if(e.code==='reseau') return '📴 Pas de réseau : le tracé n’a pas pu être mis à jour.';",
+    "vers": "if(e.code==='reseau') return '❌ Erreur.';"
+  },
+  {
+    "nom": "le calcul automatique attend seulement 0 seconde",
+    "fichier": "js/parcours.js",
+    "de": "const PARCOURS_ATTENTE_ADMIN_MS=2500; ",
+    "vers": "const PARCOURS_ATTENTE_ADMIN_MS=0; "
+  },
+  {
+    "nom": "le bouton de la liste ne compte plus ce qui manque",
+    "fichier": "js/parcours.js",
+    "de": "  const n=tronconsManquants().length;\n  z.innerHTML=",
+    "vers": "  const n=0;\n  z.innerHTML="
+  },
+  {
+    "nom": "un employé voit le bouton de la liste",
+    "fichier": "js/parcours.js",
+    "de": "  if(!estAdminApp()){z.innerHTML='';return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton de la liste n'est pas relié à la mise à jour",
+    "fichier": "js/parcours.js",
+    "de": "onclick=\"majParcoursManuel()\">🛣 Mettre à jour le tracé",
+    "vers": "onclick=\"void(0)\">🛣 Mettre à jour le tracé"
+  },
+  {
+    "nom": "le bouton de la liste s'appelle autrement",
+    "fichier": "js/parcours.js",
+    "de": "🛣 Mettre à jour le tracé'+(n?",
+    "vers": "Actualiser'+(n?"
+  },
+  {
+    "nom": "la fonction appelée s'appelle autrement",
+    "fichier": "js/parcours.js",
+    "de": "db.functions.invoke('calculer-parcours',{body:corps})",
+    "vers": "db.functions.invoke('calcul-parcours',{body:corps})"
+  },
+  {
+    "nom": "les arrêts sans service comptent dans les tronçons voulus",
+    "fichier": "js/parcours.js",
+    "de": "if(!s.route_id||!s.service||!s.lat||!s.lon||s.actif===false) return;",
+    "vers": "if(!s.route_id||!s.lat||!s.lon||s.actif===false) return;"
+  },
+  {
+    "nom": "les arrêts archivés comptent dans les tronçons voulus",
+    "fichier": "js/parcours.js",
+    "de": "if(!s.route_id||!s.service||!s.lat||!s.lon||s.actif===false) return;",
+    "vers": "if(!s.route_id||!s.service||!s.lat||!s.lon) return;"
+  },
+  {
+    "nom": "les tronçons voulus ne suivent plus l'ordre choisi",
+    "fichier": "js/parcours.js",
+    "de": "    const suite=enOrdre(g);\n    for(let i=0;i+1<suite.length;i++){\n      if(suite[i].id===suite[i+1].id) continue;",
+    "vers": "    const suite=g;\n    for(let i=0;i+1<suite.length;i++){\n      if(suite[i].id===suite[i+1].id) continue;"
+  },
+  {
+    "nom": "les tronçons voulus mélangent les types de service",
+    "fichier": "js/parcours.js",
+    "de": "const cle=s.route_id+'|'+s.service;\n    if(!groupes.has(cle))",
+    "vers": "const cle=s.route_id;\n    if(!groupes.has(cle))"
+  },
+  {
+    "nom": "les tronçons ne sont plus lus au chargement des arrêts",
+    "fichier": "js/arrets.js",
+    "de": "    if(typeof chargerSegments==='function') await chargerSegments();",
+    "vers": "    // (plus de lecture des tronçons)"
+  },
+  {
+    "nom": "la carte redessinée ne redessine plus le tracé",
+    "fichier": "js/arrets.js",
+    "de": "  if(typeof majParcours==='function') majParcours();   // le tracé qui suit les rues",
+    "vers": "  // (plus de tracé)   // le tracé qui suit les rues"
+  },
+  {
+    "nom": "l'administrateur ne fait plus calculer au chargement",
+    "fichier": "js/arrets.js",
+    "de": "    if(typeof planifierMajParcours==='function') planifierMajParcours();   // l'administrateur seulement",
+    "vers": "    // l'administrateur seulement"
+  },
+  {
+    "nom": "les arrêts ne sont plus triés par date de création à égalité",
+    "fichier": "js/arrets.js",
+    "de": ".order('ordre').order('created_at').order('id');",
+    "vers": ".order('ordre').order('id');"
+  },
+  {
+    "nom": "les arrêts ne sont plus triés par identifiant à égalité",
+    "fichier": "js/arrets.js",
+    "de": ".order('ordre').order('created_at').order('id');",
+    "vers": ".order('ordre').order('created_at');"
+  },
+  {
+    "nom": "la copie des tronçons n'est plus reprise sans signal",
+    "fichier": "js/hors-reseau.js",
+    "de": "  if(typeof restaurerParcours==='function') await restaurerParcours();",
+    "vers": "  // (plus de copie des tronçons)"
+  },
+  {
+    "nom": "un changement d'ordre ne fait plus calculer les nouveaux tronçons",
+    "fichier": "js/ordre.js",
+    "de": "    if(typeof planifierMajParcours==='function') planifierMajParcours();   // le nouvel ordre",
+    "vers": "    // le nouvel ordre"
+  },
+  {
+    "nom": "la liste ne dessine plus le bouton d'administration du tracé",
+    "fichier": "js/liste-arrets.js",
+    "de": "  if(typeof majBoutonTraceAdmin==='function') majBoutonTraceAdmin();   // « 🛣 Mettre à jour le tracé »",
+    "vers": "  // « 🛣 Mettre à jour le tracé »"
+  },
+  {
+    "nom": "la page ne charge plus parcours.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/parcours.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "la page n'a plus le bouton rond du tracé",
+    "fichier": "index.html",
+    "de": "  <button class=\"ctrl on\" id=\"btn-trace\" type=\"button\" onclick=\"basculerTrace()\" aria-label=\"Afficher ou cacher le tracé du parcours\" aria-pressed=\"true\">🛣</button>\n",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton rond du tracé n'est pas relié",
+    "fichier": "index.html",
+    "de": "id=\"btn-trace\" type=\"button\" onclick=\"basculerTrace()\"",
+    "vers": "id=\"btn-trace\" type=\"button\" onclick=\"void(0)\""
+  },
+  {
+    "nom": "la page n'a plus la place du bouton d'administration du tracé",
+    "fichier": "index.html",
+    "de": "    <div id=\"liste-trace-admin\"></div>\n",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton du tracé ne se grise plus",
+    "fichier": "css/style.css",
+    "de": ".ctrl.inactif{opacity:.55;}",
+    "vers": ".ctrl.inactif{}"
+  },
+  {
+    "nom": "la mention Geoapify est cachée sous la barre du bas",
+    "fichier": "css/style.css",
+    "de": ".leaflet-bottom.leaflet-right{margin-bottom:calc(74px + var(--sa-bottom));}",
+    "vers": ".leaflet-bottom.leaflet-right{margin-bottom:0;}"
+  },
+  {
+    "nom": "la mention Geoapify oublie la zone sûre d'un iPhone",
+    "fichier": "css/style.css",
+    "de": ".leaflet-bottom.leaflet-right{margin-bottom:calc(74px + var(--sa-bottom));}",
+    "vers": ".leaflet-bottom.leaflet-right{margin-bottom:74px;}"
+  },
+  {
+    "nom": "le bouton d'administration du tracé est minuscule",
+    "fichier": "css/style.css",
+    "de": ".lf-btn.parcours-maj{width:100%;min-height:44px;",
+    "vers": ".lf-btn.parcours-maj{width:100%;min-height:20px;"
+  }
+]

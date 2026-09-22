@@ -29,6 +29,7 @@ function renderListe(){
   body.innerHTML='';
   const parcoursVide=document.getElementById('liste-parcours');
   if(parcoursVide) parcoursVide.innerHTML='';
+  if(typeof majBoutonTraceAdmin==='function') majBoutonTraceAdmin();   // « 🛣 Mettre à jour le tracé » (administrateur seulement, parcours.js)
   if(tot===0){
     body.innerHTML='<div style="padding:32px;text-align:center;color:#6b7a8d;font-size:14px;">Aucun stop.<br>Clique ＋ pour commencer.</div>';
     return;

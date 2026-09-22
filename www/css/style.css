@@ -156,6 +156,9 @@
 #liste-parcours{flex-shrink:0;padding:0 16px;}
 #liste-parcours:not(:empty){padding-top:10px;}
 .lf-btn.parcours{width:100%;min-height:48px;background:#1d4ed8;color:#fff;font-size:17px;}
+#liste-trace-admin{flex-shrink:0;padding:0 16px;}
+#liste-trace-admin:not(:empty){padding-top:8px;}
+.lf-btn.parcours-maj{width:100%;min-height:44px;background:#0e7490;color:#fff;font-size:16px;}   /* étape 18b : « 🛣 Mettre à jour le tracé » (administrateur) */
     /* STOP CARD */
     #stop-card{
       position:absolute;bottom:calc(72px + var(--sa-bottom));left:0;right:0;z-index:950;
@@ -500,9 +503,9 @@
 #map,.leaflet-container{background:#0c1117;}
 
 /* Étape 18b : la boussole de la carte (plugin vendor/leaflet-rotate, licence MIT). Nord VERROUILLÉ par défaut (aiguille grise) ; un toucher active la rotation à deux
-   doigts (aiguille en couleur, contour vert) ; un deuxième toucher remet le nord en haut et reverrouille. Placée sous les trois boutons ronds (satellite, plan, position). */
+   doigts (aiguille en couleur, contour vert) ; un deuxième toucher remet le nord en haut et reverrouille. Placée sous les QUATRE boutons ronds (satellite, plan, position, tracé). */
 :root{--lrc-control-bg:#1a1f26;--lrc-control-hover:#252d3a;--lrc-control-size:44px;}
-.leaflet-top.leaflet-right{margin-top:calc(244px + var(--sa-top));}
+.leaflet-top.leaflet-right{margin-top:calc(296px + var(--sa-top));}
 .leaflet-right .leaflet-control-rotate.leaflet-bar{margin:0 12px 0 0;border:1px solid var(--border);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.4);overflow:hidden;}
 .leaflet-control-rotate.leaflet-bar a,.leaflet-touch .leaflet-control-rotate.leaflet-bar a{width:44px;height:44px;line-height:44px;background-color:var(--lrc-control-bg);border-radius:10px;border-bottom:none;}
 .leaflet-control-rotate.leaflet-bar a:hover,.leaflet-touch .leaflet-control-rotate.leaflet-bar a:hover{background-color:var(--lrc-control-hover);}
@@ -543,3 +546,10 @@
 .quart-signaler:active{filter:brightness(.85);}
 .quart-signaler:disabled{opacity:.5;cursor:default;}
 .quart-qui{font-size:19px;font-weight:600;color:var(--text);line-height:1.4;margin:8px 0 2px;overflow-wrap:anywhere;}
+
+/* Étape 18b : le tracé qui suit les rues (parcours.js). Le bouton rond 🛣 (sous ◎) : allumé = les lignes sont affichées ; grisé = pas de passe en cours (rien à montrer, mais le bouton marche).
+   L'attribution obligatoire de Geoapify / OpenStreetMap (bas de la carte) est remontée AU-DESSUS de la barre du bas, sinon elle serait cachée dessous. */
+.ctrl.inactif{opacity:.55;}
+.leaflet-bottom.leaflet-right{margin-bottom:calc(74px + var(--sa-bottom));}
+.leaflet-control-attribution{font-size:10px;background:rgba(11,18,32,.72)!important;color:#cbd5e1!important;}
+.leaflet-control-attribution a{color:#7dd3fc!important;}

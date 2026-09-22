@@ -8,7 +8,7 @@ async function loadStops(){
   if(typeof demarrerSuiviGps==='function') demarrerSuiviGps();   // le GPS (et sa permission, une seule fois) : après la connexion (carte.js, étape 17)
   try{
     // Seulement les arrêts actifs : un arrêt archivé (il a de l'historique) ne s'affiche plus, même pour l'administrateur
-    const{data,error}=await db.from('stops').select('*').eq('actif',true).order('ordre');
+    const{data,error}=await db.from('stops').select('*').eq('actif',true).order('ordre').order('created_at').order('id');   // l'ordre choisi ; à égalité, la date de création puis l'identifiant : le MÊME ordre que la fonction du tracé (calculer-parcours)
     if(error) throw error;
  stops=data||[];
     lectureReussie('stops',stops);
@@ -21,6 +21,7 @@ async function loadStops(){
     demarrerRelecturePositions();
     if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // la position du camion, si je conduis une passe (étape 18, tracking.js)
     await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
+    if(typeof chargerSegments==='function') await chargerSegments();   // les tronçons du tracé qui suit les rues (étape 18b, parcours.js) : jamais bloquant, jamais une erreur
     if(!reseau.enLigne) await restaurerDepuisCache();   // le signal a disparu pendant le chargement : on prend les copies pour ce qui manque
     renderAll();
     hideLoading();
@@ -28,6 +29,7 @@ async function loadStops(){
 	  checkProblemes();
     resumeAuDemarrage();   // une passe terminée à l'instant (avant un rechargement) : son résumé (passe.js)
     prechargerPourDebuter();   // de quoi débuter une passe sans réseau (passe.js), gardé en copie en arrière-plan
+    if(typeof planifierMajParcours==='function') planifierMajParcours();   // l'administrateur seulement : les tronçons qui manquent (arrêt ajouté ou déplacé) sont calculés (parcours.js)
   }catch(e){
     // Pas de signal : on s'ouvre avec ce qu'on savait à la dernière connexion (étape 16a). Un refus du serveur, lui, reste une erreur.
     if(estErreurReseau(e)){
@@ -109,6 +111,7 @@ function renderAll(){
   _sigEnCours=signatureEnCours();   // ce qui est dessiné : on ne redessinera que si ça change
   majVehicules();                   // les camions (un point chacun) avec leur équipage
   majBandeauPasse();                // « Débuter la passe », ou le résumé de la passe en cours (passe.js)
+  if(typeof majParcours==='function') majParcours();   // le tracé qui suit les rues, pendant une passe (étape 18b, parcours.js)
   if(typeof majPastilleQuart==='function') majPastilleQuart();   // la pastille « En service » (étape 17, quart.js)
 }
 

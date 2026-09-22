@@ -102,5 +102,6 @@ async function deplacerArret(e,idx,delta){
     _deplacementEnCours=false;
     renderAll();
     if(document.getElementById('liste-overlay').classList.contains('open')) renderListe();
+    if(typeof planifierMajParcours==='function') planifierMajParcours();   // le nouvel ordre crée de nouveaux couples de clients : leurs tronçons sont calculés un peu plus tard (parcours.js)
   }
 }

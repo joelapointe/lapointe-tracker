@@ -69,6 +69,7 @@
   <button class="ctrl on"  id="btn-sat" onclick="setLayer('sat')">🛰</button>
   <button class="ctrl"     id="btn-map" onclick="setLayer('map')">🗺</button>
   <button class="ctrl" onclick="centerUser()" style="margin-top:8px">◎</button>
+  <button class="ctrl on" id="btn-trace" type="button" onclick="basculerTrace()" aria-label="Afficher ou cacher le tracé du parcours" aria-pressed="true">🛣</button>
 </div>
 
 <div id="stop-card">
@@ -248,6 +249,7 @@
     </div>
     <div id="liste-body"></div>
     <div id="liste-parcours"></div>
+    <div id="liste-trace-admin"></div>
     <div id="liste-footer">
       <button class="lf-btn fermer" onclick="closeListe()">FERMER</button>
       <button class="lf-btn nouveau" id="btn-nouveau-liste" onclick="closeListe();openModal()">＋ NOUVEAU</button>
@@ -347,6 +349,7 @@
 <script src="js/admin.js"></script>
 <script src="js/liste-arrets.js"></script>
 <script src="js/ordre.js"></script>
+<script src="js/parcours.js"></script>
 <script src="js/tracking.js"></script>
 <script src="js/placement.js"></script>
 <script src="js/demarrage.js"></script>

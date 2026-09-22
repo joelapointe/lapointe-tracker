@@ -4,6 +4,7 @@
 import vm from 'vm';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { stripTypeScriptTypes } from 'node:module';   // (la fonction serveur « calculer-parcours » est du TypeScript : on retire les types pour la charger)
 // WWW_TEST : un autre dossier « www » (les erreurs volontaires modifient une COPIE du code, jamais le vrai)
 const WWW = process.env.WWW_TEST ? process.env.WWW_TEST.split('\\').join('/').replace(/\/?$/, '/') : fileURLToPath(new URL('../../www/', import.meta.url));
 
@@ -44,8 +45,9 @@ function monde(o = {}) {
     positions: o.positions ?? [],
     equipes: o.equipes ?? [],
     equipage_periodes: o.equipages ?? [],
+    parcours_segments: o.segments ?? [],   // les tronçons du tracé (étape 18b, parcours.js)
   };
-  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [], selects: [], orders: [], is: [] };
+  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
   const reponsesRpc = o.rpc ?? {};
   const reponsesEcriture = o.ecritures ?? {};
 
@@ -63,6 +65,7 @@ function monde(o = {}) {
       q.eq = (c, v) => { appels.eq.push([table, c, v]); q.filtres = [...(q.filtres ?? []), [c, v]]; return q; };
       q.order = (c, opt) => { appels.orders.push([table, c, opt]); return q; };
       q.is = (c, v) => { appels.is.push([table, c, v]); return q; };
+      q.range = (a, b) => { q.plage = [a, b]; return q; };   // (lecture par tranches : comme le vrai service de données)
       q.delete = () => { q.op = 'delete'; return q; };
       q.update = (v) => { q.op = 'update'; q.valeur = v; return q; };
       q.insert = (v) => { q.op = 'insert'; q.valeur = v; return q; };
@@ -72,7 +75,9 @@ function monde(o = {}) {
           appels.lectures.push(table);
           if (o.lectureLance?.includes(table)) throw new Error('Failed to fetch');
           // (les arrêts sont rendus en COPIE, comme le fait un vrai serveur : l'application qui change l'ordre d'un arrêt chez elle ne change pas « la base » toute seule)
-          res = o.erreurLecture?.includes(table) ? { data: null, error: { message: 'boum' } } : { data: table === 'stops' ? (donnees.stops ?? []).map((s) => ({ ...s })) : (donnees[table] ?? []), error: null };
+          let lignes = table === 'stops' ? (donnees.stops ?? []).map((s) => ({ ...s })) : (donnees[table] ?? []);
+          if (q.plage) { appels.ranges.push([table, q.plage[0], q.plage[1]]); lignes = lignes.slice(q.plage[0], q.plage[1] + 1); }
+          res = o.erreurLecture?.includes(table) ? { data: null, error: { message: 'boum' } } : { data: lignes, error: null };
         } else {
           appels.ecritures.push({ table, op: q.op, valeur: q.valeur, filtres: q.filtres });
           const rep = reponsesEcriture[table + '.' + q.op];
@@ -82,12 +87,28 @@ function monde(o = {}) {
       };
       return q;
     },
+    // Les fonctions du serveur (étape 18b : calculer-parcours) : la réponse vient de o.fonction (une valeur, ou une fonction (corps, donnees, numeroDAppel))
+    functions: {
+      invoke: async (nom, opt) => {
+        appels.fonctions.push({ nom, corps: opt && opt.body });
+        const rep = o.fonction;
+        if (typeof rep === 'function') return rep(opt && opt.body, donnees, appels.fonctions.length);
+        return rep ?? { data: { ok: true, calcules: 0, sans_route: 0, echecs: 0, restants: 0, total_troncons: 0, limite_atteinte: false }, error: null };
+      },
+    },
+    // Le temps réel : on note les canaux ouverts (parcours.js n'en ouvre un qu'une fois la table lisible)
+    channel: (nom) => {
+      const ch = { nom, liens: [], on(type, filtre, cb) { ch.liens.push({ type, filtre, cb }); return ch; }, subscribe() { appels.canaux.push(ch); return ch; } };
+      return ch;
+    },
   };
 
-  const marqueurs = [], polygones = [], retires = [], camions = [];   // « camions » : les marqueurs de véhicules (zIndexOffset 500), à part des arrêts
+  // « camions » : les marqueurs de véhicules (zIndexOffset 500), à part des arrêts ; « traces » : les polylignes du tracé, « groupes » : les couches qui les regroupent (étape 18b)
+  const marqueurs = [], polygones = [], retires = [], camions = [], traces = [], groupes = [];
+  const memoire = new Map(Object.entries(o.memo ?? {}));   // le stockage du téléphone (localStorage), propre à chaque monde
   const sandbox = {
     document: { getElementById: el, createElement: () => creer(null) },
-    localStorage: { getItem: (k) => (k === 'lp_zone' ? (o.zone ?? null) : null), setItem() {}, removeItem() {} },
+    localStorage: { getItem: (k) => (memoire.has(k) ? memoire.get(k) : (k === 'lp_zone' ? (o.zone ?? null) : null)), setItem: (k, v) => { memoire.set(k, String(v)); }, removeItem: (k) => { memoire.delete(k); } },
     window: { open: (u) => appels.ouverts.push(u) },
     setTimeout, clearTimeout, setInterval, clearInterval, console,
     L: {
@@ -100,8 +121,10 @@ function monde(o = {}) {
         return m;
       },
       polygon: (pts, opt) => { const p = { pts, opt, addTo() { return p; } }; polygones.push(p); return p; },
+      polyline: (lignes, opt) => { const p = { lignes, opt, addTo() { return p; } }; traces.push(p); return p; },
+      layerGroup: (couches) => { const g = { couches, addTo() { groupes.push(g); return g; } }; return g; },
     },
-    __map: { removeLayer: (m) => retires.push(m), flyTo() {} },
+    __map: { removeLayer: (m) => retires.push(m), flyTo() {}, attributionControl: { addAttribution: (t) => appels.attributions.push(['+', t]), removeAttribution: (t) => appels.attributions.push(['-', t]) } },
     __fauxDb: fauxDb,
     setStatus: (t) => appels.statut.push(t),
     hideLoading() {},
@@ -110,13 +133,13 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
   vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', Object.assign(ctx, { __toasts: appels.toasts }) && ctx);
   const w = {
-    ctx, el, donnees, appels, marqueurs, polygones, retires, camions,
+    ctx, el, donnees, appels, marqueurs, polygones, retires, camions, traces, groupes, memoire,
     run: (code) => vm.runInContext(code, ctx),
     routeActive: (id) => vm.runInContext(`routeActive = ${JSON.stringify(id)};`, ctx),
     couleur: (m) => (m.opt.icon.html.match(/background:(#[0-9a-f]+)/) || [])[1],
@@ -922,6 +945,374 @@ log('\n=== LES ARRÊTS QUI CHANGENT SONT RELUS UNE SEULE FOIS ===');
   m.fin();
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 18b (SUITE) : LE TRACÉ QUI SUIT LES RUES (www/js/parcours.js ; les tronçons viennent de la table parcours_segments, calculés par la fonction serveur)
+// Demande de Joé (21 sept.) : « un tracé qui suit des rues d'un client à l'autre » ; « possibilité pour l'employé d'enlever et remettre les lignes lui-même ».
+// ══════════════════════════════════════════════════════════════════════
+const cinq = ['c1', 'c2', 'c3', 'c4', 'c5'].map((id, i) => ({ id, adresse: 'rue ' + id, client: id.toUpperCase(), route_id: CH, service: MEC, lat: 46.4 + i * 0.01, lon: -72.9 - i * 0.01, ordre: i, actif: true }));
+const toursCinq = (faits = ['c1'], moi = { je_suis_chauffeur: true, je_suis_a_bord: true }) => [{ route_id: CH, tache: MEC, numero: 1, total: 5, faits: faits.length, pourcentage: faits.length * 20, arrets_faits: faits,
+  passes: [{ passe_id: 'p-luc', equipe_id: 'e1', chauffeur_id: 'u-luc', ...moi }] }];
+const sansPasse = { je_suis_chauffeur: false, je_suis_a_bord: false };
+const seg = (a, b, plus = {}) => ({ de_arret_id: a.id, vers_arret_id: b.id, de_lat: a.lat, de_lon: a.lon, vers_lat: b.lat, vers_lon: b.lon, statut: 'ok',
+  trace: [[a.lat, a.lon], [(a.lat + b.lat) / 2, a.lon - 0.001], [b.lat, b.lon]], ...plus });
+const tousSeg = (l = cinq) => l.slice(0, -1).map((a, i) => seg(a, l[i + 1]));   // c1→c2, c2→c3, c3→c4, c4→c5
+const trace = (i, j) => seg(cinq[i], cinq[j]).trace;
+const copies = (l = cinq) => l.map((s) => ({ ...s }));
+async function mondeP(o = {}) {
+  const m = monde({ stops: copies(), tours: toursCinq(), segments: tousSeg(), ...o });
+  await m.run('loadStops()');
+  m.run('clearTimeout(_tMajParcours)');   // (le calcul automatique de l'administrateur a son propre test : ici il ne doit pas se mêler aux autres)
+  return m;
+}
+const groupeActuel = (m) => { const g = m.groupes[m.groupes.length - 1]; return g && !m.retires.includes(g) ? g : null; };
+const lignesDe = (m) => { const g = groupeActuel(m); return g ? g.couches[1].lignes : null; };
+const F18B = await import('data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(fs.readFileSync(fileURLToPath(new URL('../functions/calculer-parcours/index.ts', import.meta.url)), 'utf8'))).toString('base64'));
+
+log('\n=== LE TRACÉ : CE QUI EST DESSINÉ PENDANT UNE PASSE ===');
+{
+  const m = await mondeP();
+  eq('Luc conduit, c1 est fait : la ligne va du PROCHAIN client (c2) au dernier (c5) : trois tronçons dans l\'ordre (pas c1→c2)', lignesDe(m), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  const c = groupeActuel(m).couches;
+  eq('deux couches superposées : un contour sombre plus épais dessous, la ligne cyan dessus ; ni l\'une ni l\'autre ne capte les touchers', [c.length, c[0].opt.color, c[0].opt.weight, c[1].opt.color, c[1].opt.weight, c.every((x) => x.opt.interactive === false)], [2, '#0b1220', 8, '#22d3ee', 4, true]);
+  eq('les deux couches dessinent les MÊMES lignes', c[0].lignes, c[1].lignes);
+  eq('la mention Geoapify / OpenStreetMap est posée une seule fois, avec liens', [m.appels.attributions.length, m.appels.attributions[0][0], /Geoapify/.test(m.appels.attributions[0][1]), /OpenStreetMap/.test(m.appels.attributions[0][1]), /href="https:\/\/www\.geoapify\.com/.test(m.appels.attributions[0][1])], [1, '+', true, true, true]);
+  eq('le bouton rond 🛣 est allumé (lignes affichées), pas grisé (une passe est en cours)', [m.el('btn-trace').classList.contains('on'), m.el('btn-trace').classList.contains('inactif'), m.el('btn-trace').attrs['aria-pressed']], [true, false, 'true']);
+  m.run('renderAll()'); m.run('renderAll()');
+  eq('rien n\'a changé : la carte redessinée ne redessine PAS le tracé (une seule couche créée)', [m.groupes.length, m.appels.attributions.length], [1, 1]);
+  m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2']))}, Date.now())`); m.run('renderAll()');
+  eq('c2 devient fait : le tracé se refait, il commence maintenant à c3 (deux tronçons) ; l\'ancienne couche est retirée', [lignesDe(m), m.groupes.length, m.retires.includes(m.groupes[0])], [[trace(2, 3), trace(3, 4)], 2, true]);
+  eq('… la mention n\'est pas posée en double', m.appels.attributions.filter((a) => a[0] === '+').length - m.appels.attributions.filter((a) => a[0] === '-').length, 1);
+  m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2', 'c3', 'c4']))}, Date.now())`); m.run('renderAll()');
+  eq('un seul client restant (c5) : rien à relier, aucune ligne', lignesDe(m), null);
+  m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2']))}, Date.now())`); m.run('renderAll()');
+  m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2'], sansPasse))}, Date.now())`); m.run('renderAll()');
+  eq('la passe se termine (plus de camion à moi) : les lignes disparaissent, la mention aussi ; le bouton se grise', [lignesDe(m), m.appels.attributions.filter((a) => a[0] === '+').length - m.appels.attributions.filter((a) => a[0] === '-').length, m.el('btn-trace').classList.contains('inactif')], [null, 0, true]);
+  m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2']))}, Date.now())`); m.run('renderAll()');
+  m.run('currentUser=null'); m.run('majParcours()');
+  eq('après la déconnexion : plus aucune ligne', lignesDe(m), null);
+  m.fin();
+}
+{
+  const p = await mondeP({ tours: toursCinq(['c1'], { je_suis_chauffeur: false, je_suis_a_bord: true }) });
+  eq('un PASSAGER du camion voit la même ligne', lignesDe(p), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  p.fin();
+  const a = await mondeP({ utilisateur: ADMIN, tours: toursCinq(['c1'], sansPasse) });
+  eq('l\'administrateur SANS passe (ni au volant ni à bord) : aucune ligne, aucun message', [lignesDe(a), a.dernierToast()], [null, undefined]);
+  eq('… le bouton rond est grisé (rien à montrer) mais il est là', [a.el('btn-trace').classList.contains('inactif'), a.el('btn-trace').classList.contains('on')], [true, true]);
+  a.fin();
+  const t = await mondeP({ tours: toursCinq(['c1', 'c2', 'c3', 'c4', 'c5']) });
+  eq('tous les clients faits : aucune ligne', lignesDe(t), null);
+  t.fin();
+}
+{
+  // Jamais de ligne inventée : un tronçon absent, périmé ou sans route n'est simplement pas dessiné
+  const sans = tousSeg().filter((s) => !(s.de_arret_id === 'c3' && s.vers_arret_id === 'c4'));
+  const a = await mondeP({ segments: sans });
+  eq('le tronçon c3→c4 manque : on dessine c2→c3 et c4→c5, RIEN entre c3 et c4 (jamais de ligne droite inventée)', lignesDe(a), [trace(1, 2), trace(3, 4)]);
+  a.fin();
+  const bouge = cinq.map((s) => (s.id === 'c3' ? { ...s, lat: s.lat + 0.001 } : { ...s }));
+  const b = await mondeP({ stops: bouge });
+  eq('c3 a changé de place depuis le calcul : ses DEUX tronçons sont périmés et ne sont pas dessinés (reste c4→c5)', lignesDe(b), [trace(3, 4)]);
+  b.fin();
+  const c = await mondeP({ segments: tousSeg().map((s) => (s.de_arret_id === 'c3' ? { ...s, statut: 'sans_route', trace: null } : s)) });
+  eq('un tronçon « sans_route » n\'est pas dessiné', lignesDe(c), [trace(1, 2), trace(3, 4)]);
+  c.fin();
+  const d = await mondeP({ segments: [...tousSeg(), seg(STOPS[4], STOPS[5]), seg(STOPS[0], STOPS[1])] });
+  eq('les tronçons d\'une autre route (s5→s6) ou d\'un autre trajet sont ignorés', lignesDe(d), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  d.fin();
+  const inverse = cinq.map((s) => ({ ...s, ordre: { c1: 0, c2: 1, c3: 3, c4: 2, c5: 4 }[s.id] }));   // l'administrateur a mis c4 avant c3
+  const e = await mondeP({ stops: inverse });
+  eq('l\'ordre a changé (c4 avant c3) : les nouveaux couples n\'ont pas encore de tronçon : on ne dessine que ce qui est vrai (rien)', [lignesDe(e), e.run('tronconsManquants()').length], [null, 3]);
+  e.fin();
+  const f = await mondeP({ segments: [{ ...tousSeg()[1], trace: [[46.4, -72.9]] }, tousSeg()[2]] });
+  eq('un tronçon dont la ligne n\'a qu\'un point est ignoré (jamais de plantage)', lignesDe(f), [trace(2, 3)]);
+  f.fin();
+}
+
+log('\n=== LE BOUTON 🛣 : ENLEVER ET REMETTRE LES LIGNES ===');
+{
+  const m = await mondeP();
+  m.run('basculerTrace()');
+  eq('un toucher : les lignes disparaissent (couche et mention retirées), le bouton s\'éteint, le message le dit', [lignesDe(m), m.appels.attributions[m.appels.attributions.length - 1][0], m.el('btn-trace').classList.contains('on'), m.el('btn-trace').attrs['aria-pressed'], m.dernierToast()], [null, '-', false, 'false', '🛣 Tracé caché']);
+  eq('… le choix est gardé sur le téléphone', m.memoire.get('lp_trace_visible'), '0');
+  m.run('renderAll()');
+  eq('… un redessin de la carte ne les remet PAS', lignesDe(m), null);
+  m.run('basculerTrace()');
+  eq('un deuxième toucher : elles reviennent, le message le dit, le choix est gardé', [lignesDe(m), m.el('btn-trace').classList.contains('on'), m.dernierToast(), m.memoire.get('lp_trace_visible')], [[trace(1, 2), trace(2, 3), trace(3, 4)], true, '🛣 Tracé affiché', '1']);
+  m.fin();
+  const c = await mondeP({ memo: { lp_trace_visible: '0' } });
+  eq('un téléphone où l\'employé les avait cachées les garde cachées à l\'ouverture', [lignesDe(c), c.el('btn-trace').classList.contains('on')], [null, false]);
+  c.fin();
+  const s = await mondeP({ tours: toursCinq(['c1'], sansPasse), memo: { lp_trace_visible: '0' } });
+  s.run('basculerTrace()');
+  eq('sans passe : le bouton marche quand même, et dit que les lignes apparaîtront pendant une passe', [s.dernierToast(), s.el('btn-trace').classList.contains('inactif')], ['🛣 Tracé affiché · il apparaît pendant une passe', true]);
+  s.fin();
+  const v = await mondeP({ segments: [], memo: { lp_trace_visible: '0' } });
+  v.run('basculerTrace()');
+  eq('en passe, mais aucun tronçon calculé : le message le dit honnêtement', v.dernierToast(), '🛣 Tracé affiché · rien à tracer pour l’instant');
+  v.fin();
+}
+
+log('\n=== LES TRONÇONS : LECTURE, COPIE, TEMPS RÉEL ===');
+{
+  const m = await mondeP();
+  eq('la lecture demande la table parcours_segments par tranches de 1000, triée', [m.appels.ranges.filter((r) => r[0] === 'parcours_segments'), m.appels.orders.filter((o) => o[0] === 'parcours_segments').map((o) => o[1])], [[['parcours_segments', 0, 999]], ['de_arret_id', 'vers_arret_id']]);
+  eq('les arrêts sont demandés dans l\'ordre choisi, puis la date de création, puis l\'identifiant (le MÊME ordre que la fonction serveur)', m.appels.orders.filter((o) => o[0] === 'stops').map((o) => o[1]), ['ordre', 'created_at', 'id']);
+  eq('4 tronçons installés', m.run('segmentsParcours.length'), 4);
+  const lus = m.appels.lectures.filter((x) => x === 'parcours_segments').length;
+  eq('une deuxième lecture tout de suite est inutile : rien n\'est relu (les tronçons changent très rarement)', [await m.run('chargerSegments()'), m.appels.lectures.filter((x) => x === 'parcours_segments').length], [true, lus]);
+  await m.run('chargerSegments({forcer:true})');
+  eq('… « forcer » relit', m.appels.lectures.filter((x) => x === 'parcours_segments').length, lus + 1);
+  eq('le temps réel : UN canal « parcours-changes » sur la table parcours_segments, ouvert après la première lecture réussie (pas en double)', [m.appels.canaux.length, m.appels.canaux[0].nom, m.appels.canaux[0].liens.map((l) => [l.filtre.table, l.filtre.event])], [1, 'parcours-changes', [['parcours_segments', '*']]]);
+  // De nouveaux tronçons arrivent en rafale : UNE seule relecture, et la carte suit
+  m.donnees.parcours_segments = m.donnees.parcours_segments.filter((s) => !(s.de_arret_id === 'c3'));
+  await m.run('chargerSegments({forcer:true})'); m.run('renderAll()');
+  eq('(le tronçon c3→c4 manque : la ligne a un trou)', lignesDe(m), [trace(1, 2), trace(3, 4)]);
+  m.donnees.parcours_segments.push(seg(cinq[2], cinq[3]));
+  const avant = m.appels.lectures.filter((x) => x === 'parcours_segments').length;
+  m.run('planifierRechargementParcours();planifierRechargementParcours();planifierRechargementParcours()');
+  await attendre(1800);
+  eq('trois avis du temps réel d\'un coup : UNE seule relecture, et le trou se comble à l\'écran', [m.appels.lectures.filter((x) => x === 'parcours_segments').length - avant, lignesDe(m)], [1, [trace(1, 2), trace(2, 3), trace(3, 4)]]);
+  m.fin();
+}
+{
+  const plein = [];
+  for (let i = 0; i < 1200; i++) plein.push({ de_arret_id: 'a' + i, vers_arret_id: 'b' + i, de_lat: 1, de_lon: 1, vers_lat: 2, vers_lon: 2, statut: 'sans_route', trace: null });
+  const m = await mondeP({ segments: plein });
+  eq('1200 tronçons : lus en DEUX tranches (0 à 999, puis 1000 à 1999), aucun oublié', [m.appels.ranges.filter((r) => r[0] === 'parcours_segments').map((r) => r.slice(1)), m.run('segmentsParcours.length')], [[[0, 999], [1000, 1999]], 1200]);
+  m.fin();
+}
+{
+  // Pas de table (SQL 22 pas encore exécuté) ou un serveur qui refuse : l'application marche comme avant, sans bruit
+  const m = await mondeP({ erreurLecture: ['parcours_segments'] });
+  eq('la table n\'existe pas encore : les arrêts se chargent, aucune ligne, AUCUN message, aucune erreur, AUCUN canal temps réel', [m.run('stops.length'), lignesDe(m), m.appels.toasts.length, m.appels.erreurs.length, m.appels.canaux.length], [5, null, 0, 0, 0]);
+  m.fin();
+  const o = { lectureLance: [] };
+  const r = monde({ stops: copies(), tours: toursCinq(), segments: tousSeg(), ...o }); await r.run('loadStops()'); r.run('clearTimeout(_tMajParcours)');
+  o.lectureLance.push('parcours_segments');
+  eq('le signal disparaît pendant la relecture : false, les tronçons connus sont GARDÉS (les lignes restent), et le téléphone se sait hors réseau', [await r.run('chargerSegments({forcer:true})'), (r.run('renderAll()'), lignesDe(r)), r.run('reseau.enLigne')], [false, [trace(1, 2), trace(2, 3), trace(3, 4)], false]);
+  r.fin();
+}
+{
+  // La copie pour le hors réseau
+  const m = monde({ stops: copies(), tours: toursCinq(), segments: tousSeg() });
+  m.run('globalThis.__copies=[]; cacheEcrire=(nom,data)=>{__copies.push([nom,data.length]);return Promise.resolve(true);}');
+  await m.run('loadStops()'); m.run('clearTimeout(_tMajParcours)');
+  eq('une lecture réussie garde une copie « parcours » (4 tronçons) pour le hors réseau', m.run('__copies').filter((c) => c[0] === 'parcours'), [['parcours', 4]]);
+  m.run('installerSegments([])');
+  m.run('cacheLire=async(nom)=>nom===\'parcours\'?{data:' + JSON.stringify(tousSeg().slice(0, 2)) + ',le:"2026-09-21T18:00:00.000Z"}:null');
+  await m.run('restaurerParcours()');
+  eq('au démarrage sans signal : la dernière copie est reprise (2 tronçons)', m.run('segmentsParcours.length'), 2);
+  m.run('cacheLire=async()=>({data:"pas une liste",le:"x"})');
+  await m.run('restaurerParcours()');
+  eq('une copie illisible est ignorée (les 2 tronçons connus restent)', m.run('segmentsParcours.length'), 2);
+  m.run('cacheLire=async()=>{throw new Error("boum");}');
+  eq('une copie qui plante à la lecture ne plante rien', await m.run('restaurerParcours().then(()=>"ok")'), 'ok');
+  m.fin();
+}
+
+log('\n=== L\'ADMINISTRATEUR : FAIRE CALCULER CE QUI MANQUE ===');
+const mondeA = async (o = {}) => mondeP({ utilisateur: ADMIN, tours: toursCinq(['c1'], sansPasse), ...o });
+const bilan = (o = {}) => ({ data: { ok: true, calcules: 0, sans_route: 0, echecs: 0, restants: 0, total_troncons: 4, limite_atteinte: false, ...o }, error: null });
+const erreurHttp = (statut, corps) => ({ data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { status: statut, json: async () => corps } } });
+{
+  const m = await mondeA({ segments: tousSeg().slice(0, 2) });
+  eq('deux tronçons manquent (c3→c4 et c4→c5)', m.run('tronconsManquants()'), ['c3|c4', 'c4|c5']);
+  m.fin();
+  eq('tout est à jour : aucun manquant', (await mondeA()).run('tronconsManquants().length'), 0);
+  const b = await mondeA({ stops: cinq.map((s) => (s.id === 'c3' ? { ...s, lon: -73 } : { ...s })) });
+  eq('un client a bougé : les deux tronçons qui le touchent manquent', b.run('tronconsManquants()'), ['c2|c3', 'c3|c4']);
+  b.fin();
+  const c = await mondeA({ segments: tousSeg().map((s) => (s.de_arret_id === 'c2' ? { ...s, statut: 'sans_route', trace: null } : s)) });
+  eq('un « sans_route » à jour compte comme fait (on ne le redemande pas tout seul)', c.run('tronconsManquants().length'), 0);
+  c.fin();
+  const d = await mondeA({ stops: [...cinq, { id: 'z1', adresse: 'sans service', route_id: CH, service: null, lat: 46.9, lon: -72.5, ordre: 9, actif: true }, { id: 'z1b', adresse: 'sans service aussi', route_id: CH, service: null, lat: 46.91, lon: -72.5, ordre: 10, actif: true }, { id: 'z2', adresse: 'sans position', route_id: CH, service: MEC, lat: null, lon: null, ordre: 10, actif: true }, { id: 'z3', adresse: 'archivé', route_id: CH, service: MEC, lat: 46.95, lon: -72.5, ordre: 11, actif: false }].map((s) => ({ ...s })) });
+  eq('un arrêt sans service, sans position ou archivé n\'ajoute aucun tronçon voulu', d.run('tronconsManquants().length'), 0);
+  d.fin();
+}
+{
+  // Le bouton « Mettre à jour le tracé » : ce qu'il dit
+  const m = await mondeA();
+  await m.run('majParcoursManuel()');
+  eq('tout est à jour : « déjà à jour », aucun appel au serveur', [m.dernierToast(), m.appels.fonctions.length], ['✔ Le tracé est déjà à jour.', 0]);
+  m.fin();
+  let nouveaux = null;
+  const a = await mondeA({ segments: tousSeg().slice(0, 2), fonction: (corps, d) => { nouveaux = corps; d.parcours_segments.push(...tousSeg().slice(2)); return bilan({ calcules: 2, total_troncons: 4 }); } });
+  const lus = a.appels.lectures.filter((x) => x === 'parcours_segments').length;
+  a.donnees.parcours_segments = a.donnees.parcours_segments.slice();   // (une copie : la lecture du serveur change de contenu pendant l'appel)
+  await a.run('majParcoursManuel()');
+  eq('deux tronçons manquent : la fonction « calculer-parcours » est appelée UNE fois, avec « refaire_sans_route »', [a.appels.fonctions.map((f) => f.nom), nouveaux], [['calculer-parcours'], { refaire_sans_route: true }]);
+  eq('… les nouveaux tronçons sont relus tout de suite, le message dit ce qui s\'est passé, le voyant de synchro s\'éteint, le verrou est rendu', [a.appels.lectures.filter((x) => x === 'parcours_segments').length - lus, a.dernierToast(), a.el('sync').classList.contains('show'), a.run('_majParcoursEnCours')], [1, '✔ Tracé mis à jour : 2 tronçons calculés', false, false]);
+  eq('… il n\'y a plus rien à calculer', a.run('tronconsManquants().length'), 0);
+  a.fin();
+  // L'administrateur conduit aussi un camion : après le calcul, les nouvelles lignes apparaissent tout de suite sur SA carte
+  const v = await mondeP({ utilisateur: ADMIN, tours: toursCinq(['c1']), segments: tousSeg().slice(0, 2), fonction: (corps, d) => { d.parcours_segments.push(...tousSeg().slice(2)); return bilan({ calcules: 2 }); } });
+  v.run('clearTimeout(_tMajParcours)');
+  eq('(avant : seul c2→c3 est connu)', lignesDe(v), [trace(1, 2)]);
+  await v.run('majParcoursManuel()');
+  eq('après le calcul, la carte de l\'administrateur (en passe) montre les nouvelles lignes sans rien toucher', lignesDe(v), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  v.fin();
+  const u = await mondeA({ segments: tousSeg().slice(0, 3), fonction: (corps, d) => { d.parcours_segments.push(...tousSeg().slice(3)); return bilan({ calcules: 1 }); } });
+  await u.run('majParcoursManuel()');
+  eq('un seul tronçon : « 1 tronçon calculé » (singulier)', u.dernierToast(), '✔ Tracé mis à jour : 1 tronçon calculé');
+  u.fin();
+}
+{
+  // Plusieurs appels (40 tronçons à la fois), jusqu'à la fin, sans jamais tourner en rond
+  const rondes = [bilan({ calcules: 40, restants: 60 }), bilan({ calcules: 40, restants: 20 }), bilan({ calcules: 20, restants: 0 })];
+  const m = await mondeA({ segments: [], fonction: (c, d, n) => rondes[n - 1] });
+  await m.run('majParcoursManuel()');
+  eq('100 tronçons : trois appels ; « refaire_sans_route » seulement au PREMIER ; message total', [m.appels.fonctions.map((f) => f.corps), m.dernierToast()], [[{ refaire_sans_route: true }, {}, {}], '✔ Tracé mis à jour : 100 tronçons calculés']);
+  m.fin();
+  const t = await mondeA({ segments: [], fonction: () => bilan({ calcules: 1, restants: 9 }) });
+  await t.run('majParcoursManuel()');
+  eq('un service qui n\'en finit pas : au plus SIX appels, le message dit ce qui reste', [t.appels.fonctions.length, t.dernierToast()], [6, '✔ Tracé mis à jour : 6 tronçons calculés · il en reste 9']);
+  t.fin();
+  const p = await mondeA({ segments: [], fonction: () => bilan({ echecs: 3, restants: 3 }) });
+  await p.run('majParcoursManuel()');
+  eq('aucun progrès (le service est en panne) : UN seul appel, pas de boucle', [p.appels.fonctions.length, p.dernierToast()], [1, '✔ Le tracé est à jour · 3 à refaire (service indisponible)']);
+  p.fin();
+  const l = await mondeA({ segments: [], fonction: () => bilan({ calcules: 5, restants: 10, limite_atteinte: true }) });
+  await l.run('majParcoursManuel()');
+  eq('la limite du service est atteinte : UN seul appel, on le dit', [l.appels.fonctions.length, l.dernierToast()], [1, '✔ Tracé mis à jour : 5 tronçons calculés · limite du service atteinte : réessaie plus tard']);
+  l.fin();
+  const s = await mondeA({ segments: [], fonction: () => bilan({ calcules: 1, sans_route: 2 }) });
+  await s.run('majParcoursManuel()');
+  eq('des couples sans route trouvée : le message le dit', s.dernierToast(), '✔ Tracé mis à jour : 1 tronçon calculé · 2 sans route trouvée');
+  s.fin();
+  const q = await mondeA({ segments: [...tousSeg().slice(0, 3), { ...tousSeg()[3], statut: 'sans_route', trace: null }], fonction: () => bilan({ calcules: 1 }) });
+  await q.run('majParcoursManuel()');
+  eq('rien ne manque mais un tronçon était « sans route » : le bouton REDEMANDE (l\'administrateur le veut)', [q.appels.fonctions.length, q.appels.fonctions[0].corps], [1, { refaire_sans_route: true }]);
+  q.fin();
+}
+{
+  // Les erreurs, dites simplement (le bouton est le seul endroit qui parle)
+  const essai = async (fonction, o = {}) => { const m = await mondeA({ segments: [], fonction, ...o }); await m.run('majParcoursManuel()'); const t = m.dernierToast(); m.fin(); return t; };
+  eq('pas l\'administrateur (403)', await essai(() => erreurHttp(403, { ok: false, erreur: 'non_autorise', message: 'Réservé à l\'administrateur.' })), '❌ Réservé à l’administrateur.');
+  eq('la clé Geoapify n\'est pas enregistrée : le message du serveur (qui dit quoi faire) est montré', await essai(() => erreurHttp(500, { ok: false, erreur: 'cle_absente', message: 'La clé Geoapify n\'est pas enregistrée : Supabase > Edge Functions > Secrets > ajouter GEOAPIFY_KEY.' })), '❌ La clé Geoapify n\'est pas enregistrée : Supabase > Edge Functions > Secrets > ajouter GEOAPIFY_KEY.');
+  eq('la clé est refusée : idem', /GEOAPIFY_KEY/.test(await essai(() => erreurHttp(502, { ok: false, erreur: 'cle_refusee', message: 'Geoapify a refusé la clé : vérifiez GEOAPIFY_KEY dans Supabase.' }))), true);
+  eq('la fonction n\'est pas installée (404)', await essai(() => erreurHttp(404, { code: 'NOT_FOUND', message: 'Requested function was not found' })), '❌ La fonction « calculer-parcours » n’est pas encore installée sur Supabase.');
+  const sansSignal = () => ({ data: null, error: { name: 'FunctionsFetchError', message: 'Failed to send a request to the Edge Function', context: new TypeError('Failed to fetch') } });   // (l'erreur réelle de supabase-js quand la demande n'obtient AUCUNE réponse)
+  eq('pas de signal (aucune réponse du serveur)', await essai(sansSignal), '📴 Pas de réseau : le tracé n’a pas pu être mis à jour.');
+  eq('… et le téléphone se sait alors hors réseau (la relecture qui suit échoue aussi ; la sonde reprend la main)', await (async () => {
+    const o = { lectureLance: [] };
+    const m = await mondeA({ segments: [], fonction: () => { o.lectureLance.push('parcours_segments'); return sansSignal(); }, ...o });
+    await attendre(100); await m.run('majParcoursManuel()'); const r = m.run('reseau.enLigne'); m.fin(); return r;
+  })(), false);
+  eq('une erreur interne du serveur : message général', await essai(() => erreurHttp(500, { ok: false, erreur: 'erreur_interne', message: '' })), '❌ Le tracé n’a pas pu être mis à jour.');
+  eq('une réponse illisible : message général, jamais de plantage', await essai(() => ({ data: null, error: null })), '❌ Le tracé n’a pas pu être mis à jour.');
+  eq('une réponse « ok: false » sans erreur HTTP : jamais prise pour un succès, le message du serveur est montré', await essai(() => ({ data: { ok: false, erreur: 'cle_absente', message: 'La clé manque.' }, error: null })), '❌ La clé manque.');
+  eq('… « pas de signal » prévient le téléphone (marquerHorsReseau) UNE fois', await (async () => {
+    const m = await mondeA({ segments: [], fonction: sansSignal });
+    await attendre(100); m.run('globalThis.__hors=0; marquerHorsReseau=function(){__hors++;};');
+    await m.run('majParcoursManuel()'); const n = m.run('__hors'); m.fin(); return n;
+  })(), 1);
+  eq('l\'appel lui-même plante : message général, jamais de plantage', await essai(() => { throw new Error('boum'); }), '❌ Le tracé n’a pas pu être mis à jour. boum');
+  eq('un appel qui échoue avant de rien calculer ne laisse pas le voyant de synchro allumé', await (async () => { const m = await mondeA({ segments: [], fonction: () => erreurHttp(500, { erreur: 'x' }) }); await m.run('majParcoursManuel()'); const r = m.el('sync').classList.contains('show'); m.fin(); return r; })(), false);
+}
+{
+  // Sans réseau, sans être administrateur, deux à la fois
+  const m = await mondeA({ segments: [] });
+  await attendre(100);   // (les lectures en arrière-plan du chargement finissent d'abord : elles remettraient « en ligne »)
+  m.run('reseau.enLigne=false');
+  await m.run('majParcoursManuel()'); await m.run('majParcoursServeur({manuel:false})');
+  eq('sans réseau : le bouton le dit, l\'automatique se tait ; aucun appel dans les deux cas', [m.dernierToast(), m.appels.toasts.length, m.appels.fonctions.length], ['📴 Pas de réseau : le tracé ne peut pas être mis à jour maintenant.', 1, 0]);
+  m.fin();
+  const e = await mondeP({ segments: [] });
+  const r = await e.run('majParcoursManuel()');
+  eq('un EMPLOYÉ ne peut pas le faire : rien n\'est demandé, aucun message', [r, e.appels.fonctions.length, e.appels.toasts.length], [null, 0, 0]);
+  e.fin();
+  const c = await mondeA({ segments: [], fonction: async () => { await attendre(150); return bilan({ calcules: 1 }); } });
+  await Promise.all([c.run('majParcoursManuel()'), c.run('majParcoursManuel()')]);
+  eq('deux touchers rapprochés : UN seul calcul à la fois', c.appels.fonctions.length, 1);
+  c.fin();
+}
+{
+  // Le calcul AUTOMATIQUE (ordre changé, arrêt ajouté ou déplacé) : silencieux, une fois par situation
+  const m = await mondeA({ segments: tousSeg().slice(0, 2), fonction: () => bilan({ echecs: 2, restants: 2 }) });
+  await m.run('majParcoursServeur({manuel:false})');
+  eq('deux tronçons manquent : demandés UNE fois, SANS « refaire_sans_route », et sans aucun message', [m.appels.fonctions.map((f) => f.corps), m.appels.toasts.length], [[{}], 0]);
+  await m.run('majParcoursServeur({manuel:false})');
+  eq('la même situation (le service n\'a rien donné) : PAS redemandé (pas de boucle qui martèle le service)', m.appels.fonctions.length, 1);
+  m.donnees.stops = m.donnees.stops.map((s) => (s.id === 'c5' ? { ...s, lat: 46.6 } : s));
+  await m.run('loadStops()'); m.run('clearTimeout(_tMajParcours)');
+  await m.run('majParcoursServeur({manuel:false})');
+  eq('un arrêt a bougé : la situation a changé, on redemande', m.appels.fonctions.length, 2);
+  m.fin();
+  const ok_ = await mondeA();
+  await ok_.run('majParcoursServeur({manuel:false})');
+  eq('rien ne manque : aucun appel, aucun message', [ok_.appels.fonctions.length, ok_.appels.toasts.length], [0, 0]);
+  ok_.fin();
+  const fait = await mondeA({ segments: tousSeg().slice(0, 2), fonction: (corps, d) => { d.parcours_segments.push(...tousSeg().slice(2)); return bilan({ calcules: 2 }); } });
+  await fait.run('majParcoursServeur({manuel:false})');
+  await fait.run('majParcoursServeur({manuel:false})');
+  eq('une fois tout calculé, l\'automatique ne redemande RIEN (un seul appel en tout, pas un de trop)', fait.appels.fonctions.length, 1);
+  fait.fin();
+  const err = await mondeA({ segments: [], fonction: () => erreurHttp(500, { erreur: 'cle_absente', message: 'x' }) });
+  await err.run('majParcoursServeur({manuel:false})');
+  eq('une erreur du serveur en mode automatique : AUCUN message (seul le bouton parle)', [err.appels.fonctions.length, err.appels.toasts.length], [1, 0]);
+  err.fin();
+}
+{
+  // Le déclenchement : après le chargement des arrêts (administrateur seulement), après un changement d'ordre ; groupé
+  const m = monde({ utilisateur: ADMIN, stops: copies(), tours: toursCinq(['c1'], sansPasse), segments: tousSeg().slice(0, 2), fonction: () => bilan({ calcules: 2 }) });
+  await m.run('loadStops()');
+  await attendre(600);
+  eq('au chargement des arrêts, l\'administrateur voit qu\'il manque des tronçons : rien tout de suite (on attend qu\'il ait fini de toucher à l\'écran)', m.appels.fonctions.length, 0);
+  await attendre(2400);
+  eq('… puis UN appel à la fonction, silencieux', [m.appels.fonctions.length, m.appels.toasts.length], [1, 0]);
+  m.fin();
+  const e = monde({ utilisateur: { id: 'u-luc', nom: 'Luc', role: 'employe' }, stops: copies(), tours: toursCinq(), segments: tousSeg().slice(0, 2) });
+  await e.run('loadStops()'); e.run('planifierMajParcours()');
+  await attendre(2800);
+  eq('un EMPLOYÉ (même avec des tronçons manquants) ne déclenche JAMAIS de calcul', e.appels.fonctions.length, 0);
+  e.fin();
+  const d = monde({ utilisateur: ADMIN, stops: copies(), tours: toursCinq(['c1'], sansPasse), segments: tousSeg(), fonction: () => bilan({ calcules: 3 }) });
+  await d.run('loadStops()'); d.run('clearTimeout(_tMajParcours)'); d.routeActive(CH);
+  const idx4 = d.run("stops.findIndex(s=>s.id==='c4')");
+  await d.run(`deplacerArret(null,${idx4},-1)`);   // c4 monte avant c3 : trois nouveaux couples
+  eq('l\'administrateur change l\'ordre : rien n\'est demandé tout de suite', d.appels.fonctions.length, 0);
+  await d.run(`deplacerArret(null,${d.run("stops.findIndex(s=>s.id==='c2')")},1)`);
+  await attendre(2800);
+  eq('… puis, quand il a fini de toucher ▲ ▼, UN SEUL appel (groupé)', d.appels.fonctions.length, 1);
+  d.fin();
+}
+{
+  // Le bouton dans la liste
+  const m = await mondeA({ segments: tousSeg().slice(0, 2) }); m.routeActive(CH); await m.run('renderListe()');
+  const h = m.el('liste-trace-admin').innerHTML;
+  eq('l\'administrateur voit « 🛣 Mettre à jour le tracé · 2 à calculer », relié à majParcoursManuel()', /<button type="button" class="lf-btn parcours-maj" onclick="majParcoursManuel\(\)">🛣 Mettre à jour le tracé · 2 à calculer<\/button>/.test(h), true, h);
+  m.fin();
+  const a = await mondeA(); a.routeActive(CH); await a.run('renderListe()');
+  eq('tout est à jour : le bouton est là, sans compte', a.el('liste-trace-admin').innerHTML.includes('Mettre à jour le tracé</button>'), true);
+  a.fin();
+  const e = await mondeP({ segments: tousSeg().slice(0, 2) }); e.routeActive(CH); await e.run('renderListe()');
+  eq('un employé ne voit PAS ce bouton', e.el('liste-trace-admin').innerHTML, '');
+  e.fin();
+}
+
+log('\n=== L\'APPLICATION ET LA FONCTION SERVEUR ÉCRIVENT LA MÊME SUITE DE CLIENTS ===');
+{
+  // Si les deux se trompaient d'ordre, les tronçons calculés ne serviraient à rien : mêmes suites, mêmes égalités, mêmes exclusions
+  const mel = [
+    { id: 'k1', route_id: CH, service: MEC, lat: 46.1, lon: -72.1, ordre: 5 }, { id: 'k2', route_id: CH, service: MEC, lat: 46.2, lon: -72.2, ordre: 5 }, { id: 'k3', route_id: CH, service: MEC, lat: 46.3, lon: -72.3, ordre: 1 },
+    { id: 'k4', route_id: CH, service: MEC, lat: 46.4, lon: -72.4, ordre: null }, { id: 'k5', route_id: CH, service: MEC, lat: 46.5, lon: -72.5, ordre: 'x' }, { id: 'k6', route_id: CH, service: MEC, lat: 46.6, lon: -72.6, ordre: 1 },
+    { id: 'k7', route_id: CH, service: SEL, lat: 46.7, lon: -72.7, ordre: 2 }, { id: 'k8', route_id: CH, service: SEL, lat: 46.8, lon: -72.8, ordre: 1 },
+    { id: 'k9', route_id: SE, service: MEC, lat: 46.9, lon: -72.9, ordre: 0 }, { id: 'ka', route_id: SE, service: MEC, lat: 47.0, lon: -73.0, ordre: 0 },
+    { id: 'kb', route_id: CH, service: MEC, lat: null, lon: null, ordre: 0 }, { id: 'kc', route_id: CH, service: null, lat: 47.1, lon: -73.1, ordre: 0 }, { id: 'kd', route_id: null, service: MEC, lat: 47.2, lon: -73.2, ordre: 0 },
+    { id: 'ke', route_id: CH, service: MEC, lat: 47.3, lon: -73.3, ordre: 3, actif: false },
+  ].map((s) => ({ actif: true, ...s }));
+  const m = monde({ stops: mel, tours: [] }); await m.run('loadStops()');
+  const appApp = (route, service) => m.run(`sequenceParcours(${JSON.stringify(route)},${JSON.stringify(service)}).map(s=>s.id)`);
+  const serveur = F18B.sequences(mel.filter((s) => s.actif !== false));   // (la fonction ne lit que les arrêts actifs)
+  const cle = (s) => s[0].route_id + '|' + s[0].service;
+  const vus = new Map(serveur.map((s) => [cle(s), s.map((x) => x.id)]));
+  eq('route Charette, déneigement : les égalités gardent l\'ordre de départ, « x » et « vide » comptent 0, sans position / sans service / sans route / archivé sont exclus', appApp(CH, MEC), ['k4', 'k5', 'k3', 'k6', 'k1', 'k2']);
+  for (const [r, s] of [[CH, MEC], [CH, SEL], [SE, MEC]]) eq(`suite ${r} / ${s} : l\'application et la fonction sont d\'accord`, appApp(r, s), vus.get(r + '|' + s));
+  eq('… et les tronçons voulus par la fonction sont ceux que l\'application dit manquer (aucun tronçon gardé)', F18B.paires(serveur).map((p) => p.de.id + '|' + p.vers.id).sort(), m.run('tronconsManquants()').sort());
+  m.fin();
+}
+
 log('\n=== LE CODE : ORDRE, PARCOURS, PAGE ===');
 {
   const page = lire('index.html'), css = lire('css/style.css'), carte = lire('js/carte.js'), ordre = lire('js/ordre.js');
@@ -932,6 +1323,21 @@ log('\n=== LE CODE : ORDRE, PARCOURS, PAGE ===');
   vrai('l\'ordre s\'écrit dans stops.ordre par « update » (règle stops_admin : pas de SQL) et jamais autrement', /db\.from\('stops'\)\.update\(\{ordre:valeurOrdre\(x\)\}\)\.eq\('id',x\.id\)/.test(ordre));
   vrai('le style : l\'adresse d\'un client passe sur 2 lignes au plus (les flèches ▲ ▼ prennent de la place), sans être coupée sur une seule', /\.ci-addr\{[^}]*-webkit-line-clamp:2/.test(css) && !/\.ci-addr\{[^}]*white-space:nowrap/.test(css));
   vrai('le style : le prochain client, les flèches (40 px), le bouton Google Maps',/\.ci\.ci-prochain\{[^}]*box-shadow:inset 3px 0 0/.test(css) && /\.ci-mv\{width:40px;height:40px/.test(css) && /\.lf-btn\.parcours\{width:100%;min-height:48px/.test(css) && /\.passe-prochain\{[^}]*color:var\(--accent\)/.test(css));
+  // ── Étape 18b (suite) : le tracé qui suit les rues ──
+  const parcours = lire('js/parcours.js'), arrets = lire('js/arrets.js'), horsReseau = lire('js/hors-reseau.js'), listeArrets = lire('js/liste-arrets.js');
+  vrai('la page charge parcours.js après ordre.js et avant tracking.js', page.indexOf('js/ordre.js') < page.indexOf('js/parcours.js') && page.indexOf('js/parcours.js') < page.indexOf('js/tracking.js'));
+  vrai('la page a le bouton rond 🛣 (après ◎, allumé au départ, relié à basculerTrace) et la zone du bouton d\'administration sous « Parcours »',
+    /id="btn-trace" type="button" onclick="basculerTrace\(\)"[^>]*aria-pressed="true">🛣<\/button>/.test(page) && page.indexOf('centerUser()') < page.indexOf('id="btn-trace"') && page.indexOf('id="liste-parcours"') < page.indexOf('id="liste-trace-admin"'));
+  vrai('arrets.js : les tronçons sont lus au chargement des arrêts, le tracé suit chaque redessin de la carte, l\'administrateur fait calculer ce qui manque',
+    /if\(typeof chargerSegments==='function'\) await chargerSegments\(\);/.test(arrets) && /if\(typeof majParcours==='function'\) majParcours\(\);/.test(arrets) && /if\(typeof planifierMajParcours==='function'\) planifierMajParcours\(\);/.test(arrets));
+  vrai('les arrêts sont lus dans l\'ordre « ordre, created_at, id » (le même ordre que la fonction serveur)', /\.order\('ordre'\)\.order\('created_at'\)\.order\('id'\)/.test(arrets));
+  vrai('hors-reseau.js : la copie des tronçons est reprise au démarrage sans signal', /if\(typeof restaurerParcours==='function'\) await restaurerParcours\(\);/.test(horsReseau));
+  vrai('ordre.js : un changement d\'ordre fait planifier le calcul des nouveaux tronçons', /if\(typeof planifierMajParcours==='function'\) planifierMajParcours\(\);/.test(ordre));
+  vrai('liste-arrets.js : le bouton « Mettre à jour le tracé » de l\'administrateur est redessiné avec la liste', /if\(typeof majBoutonTraceAdmin==='function'\) majBoutonTraceAdmin\(\);/.test(listeArrets));
+  vrai('le temps réel des tronçons a son PROPRE canal (une table absente ne doit pas faire tomber les autres)', /db\.channel\('parcours-changes'\)/.test(parcours) && !/parcours_segments/.test(carte));
+  vrai('la fonction serveur s\'appelle « calculer-parcours » et le corps n\'envoie ni clé ni position', /db\.functions\.invoke\('calculer-parcours',\{body:corps\}\)/.test(parcours) && !/apiKey|GEOAPIFY|api\.geoapify/i.test(parcours.split('\n').filter((l) => !/^\s*\/\//.test(l) && !/ATTRIBUTION_TRACE=/.test(l) && !/messageErreur|La clé Geoapify pose/.test(l)).join('\n')));
+  vrai('le style : bouton grisé sans passe, mention Geoapify/OpenStreetMap remontée AU-DESSUS de la barre du bas (74 px + zone sûre), bouton d\'administration, boussole sous QUATRE boutons',
+    /\.ctrl\.inactif\{opacity:\.55;\}/.test(css) && /\.leaflet-bottom\.leaflet-right\{margin-bottom:calc\(74px \+ var\(--sa-bottom\)\);\}/.test(css) && /\.lf-btn\.parcours-maj\{width:100%;min-height:44px/.test(css) && /\.leaflet-top\.leaflet-right\{margin-top:calc\(296px \+ var\(--sa-top\)\);\}/.test(css));
 }
 
 tousLesMondes.forEach((w) => w.fin());

@@ -75,3 +75,74 @@ function confirmer(titre,texte,libelleOui,libelleNon){
     non.focus();
   });
 }
+
+// ── INFORMATION (un seul bouton) ───────────────────────
+// Pour un message qu'il FAUT lire avant de continuer (par exemple un NIP, montré une seule fois) : contrairement à toast(),
+// rien ne se ferme tout seul. Réutilise la même boîte que confirmer() (une seule à la fois : ouvrir l'une ferme l'autre).
+// Utilisation :  await informer('Nouveau NIP de Marc', '482915', 'J\'ai noté le NIP');
+function informer(titre,texte,libelleOK){
+  return new Promise(resolve=>{
+    if(_fermerConfirmation) _fermerConfirmation(false);
+    const ancienne=document.getElementById('confirm-overlay');
+    if(ancienne) ancienne.remove();
+    const fond=document.createElement('div');
+    fond.id='confirm-overlay';
+    fond.setAttribute('role','dialog');
+    fond.setAttribute('aria-modal','true');
+    const boite=document.createElement('div');
+    boite.id='confirm-boite';
+    const t=document.createElement('div');
+    t.id='confirm-titre'; t.textContent=titre||'';
+    boite.appendChild(t);
+    if(texte){
+      const p=document.createElement('div');
+      p.id='confirm-texte'; p.textContent=texte;
+      boite.appendChild(p);
+    }
+    const zone=document.createElement('div');
+    zone.id='confirm-boutons';
+    const ok=document.createElement('button');
+    ok.type='button'; ok.className='confirm-btn compte-ok'; ok.textContent=libelleOK||'OK';
+    zone.appendChild(ok);
+    boite.appendChild(zone);
+    fond.appendChild(boite);
+    let fini=false;
+    function fermer(){
+      if(fini) return;
+      fini=true;
+      if(_fermerConfirmation===fermer) _fermerConfirmation=null;
+      document.removeEventListener('keydown',surTouche);
+      fond.remove();
+      resolve();
+    }
+    _fermerConfirmation=fermer;
+    function surTouche(e){ if(e.key==='Escape'||e.key==='Enter') fermer(); }
+    ok.addEventListener('click',fermer);
+    fond.addEventListener('click',e=>{ if(e.target===fond) fermer(); });   // toucher en dehors = comme Échap (un seul choix possible)
+    document.addEventListener('keydown',surTouche);
+    document.body.appendChild(fond);
+    ok.focus();
+  });
+}
+
+// ── ERREURS DES FONCTIONS SERVEUR (Edge Functions) ─────
+// Toutes nos fonctions serveur (admin-employes, calculer-parcours…) répondent en JSON {ok:false, erreur, message} : ce JSON est
+// dans error.context (une vraie réponse HTTP), sauf si la demande n'a obtenu AUCUNE réponse (pas de signal, ou fonction absente).
+async function lireErreurFonction(err){
+  // « FunctionsFetchError » (supabase-js) : la demande n'a obtenu AUCUNE réponse (pas de signal) ; l'erreur d'origine est dans « context »
+  if(err&&err.name==='FunctionsFetchError'){
+    signalerEchecReseau(err.context||err);
+    return {code:'reseau',message:''};
+  }
+  try{
+    const c=err&&err.context;
+    if(c&&typeof c.json==='function'){
+      const j=await c.json();
+      // Un 404 renvoyé par SUPABASE LUI-MÊME (fonction pas déployée) n'a pas notre forme {ok:false,…} : à distinguer d'un 404
+      // « métier » qu'une de nos fonctions peut renvoyer pour de bon (ex. admin-employes : « employe_introuvable »).
+      if(c.status===404&&(!j||j.ok===undefined)) return {code:'fonction_absente',message:''};
+      return {code:(j&&j.erreur)||'erreur',message:(j&&j.message)||''};
+    }
+  }catch(e){}
+  return {code:estErreurReseau(err)?'reseau':'erreur',message:String((err&&err.message)||err||'')};
+}

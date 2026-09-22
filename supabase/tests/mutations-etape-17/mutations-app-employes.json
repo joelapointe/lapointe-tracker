@@ -1,0 +1,332 @@
+[
+  {
+    "nom": "un employé peut ouvrir le panneau administrateur",
+    "fichier": "js/admin.js",
+    "de": "if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}",
+    "vers": "if(false){toast('⛔ Accès admin requis');return;}"
+  },
+  {
+    "nom": "ouvrir le panneau ne repart plus toujours sur « Problèmes »",
+    "fichier": "js/admin.js",
+    "de": "_adminOnglet='problemes';\n  document.getElementById('admin-overlay').classList.add('open');",
+    "vers": "document.getElementById('admin-overlay').classList.add('open');"
+  },
+  {
+    "nom": "toucher le même onglet le relit quand même (perte de temps, et un clignotement à l'écran)",
+    "fichier": "js/admin.js",
+    "de": "function changerOngletAdmin(id){\n  if(id===_adminOnglet) return;\n  _adminOnglet=id;",
+    "vers": "function changerOngletAdmin(id){\n  _adminOnglet=id;"
+  },
+  {
+    "nom": "toucher un onglet ne change plus rien",
+    "fichier": "js/admin.js",
+    "de": "_adminOnglet=id;\n  chargerPanneauAdmin();",
+    "vers": "_adminOnglet=id;"
+  },
+  {
+    "nom": "le sous-titre du panneau ne suit plus l'onglet actif",
+    "fichier": "js/admin.js",
+    "de": "document.getElementById('admin-sub').textContent=o.titre;",
+    "vers": ""
+  },
+  {
+    "nom": "la liste des onglets est figée au chargement (les futurs onglets ne s'ajouteraient jamais)",
+    "fichier": "js/admin.js",
+    "de": "function ongletsAdmin(){\n  return [",
+    "vers": "const _ONGLETS_ADMIN=["
+  },
+  {
+    "nom": "aucun onglet ne se dessine (le bouton « Employés » disparaît)",
+    "fichier": "js/admin.js",
+    "de": "function renderOngletsAdmin(){\n  const zone=document.getElementById('admin-tabs');\n  if(!zone) return;",
+    "vers": "function renderOngletsAdmin(){\n  return;\n  const zone=document.getElementById('admin-tabs');\n  if(!zone) return;"
+  },
+  {
+    "nom": "l'onglet actif ne se distingue plus visuellement",
+    "fichier": "js/admin.js",
+    "de": "b.className='admin-tab'+(o.id===_adminOnglet?' active':'');",
+    "vers": "b.className='admin-tab';"
+  },
+  {
+    "nom": "le corps du panneau n'est plus vidé avant de dessiner le nouvel onglet (les deux se mélangent)",
+    "fichier": "js/admin.js",
+    "de": "  const body=document.getElementById('admin-body');\n  body.innerHTML='';\n  if(typeof o.charger==='function') await o.charger();",
+    "vers": "  const body=document.getElementById('admin-body');\n  if(typeof o.charger==='function') await o.charger();"
+  },
+  {
+    "nom": "marquer un problème comme lu redessine n'importe quel onglet ouvert (même « Employés »)",
+    "fichier": "js/admin.js",
+    "de": "if(_adminOnglet==='problemes') chargerPanneauAdmin();",
+    "vers": "chargerPanneauAdmin();"
+  },
+  {
+    "nom": "la lecture des employés ne passe plus par le serveur (admin_lister_utilisateurs)",
+    "fichier": "js/admin-employes.js",
+    "de": "const r=await db.rpc('admin_lister_utilisateurs');",
+    "vers": "const r={data:[],error:null};"
+  },
+  {
+    "nom": "une erreur de lecture est ignorée (la liste semble vide au lieu de dire l'erreur)",
+    "fichier": "js/admin-employes.js",
+    "de": "if(error){\n    body.innerHTML='<div style=\"padding:16px;color:#ef4444;font-size:13px;\">❌ Impossible de charger les employés. Vérifie la connexion, puis réessaie.</div>';\n    return;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "une réponse qui n'est pas une vraie liste (mais qui a un « length ») plante la liste",
+    "fichier": "js/admin-employes.js",
+    "de": "employesAdmin=Array.isArray(data)?data:[];",
+    "vers": "employesAdmin=data;"
+  },
+  {
+    "nom": "le téléphone n'est plus mis en forme (chiffres bruts)",
+    "fichier": "js/admin-employes.js",
+    "de": "return d.length===10?d.slice(0,3)+' '+d.slice(3,6)+'-'+d.slice(6):(t||'—');",
+    "vers": "return t||'—';"
+  },
+  {
+    "nom": "aucun compte : rien n'est affiché (pas même « Aucun compte »)",
+    "fichier": "js/admin-employes.js",
+    "de": "vide.textContent='Aucun compte.';",
+    "vers": "vide.textContent='';"
+  },
+  {
+    "nom": "le bouton « ＋ NOUVEL EMPLOYÉ » n'ouvre plus rien",
+    "fichier": "js/admin-employes.js",
+    "de": "btAjout.onclick=ouvrirNouvelEmploye;",
+    "vers": "btAjout.onclick=null;"
+  },
+  {
+    "nom": "un compte ADMINISTRATEUR reçoit lui aussi les boutons Désactiver/NIP/Supprimer",
+    "fichier": "js/admin-employes.js",
+    "de": "if(u.role==='employe'){",
+    "vers": "if(true){"
+  },
+  {
+    "nom": "un compte administrateur montre son téléphone au lieu de « Administrateur »",
+    "fichier": "js/admin-employes.js",
+    "de": "detail.textContent=u.role==='admin'?'👑 Administrateur':formaterTel(u.telephone);",
+    "vers": "detail.textContent=formaterTel(u.telephone);"
+  },
+  {
+    "nom": "le badge « Désactivé » n'apparaît jamais (toujours « Actif »)",
+    "fichier": "js/admin-employes.js",
+    "de": "badge.textContent=u.actif?'Actif':'Désactivé';",
+    "vers": "badge.textContent='Actif';"
+  },
+  {
+    "nom": "le bouton Désactiver/Réactiver dit toujours « Désactiver »",
+    "fichier": "js/admin-employes.js",
+    "de": "btEtat.textContent=u.actif?'Désactiver':'Réactiver';",
+    "vers": "btEtat.textContent='Désactiver';"
+  },
+  {
+    "nom": "le nom de la fonction serveur est mal orthographié",
+    "fichier": "js/admin-employes.js",
+    "de": "db.functions.invoke('admin-employes',{body:corps})",
+    "vers": "db.functions.invoke('admin_employes',{body:corps})"
+  },
+  {
+    "nom": "une réponse « ok:false » est prise pour un succès",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!d||d.ok!==true) return {erreur:",
+    "vers": "if(!d) return {erreur:"
+  },
+  {
+    "nom": "une panne de réseau n'est plus signalée au reste de l'application",
+    "fichier": "js/admin-employes.js",
+    "de": "signalerEchecReseau(e);\n    return {erreur:{code:estErreurReseau(e)?'reseau':'erreur'",
+    "vers": "return {erreur:{code:estErreurReseau(e)?'reseau':'erreur'"
+  },
+  {
+    "nom": "le message « pas administrateur » est faux",
+    "fichier": "js/admin-employes.js",
+    "de": "if(e.code==='non_autorise') return '❌ Réservé à l’administrateur.';",
+    "vers": "if(e.code==='non_autorise') return '❌ Erreur.';"
+  },
+  {
+    "nom": "le message « fonction absente » ne dit plus quoi vérifier",
+    "fichier": "js/admin-employes.js",
+    "de": "if(e.code==='fonction_absente') return '❌ La fonction « admin-employes » n’est pas installée sur Supabase.';",
+    "vers": "if(e.code==='fonction_absente') return '❌ Erreur.';"
+  },
+  {
+    "nom": "le message du serveur (téléphone déjà utilisé, NIP trop facile…) n'est plus montré",
+    "fichier": "js/admin-employes.js",
+    "de": "if(['telephone_deja_utilise','nip_trop_facile','nom_invalide','telephone_invalide','nip_invalide','requete_invalide'].includes(e.code)) return '❌ '+(e.message||'Renseignement invalide.');",
+    "vers": ""
+  },
+  {
+    "nom": "« employé introuvable » ne relit plus la liste (elle reste fausse)",
+    "fichier": "js/admin-employes.js",
+    "de": "if(e.code==='employe_introuvable') await chargerEmployesAdmin();",
+    "vers": ""
+  },
+  {
+    "nom": "le message ne dit plus jamais rien (toujours vide)",
+    "fichier": "js/admin-employes.js",
+    "de": "async function apresErreurEmploye(e){\n  toast(messageErreurEmploye(e));",
+    "vers": "async function apresErreurEmploye(e){"
+  },
+  {
+    "nom": "désactiver un employé ne demande plus de confirmation",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!actif&&!(await confirmer('Désactiver '+u.nom+' ?','Il ne pourra plus se connecter ni voir quoi que ce soit. Son historique est conservé.','Désactiver','Annuler'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "réactiver demande une confirmation inutile",
+    "fichier": "js/admin-employes.js",
+    "de": "async function changerEtatEmploye(u){\n  const actif=!u.actif;",
+    "vers": "async function changerEtatEmploye(u){\n  const actif=!u.actif;\n  if(!(await confirmer('Confirmer ?'))) return;"
+  },
+  {
+    "nom": "désactiver et réactiver appellent toujours « desactiver »",
+    "fichier": "js/admin-employes.js",
+    "de": "const r=await appelerAdminEmployes({action:actif?'reactiver':'desactiver',id:u.id});",
+    "vers": "const r=await appelerAdminEmployes({action:'desactiver',id:u.id});"
+  },
+  {
+    "nom": "le message dit « désactivé » même en réactivant",
+    "fichier": "js/admin-employes.js",
+    "de": "toast(actif?'✔ '+u.nom+' est réactivé':'✔ '+u.nom+' est désactivé');",
+    "vers": "toast('✔ '+u.nom+' est désactivé');"
+  },
+  {
+    "nom": "la liste n'est pas relue après avoir changé l'état d'un employé",
+    "fichier": "js/admin-employes.js",
+    "de": "toast(actif?'✔ '+u.nom+' est réactivé':'✔ '+u.nom+' est désactivé');\n  await chargerEmployesAdmin();\n}\n\n// ── Réinitialiser",
+    "vers": "toast(actif?'✔ '+u.nom+' est réactivé':'✔ '+u.nom+' est désactivé');\n}\n\n// ── Réinitialiser"
+  },
+  {
+    "nom": "réinitialiser le NIP ne demande pas de confirmation",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!(await confirmer('Nouveau NIP pour '+u.nom+' ?','L’ancien NIP ne fonctionnera plus.','Nouveau NIP','Annuler'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "un NIP est proposé au serveur au lieu de le laisser choisir au hasard",
+    "fichier": "js/admin-employes.js",
+    "de": "const r=await appelerAdminEmployes({action:'reinitialiser_nip',id:u.id});",
+    "vers": "const r=await appelerAdminEmployes({action:'reinitialiser_nip',id:u.id,nip:'123457'});"
+  },
+  {
+    "nom": "le nouveau NIP n'est plus montré du tout",
+    "fichier": "js/admin-employes.js",
+    "de": "await informer('Nouveau NIP de '+u.nom,r.nip,'J’ai noté le NIP');",
+    "vers": ""
+  },
+  {
+    "nom": "le nom de la personne n'apparaît plus avec son nouveau NIP",
+    "fichier": "js/admin-employes.js",
+    "de": "await informer('Nouveau NIP de '+u.nom,r.nip,'J’ai noté le NIP');",
+    "vers": "await informer('Nouveau NIP',r.nip,'J’ai noté le NIP');"
+  },
+  {
+    "nom": "supprimer ne demande pas de confirmation",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!(await confirmer('Supprimer '+u.nom+' ?','S’il a de l’historique (quarts, passes…), il sera désactivé à la place.','Supprimer','Annuler'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "la boîte de suppression ne prévient plus qu'un employé avec de l'historique sera désactivé",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!(await confirmer('Supprimer '+u.nom+' ?','S’il a de l’historique (quarts, passes…), il sera désactivé à la place.','Supprimer','Annuler'))) return;",
+    "vers": "if(!(await confirmer('Supprimer '+u.nom+' ?'))) return;"
+  },
+  {
+    "nom": "supprimer et désactivé-à-la-place disent toujours le même message",
+    "fichier": "js/admin-employes.js",
+    "de": "toast(r.resultat==='desactive'?'⚠ '+u.nom+' a de l’historique : désactivé plutôt que supprimé':'🗑 '+u.nom+' est supprimé');",
+    "vers": "toast('🗑 '+u.nom+' est supprimé');"
+  },
+  {
+    "nom": "ouvrir la fenêtre ne vide plus les anciens champs (des restes du dernier employé créé)",
+    "fichier": "js/admin-employes.js",
+    "de": "function ouvrirNouvelEmploye(){\n  document.getElementById('ne-nom').value='';",
+    "vers": "function ouvrirNouvelEmploye(){"
+  },
+  {
+    "nom": "la fenêtre s'ouvre avec le NIP manuel déjà coché",
+    "fichier": "js/admin-employes.js",
+    "de": "document.getElementById('ne-nip-manuel').checked=false;",
+    "vers": "document.getElementById('ne-nip-manuel').checked=true;"
+  },
+  {
+    "nom": "toucher en dehors de la fenêtre « Nouvel employé » ne la ferme plus",
+    "fichier": "js/admin-employes.js",
+    "de": "function bgClickNE(e){\n  if(e.target===document.getElementById('nouvel-employe-overlay')) fermerNouvelEmploye();\n}",
+    "vers": "function bgClickNE(e){}"
+  },
+  {
+    "nom": "décocher « je choisis le NIP » ne cache plus le champ",
+    "fichier": "js/admin-employes.js",
+    "de": "document.getElementById('ne-nip-zone').style.display=on?'block':'none';",
+    "vers": "document.getElementById('ne-nip-zone').style.display='block';"
+  },
+  {
+    "nom": "décocher « je choisis le NIP » garde le NIP tapé (il serait envoyé quand même)",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!on) document.getElementById('ne-nip').value='';",
+    "vers": ""
+  },
+  {
+    "nom": "un nom vide est accepté",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!nom){toast('⚠ Entre un nom');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "un téléphone vide est accepté",
+    "fichier": "js/admin-employes.js",
+    "de": "if(!telephone){toast('⚠ Entre un numéro de téléphone');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "un NIP manuel de 5 chiffres est accepté",
+    "fichier": "js/admin-employes.js",
+    "de": "if(manuel&&!/^[0-9]{6}$/.test(nip)){toast('⚠ Le NIP doit avoir exactement 6 chiffres');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "un NIP est envoyé au serveur même quand « je choisis moi-même » n'est pas coché",
+    "fichier": "js/admin-employes.js",
+    "de": "const r=await appelerAdminEmployes(Object.assign({action:'creer',nom,telephone},manuel?{nip}:{}));",
+    "vers": "const r=await appelerAdminEmployes(Object.assign({action:'creer',nom,telephone},{nip}));"
+  },
+  {
+    "nom": "la fenêtre ne se ferme plus après une création réussie",
+    "fichier": "js/admin-employes.js",
+    "de": "if(r.erreur){toast(messageErreurEmploye(r.erreur));return;}\n  fermerNouvelEmploye();",
+    "vers": "if(r.erreur){toast(messageErreurEmploye(r.erreur));return;}"
+  },
+  {
+    "nom": "la liste n'est pas relue après avoir créé un employé",
+    "fichier": "js/admin-employes.js",
+    "de": "fermerNouvelEmploye();\n  await chargerEmployesAdmin();\n  await informer('Compte créé",
+    "vers": "fermerNouvelEmploye();\n  await informer('Compte créé"
+  },
+  {
+    "nom": "le nouveau NIP n'est plus montré après une création",
+    "fichier": "js/admin-employes.js",
+    "de": "await informer('Compte créé : '+r.employe.nom,'NIP : '+r.nip+(r.nip_genere?' (choisi au hasard)':''),'J’ai noté le NIP');",
+    "vers": ""
+  },
+  {
+    "nom": "« choisi au hasard » est dit même quand Joé a choisi le NIP lui-même",
+    "fichier": "js/admin-employes.js",
+    "de": "'NIP : '+r.nip+(r.nip_genere?' (choisi au hasard)':'')",
+    "vers": "'NIP : '+r.nip+' (choisi au hasard)'"
+  },
+  {
+    "nom": "un 404 « métier » (ex. employé introuvable) est pris pour une fonction absente",
+    "fichier": "js/utilitaires.js",
+    "de": "if(c.status===404&&(!j||j.ok===undefined)) return {code:'fonction_absente',message:''};",
+    "vers": "if(c.status===404) return {code:'fonction_absente',message:''};"
+  },
+  {
+    "nom": "un 404 de Supabase (fonction non déployée) n'est plus reconnu",
+    "fichier": "js/utilitaires.js",
+    "de": "if(c.status===404&&(!j||j.ok===undefined)) return {code:'fonction_absente',message:''};",
+    "vers": "if(false) return {code:'fonction_absente',message:''};"
+  }
+]

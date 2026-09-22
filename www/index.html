@@ -187,6 +187,32 @@
     </div>
   </div>
 </div>
+
+<!-- Étape 19 : « ＋ Nouvel employé » (admin-employes.js) — le NIP, lui, est montré une seule fois avec informer() -->
+<div id="nouvel-employe-overlay" onclick="bgClickNE(event)">
+  <div id="nouvel-employe-modal">
+    <h2>＋ Nouvel employé</h2>
+    <div class="f">
+      <label>Nom</label>
+      <input id="ne-nom" type="text" placeholder="ex: Marc Tremblay"/>
+    </div>
+    <div class="f">
+      <label>Numéro de téléphone</label>
+      <input id="ne-telephone" type="tel" inputmode="tel" placeholder="ex: 819 555-0101"/>
+    </div>
+    <div class="f emp-nip-choix">
+      <label><input id="ne-nip-manuel" type="checkbox" onchange="basculerNipManuel()"/> Je choisis le NIP moi-même</label>
+    </div>
+    <div class="f" id="ne-nip-zone" style="display:none;">
+      <label>NIP (6 chiffres)</label>
+      <input id="ne-nip" type="text" inputmode="numeric" maxlength="6" placeholder="ex: 482915"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="mb s" onclick="fermerNouvelEmploye()">Annuler</button>
+      <button class="mb p" onclick="creerEmploye()">Créer</button>
+    </div>
+  </div>
+</div>
 <!-- Étape 16b : la liste « Gestes non envoyés » (file-attente.js), ouverte en touchant la bande du haut -->
 <div id="gestes-overlay" onclick="bgClickGestes(event)">
   <div id="gestes-boite" role="dialog" aria-modal="true" aria-labelledby="gestes-h">
@@ -230,6 +256,7 @@
       </div>
       <button id="admin-x" onclick="closeAdmin()">✕</button>
     </div>
+    <div id="admin-tabs"></div>
     <div id="admin-body">
       <div style="padding:32px;text-align:center;color:#6b7a8d;">Chargement…</div>
     </div>
@@ -347,6 +374,7 @@
 <script src="js/problemes.js"></script>
 <script src="js/photos.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/admin-employes.js"></script>
 <script src="js/liste-arrets.js"></script>
 <script src="js/ordre.js"></script>
 <script src="js/parcours.js"></script>

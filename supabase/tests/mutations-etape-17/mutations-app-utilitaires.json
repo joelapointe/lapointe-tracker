@@ -1,0 +1,20 @@
+[
+  {
+    "nom": "informer() se ferme tout seul sur n'importe quelle touche (pas seulement Échap/Entrée)",
+    "fichier": "js/utilitaires.js",
+    "de": "function surTouche(e){ if(e.key==='Escape'||e.key==='Enter') fermer(); }",
+    "vers": "function surTouche(e){ fermer(); }"
+  },
+  {
+    "nom": "informer() ne ferme plus la boîte de confirmation ouverte avant lui (les deux se superposeraient)",
+    "fichier": "js/utilitaires.js",
+    "de": "function informer(titre,texte,libelleOK){\n  return new Promise(resolve=>{\n    if(_fermerConfirmation) _fermerConfirmation(false);",
+    "vers": "function informer(titre,texte,libelleOK){\n  return new Promise(resolve=>{"
+  },
+  {
+    "nom": "toucher en dehors d'informer() ne le ferme plus",
+    "fichier": "js/utilitaires.js",
+    "de": "fond.addEventListener('click',e=>{ if(e.target===fond) fermer(); });   // toucher en dehors = comme Échap (un seul choix possible)",
+    "vers": ""
+  }
+]

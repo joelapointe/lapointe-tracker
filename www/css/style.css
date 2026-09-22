@@ -485,7 +485,7 @@
 #bandeau-reseau{white-space:normal;text-align:right;max-width:calc(100vw - 24px);}
 #bandeau-reseau.actif{pointer-events:auto;cursor:pointer;}
 /* Les fenêtres qui montent du bas de l'écran restent au-dessus de la barre d'accueil d'un iPhone (0 ailleurs) */
-#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
+#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
 #gestes-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:4000;align-items:center;justify-content:center;padding:20px;}
 #gestes-overlay.open{display:flex;}
 #gestes-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 16px 16px;width:100%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;}
@@ -553,3 +553,26 @@
 .leaflet-bottom.leaflet-right{margin-bottom:calc(74px + var(--sa-bottom));}
 .leaflet-control-attribution{font-size:10px;background:rgba(11,18,32,.72)!important;color:#cbd5e1!important;}
 .leaflet-control-attribution a{color:#7dd3fc!important;}
+
+#nouvel-employe-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}
+#nouvel-employe-overlay.open{display:flex;}
+#nouvel-employe-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
+#nouvel-employe-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
+
+/* Étape 19 : le panneau administrateur devient plusieurs onglets (admin.js), le premier : « Employés » (admin-employes.js). */
+#admin-tabs{display:flex;gap:6px;padding:10px 16px 0;flex-shrink:0;overflow-x:auto;}
+.admin-tab{flex-shrink:0;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.admin-tab.active{background:var(--accent);color:#111;border-color:var(--accent);}
+.emp-item{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(37,45,58,.8);gap:10px;flex-wrap:wrap;}
+.emp-info{flex:1;min-width:0;}
+.emp-nom{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;color:var(--text);overflow-wrap:anywhere;}
+.emp-detail{font-size:12px;color:var(--muted);margin-top:1px;}
+.emp-badge{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0;}
+.emp-badge.actif{background:rgba(74,222,128,.10);color:var(--green);}
+.emp-badge.inactif{background:rgba(239,68,68,.10);color:var(--red);}
+.emp-actions{display:flex;gap:6px;flex-basis:100%;justify-content:flex-end;}
+.emp-btn{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:#161c24;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.emp-btn:active{filter:brightness(.85);}
+.emp-btn.del{color:var(--red);border-color:rgba(239,68,68,.4);flex:0 0 auto;padding:0 14px;}
+.emp-nip-choix label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;}
+.emp-nip-choix input[type="checkbox"]{width:18px;height:18px;}

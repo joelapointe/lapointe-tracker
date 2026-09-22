@@ -195,23 +195,6 @@ function tronconsManquants(){return manquantsDetail().map(m=>m.cle);}
 function signatureManquants(){
   return manquantsDetail().map(m=>[m.cle,m.de.lat,m.de.lon,m.vers.lat,m.vers.lon].join(',')).sort().join(';');
 }
-// Lit l'erreur d'un appel de fonction : notre réponse JSON {erreur, message} est dans error.context (une vraie réponse du serveur)
-async function lireErreurFonction(err){
-  // « FunctionsFetchError » (supabase-js) : la demande n'a obtenu AUCUNE réponse (pas de signal) ; l'erreur d'origine est dans « context »
-  if(err&&err.name==='FunctionsFetchError'){
-    signalerEchecReseau(err.context||err);
-    return {code:'reseau',message:''};
-  }
-  try{
-    const c=err&&err.context;
-    if(c&&typeof c.json==='function'){
-      if(c.status===404) return {code:'fonction_absente',message:''};
-      const j=await c.json();
-      return {code:(j&&j.erreur)||'erreur',message:(j&&j.message)||''};
-    }
-  }catch(e){}
-  return {code:estErreurReseau(err)?'reseau':'erreur',message:String((err&&err.message)||err||'')};
-}
 async function appelerCalculerParcours(corps){
   try{
     const r=await avecDelai(db.functions.invoke('calculer-parcours',{body:corps}),PARCOURS_DELAI_FONCTION_MS);

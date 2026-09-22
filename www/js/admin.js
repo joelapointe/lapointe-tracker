@@ -1,11 +1,23 @@
-// js/admin.js — Panneau administrateur : problèmes signalés
+// js/admin.js — Panneau administrateur : les onglets, et l'onglet « Problèmes signalés »
 // (Étape 12 : plus d'approbation de comptes — Joé crée chaque compte lui-même.)
 // (Étape 13 : lit les nouvelles colonnes — cree_le, passe, auteur — et n'affiche jamais « aucun problème » quand la lecture échoue.)
+// (Étape 19 : le panneau devient plusieurs onglets — Problèmes, Employés, puis Véhicules, Réglages… — chacun dans son propre fichier.)
 // (extrait de l'ancien index.html)
-	function openAdmin(){
+
+// La liste des onglets EST UNE FONCTION (pas une constante posée au chargement) : les fichiers des autres onglets (employés,
+// véhicules…) se chargent APRÈS celui-ci ; leurs fonctions n'existent donc pas encore au moment où ce fichier s'exécute.
+function ongletsAdmin(){
+  return [
+    {id:'problemes',icone:'⚠',label:'Problèmes',titre:'Problèmes signalés',charger:loadProblemes},
+    {id:'employes',icone:'👤',label:'Employés',titre:'Employés',charger:(typeof chargerEmployesAdmin==='function')?chargerEmployesAdmin:null},
+  ];
+}
+let _adminOnglet='problemes';
+
+function openAdmin(){
   if(!currentUser||currentUser.role!=='admin'){toast('⛔ Accès admin requis');return;}
- document.getElementById('admin-overlay').classList.add('open');
-  document.getElementById('admin-sub').textContent='Problèmes signalés';
+  _adminOnglet='problemes';
+  document.getElementById('admin-overlay').classList.add('open');
   chargerPanneauAdmin();
 }
 
@@ -15,6 +27,27 @@ function closeAdmin(){
 
 function bgClickAdmin(e){
   if(e.target===document.getElementById('admin-overlay'))closeAdmin();
+}
+
+// Toucher un onglet : ne relit PAS l'onglet qu'on quitte (le prochain openAdmin() le fera si besoin)
+function changerOngletAdmin(id){
+  if(id===_adminOnglet) return;
+  _adminOnglet=id;
+  chargerPanneauAdmin();
+}
+
+function renderOngletsAdmin(){
+  const zone=document.getElementById('admin-tabs');
+  if(!zone) return;
+  zone.innerHTML='';
+  ongletsAdmin().forEach(o=>{
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='admin-tab'+(o.id===_adminOnglet?' active':'');
+    b.textContent=o.icone+' '+o.label;
+    b.onclick=()=>changerOngletAdmin(o.id);
+    zone.appendChild(b);
+  });
 }
 
 async function loadProblemes(){
@@ -90,10 +123,13 @@ async function marquerLu(id){
   toast('✔ Problème marqué comme lu');
   await chargerProblemes();
   renderAll();majCarte();checkProblemes();
-  chargerPanneauAdmin();
+  if(_adminOnglet==='problemes') chargerPanneauAdmin();   // l'onglet des problèmes est ouvert : il se redessine ; un autre onglet n'a pas à être interrompu
 }
 async function chargerPanneauAdmin(){
+  renderOngletsAdmin();
+  const o=ongletsAdmin().find(x=>x.id===_adminOnglet)||ongletsAdmin()[0];
+  document.getElementById('admin-sub').textContent=o.titre;
   const body=document.getElementById('admin-body');
   body.innerHTML='';
-  await loadProblemes();
+  if(typeof o.charger==='function') await o.charger();
 }

@@ -4,7 +4,8 @@
 import vm from 'vm';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-const WWW = fileURLToPath(new URL('../../www/', import.meta.url));
+// WWW_TEST : un autre dossier « www » (les erreurs volontaires modifient une COPIE du code, jamais le vrai)
+const WWW = process.env.WWW_TEST ? process.env.WWW_TEST.split('\\').join('/').replace(/\/?$/, '/') : fileURLToPath(new URL('../../www/', import.meta.url));
 
 let ok = 0, ko = 0;
 const log = (s) => console.log(s);
@@ -277,7 +278,9 @@ log('\n=== BOÎTE DE CONFIRMATION (remplace la fenêtre native, refusée d\'offi
     const document = { body, createElement: (t) => new Faux(t), getElementById: (id) => body.trouver(id), addEventListener: (t, f) => touches.push({ t, f }), removeEventListener: (t, f) => { const i = touches.findIndex((x) => x.f === f); if (i >= 0) touches.splice(i, 1); } };
     const ctx = vm.createContext({ document, console, setTimeout, clearTimeout });
     vm.runInContext(lire('js/utilitaires.js'), ctx);
-    return { body, touches, ouvrir: (...a) => vm.runInContext(`confirmer(${a.map((x) => JSON.stringify(x)).join(',')})`, ctx), appuyer: (key) => touches.filter((x) => x.t === 'keydown').forEach((x) => x.f({ key })) };
+    return { body, touches, ouvrir: (...a) => vm.runInContext(`confirmer(${a.map((x) => JSON.stringify(x)).join(',')})`, ctx),
+      ouvrirInfo: (...a) => vm.runInContext(`informer(${a.map((x) => JSON.stringify(x)).join(',')})`, ctx),
+      appuyer: (key) => touches.filter((x) => x.t === 'keydown').forEach((x) => x.f({ key })) };
   };
   const etat = (p) => { const r = { fini: false, val: undefined }; p.then((v) => { r.fini = true; r.val = v; }); return r; };
   const attendre = () => new Promise((res) => setImmediate(res));
@@ -322,6 +325,47 @@ log('\n=== BOÎTE DE CONFIRMATION (remplace la fenêtre native, refusée d\'offi
   n = nouveau(); p = etat(n.ouvrir()); await attendre();
   eq('sans texte ni libellés : valeurs par défaut sensées', [n.body.trouver('confirm-titre').textContent, n.body.trouver('confirm-overlay').tous('confirm-btn').map((b) => b.textContent), n.body.trouver('confirm-texte')], ['Confirmer ?', ['Confirmer', 'Annuler'], null]);
   vrai('le texte affiché est inséré comme TEXTE (jamais comme HTML) : un nom piégé ne peut pas exécuter de code', /textContent/.test(lire('js/utilitaires.js')) && !/innerHTML/.test(lire('js/utilitaires.js').split('function confirmer')[1]));
+
+  // ── informer() : un seul bouton (étape 19, pour montrer un NIP une seule fois) ──
+  n = nouveau(); p = etat(n.ouvrirInfo('Nouveau NIP de Luc', '482915', 'J\'ai noté le NIP'));
+  fond = n.body.trouver('confirm-overlay');
+  eq('informer() affiche titre, texte, UN SEUL bouton au libellé donné (pas « oui »/« non »)', [n.body.trouver('confirm-titre')?.textContent, n.body.trouver('confirm-texte')?.textContent, fond.tous('confirm-btn').length, fond.tous('confirm-btn')[0].textContent], ['Nouveau NIP de Luc', '482915', 1, 'J\'ai noté le NIP']);
+  eq('c\'est une vraie boîte de dialogue (accessibilité), le bouton reçoit le focus', [fond.attrs.role, fond.attrs['aria-modal'], fond.tous('confirm-btn')[0].focusRecu], ['dialog', 'true', true]);
+  eq('tant qu\'on n\'a rien touché : pas de réponse', p.fini, false);
+  fond.tous('confirm-btn')[0].clic(); await attendre();
+  eq('toucher le bouton répond, retire la boîte et l\'écouteur du clavier', [p.fini, !!n.body.trouver('confirm-overlay'), n.touches.length], [true, false, 0]);
+
+  n = nouveau(); p = etat(n.ouvrirInfo('T', '482915'));
+  n.appuyer('a'); await attendre();
+  eq('une touche quelconque ne ferme RIEN (le NIP doit rester affiché tant qu\'on n\'a pas choisi de le fermer)', [p.fini, !!n.body.trouver('confirm-overlay')], [false, true]);
+  n.appuyer('Escape'); await attendre();
+  eq('Échap ferme quand même (un seul bouton : pas de risque de fermer par accident)', p.fini, true);
+
+  n = nouveau(); p = etat(n.ouvrirInfo('T', '482915'));
+  n.appuyer('Enter'); await attendre();
+  eq('Entrée ferme aussi (un seul choix possible, contrairement à confirmer() à deux boutons)', p.fini, true);
+
+  n = nouveau(); p = etat(n.ouvrirInfo('T', '482915'));
+  fond = n.body.trouver('confirm-overlay');
+  fond.clic(n.body.trouver('confirm-boite')); await attendre();
+  eq('toucher DANS la boîte ne la ferme pas', [p.fini, !!n.body.trouver('confirm-overlay')], [false, true]);
+  fond.clic(fond); await attendre();
+  eq('toucher EN DEHORS ferme', p.fini, true);
+
+  // Une seule boîte à la fois, informer() et confirmer() partagent le même emplacement
+  n = nouveau();
+  let pc = etat(n.ouvrir('Confirmation ouverte', '', 'Oui', 'Non'));
+  let pi = etat(n.ouvrirInfo('Puis un NIP', '482915'));
+  await attendre();
+  eq('ouvrir informer() PENDANT une confirmation : la confirmation reçoit « non » (jamais laissée sans réponse), une seule boîte reste', [pc.val, pi.fini, n.body.enfants.length, n.body.trouver('confirm-titre')?.textContent], [false, false, 1, 'Puis un NIP']);
+  n.body.trouver('confirm-overlay').tous('confirm-btn')[0].clic(); await attendre();
+  eq('… puis informer() répond normalement', pi.fini, true);
+
+  n = nouveau();
+  pi = etat(n.ouvrirInfo('Un NIP', '482915'));
+  pc = etat(n.ouvrir('Puis une confirmation', '', 'Oui', 'Non'));
+  await attendre();
+  eq('… et l\'inverse : ouvrir confirmer() PENDANT un informer() ferme le NIP tout seul (une seule boîte à la fois)', [pi.fini, n.body.enfants.length, n.body.trouver('confirm-titre')?.textContent], [true, 1, 'Puis une confirmation']);
 }
 
 // =====================================================================

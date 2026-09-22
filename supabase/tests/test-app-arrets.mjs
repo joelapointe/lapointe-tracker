@@ -47,7 +47,7 @@ function monde(o = {}) {
     equipage_periodes: o.equipages ?? [],
     parcours_segments: o.segments ?? [],   // les tronçons du tracé (étape 18b, parcours.js)
   };
-  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
+  const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], informations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
   const reponsesRpc = o.rpc ?? {};
   const reponsesEcriture = o.ecritures ?? {};
 
@@ -133,11 +133,12 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
-  vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; };', Object.assign(ctx, { __toasts: appels.toasts }) && ctx);
+  vm.runInContext('toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponseConfirmation; }; informer = async (...a) => { __informations.push(a); };',
+    Object.assign(ctx, { __toasts: appels.toasts, __informations: appels.informations }) && ctx);
   const w = {
     ctx, el, donnees, appels, marqueurs, polygones, retires, camions, traces, groupes, memoire,
     run: (code) => vm.runInContext(code, ctx),
@@ -145,6 +146,7 @@ function monde(o = {}) {
     couleur: (m) => (m.opt.icon.html.match(/background:(#[0-9a-f]+)/) || [])[1],
     elementsListe: () => el('liste-body').children,
     dernierToast: () => appels.toasts[appels.toasts.length - 1],
+    dernierInfo: () => appels.informations[appels.informations.length - 1],
     fin: () => vm.runInContext('clearInterval(_minuterieEnCours);_minuterieEnCours=null;arreterSonde();', ctx),
   };
   tousLesMondes.push(w);
@@ -625,6 +627,247 @@ log('\n=== PANNEAU ADMINISTRATEUR : lit les nouvelles colonnes, ne ment jamais =
   vrai('… même quand le réseau est coupé', texte(m).includes('❌ Impossible de charger les problèmes'), texte(m));
   m = monde(); await m.run('loadStops()'); await m.run('openAdmin()'); await attendre(30);
   eq('un employé qui essaie d\'ouvrir le panneau : refusé', [m.dernierToast(), m.el('admin-overlay').classList.contains('open')], ['⛔ Accès admin requis', false]);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 19 (SUITE) : LE PANNEAU ADMINISTRATEUR DEVIENT PLUSIEURS ONGLETS ; L'ONGLET « EMPLOYÉS » (www/js/admin.js, admin-employes.js)
+// ══════════════════════════════════════════════════════════════════════
+const ADMIN19 = { id: 'u-joe', nom: 'Joé', role: 'admin' };
+const EMPLOYES = [
+  { id: 'e-luc', nom: 'Luc Boisvert', telephone: '8195550101', role: 'employe', actif: true, cree_le: '2026-01-01T00:00:00Z' },
+  { id: 'e-marc', nom: 'Marc Tremblay', telephone: '8195550102', role: 'employe', actif: false, cree_le: '2026-01-02T00:00:00Z' },
+  { id: 'u-joe', nom: 'Joé', telephone: null, role: 'admin', actif: true, cree_le: '2026-01-01T00:00:00Z' },
+];
+const mondeEmp = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, rpc: { admin_lister_utilisateurs: { data: EMPLOYES, error: null } }, ...o });
+  await m.run('loadStops()');
+  return m;
+};
+const ligneEmploye = (m, id) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === EMPLOYES.find((e) => e.id === id).nom);
+const boutonEmp = (ligne, texte) => ligne.children[2].children.find((b) => b.textContent === texte);
+
+log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
+{
+  const m = await mondeEmp({ problemes: [] });
+  await m.run('openAdmin()'); await attendre(30);
+  eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab']]]);
+  eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
+  m.el('admin-tabs').children[1].onclick();
+  await attendre(30);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active'], 'Employés', 1]);
+  m.el('admin-tabs').children[1].onclick();
+  eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
+  m.el('admin-tabs').children[0].onclick();
+  await attendre(30);
+  eq('revenir sur « Problèmes » : son contenu (et non celui des employés) est affiché', m.el('admin-sub').textContent, 'Problèmes signalés');
+  m.fin();
+}
+{
+  // Marquer un problème comme lu ne doit PAS faire sauter l'écran sur « Problèmes » si on est sur un AUTRE onglet
+  const m = await mondeEmp({ problemes: [{ id: 'pb1', stop_id: 's2', passe_id: null, utilisateur_id: 'u-marc', note: 'x', cree_le: new Date().toISOString(), stops: { adresse: 'a', service: MEC, client: 'c' }, utilisateurs: { nom: 'Marc' }, passes: null }], ecritures: { 'problemes.update': { data: [{ id: 'pb1' }], error: null } } });
+  await m.run('openAdmin()'); await attendre(30);
+  m.el('admin-tabs').children[1].onclick(); await attendre(30);
+  const relu = m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length;
+  await m.run(`marquerLu('pb1')`);
+  eq('« marquer comme lu » pendant que l\'onglet « Employés » est ouvert : il reste sur « Employés », il n\'est PAS relu pour rien', [m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length - relu], ['Employés', 0]);
+  m.fin();
+}
+{
+  const m = await mondeEmp();
+  await m.run(`_adminOnglet='employes';`);
+  await m.run('openAdmin()');
+  eq('ouvrir le panneau repart TOUJOURS sur « Problèmes » (jamais coincé sur un autre onglet)', m.run('_adminOnglet'), 'problemes');
+  m.fin();
+}
+
+log('\n=== L\'ONGLET « EMPLOYÉS » : LA LISTE ===');
+{
+  const m = await mondeEmp();
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`);
+  await attendre(30);
+  const lus = m.appels.rpc.find((r) => r.nom === 'admin_lister_utilisateurs');
+  vrai('la liste vient de admin_lister_utilisateurs() (le serveur)', !!lus);
+  const luc = ligneEmploye(m, 'e-luc'), marc = ligneEmploye(m, 'e-marc'), joe = ligneEmploye(m, 'u-joe');
+  vrai('un employé actif : son nom, son téléphone bien formaté, le badge « Actif »', !!luc && luc.children[0].children[1].textContent === '819 555-0101' && luc.children[1].textContent === 'Actif' && luc.children[1].className === 'emp-badge actif');
+  vrai('un employé désactivé : le badge « Désactivé »', !!marc && marc.children[1].textContent === 'Désactivé' && marc.children[1].className === 'emp-badge inactif');
+  vrai('un employé a trois boutons : Désactiver/Réactiver, NIP, Supprimer', luc.children[2].children.map((b) => b.textContent).join('|') === 'Désactiver|🔑 NIP|🗑' && marc.children[2].children.map((b) => b.textContent).join('|') === 'Réactiver|🔑 NIP|🗑');
+  vrai('un compte ADMINISTRATEUR : « 👑 Administrateur » à la place du téléphone, AUCUN bouton (il ne se gère pas ici)', !!joe && joe.children[0].children[1].textContent === '👑 Administrateur' && joe.children.length === 2);
+  vrai('le bouton « ＋ NOUVEL EMPLOYÉ » est là, au-dessus de la liste', m.el('admin-body').children[0].children[0].textContent === '＋ NOUVEL EMPLOYÉ');
+  m.fin();
+}
+{
+  const vide = await mondeEmp({ rpc: { admin_lister_utilisateurs: { data: [], error: null } } });
+  await vide.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  vrai('aucun compte : « Aucun compte. », le bouton « ＋ NOUVEL EMPLOYÉ » reste là', vide.el('admin-body').children[1].textContent === 'Aucun compte.');
+  vide.fin();
+  const err = await mondeEmp({ rpc: { admin_lister_utilisateurs: { data: null, error: { message: 'boum' } } } });
+  await err.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste ne peut pas être lue : message clair, jamais « Aucun compte » (ce serait un mensonge)', err.el('admin-body').innerHTML.includes('❌ Impossible de charger les employés') && !err.el('admin-body').innerHTML.includes('Aucun compte'));
+  err.fin();
+  const planté = await mondeEmp({ rpc: { admin_lister_utilisateurs: () => { throw new Error('Failed to fetch'); } } });
+  await planté.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  vrai('… même si l\'appel plante carrément (jamais de plantage de l\'écran)', planté.el('admin-body').innerHTML.includes('❌ Impossible de charger les employés'));
+  planté.fin();
+  const pasListe = await mondeEmp({ rpc: { admin_lister_utilisateurs: { data: { length: 2 }, error: null } } });
+  await pasListe.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  eq('la réponse n\'est pas une VRAIE liste, même si elle a un « length » (jamais attendu, mais jamais un plantage) : traité comme « aucun compte »', pasListe.el('admin-body').children[1]?.textContent, 'Aucun compte.');
+  pasListe.fin();
+}
+
+log('\n=== « ＋ NOUVEL EMPLOYÉ » ===');
+{
+  const m = await mondeEmp({ fonction: (corps) => ({ data: { ok: true, employe: { id: 'nouveau', nom: corps.nom, telephone: '8195559999', actif: true }, nip: '482915', nip_genere: true }, error: null }) });
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  m.el('ne-nom').value = 'reste du dernier employé'; m.el('ne-telephone').value = '8195550000'; m.el('ne-nip-manuel').checked = true; m.el('ne-nip').value = '111111'; m.el('ne-nip-zone').style.display = 'block';
+  m.el('admin-body').children[0].children[0].onclick();
+  eq('le bouton ouvre la fenêtre, avec des champs vides (rien du dernier employé créé) et le NIP manuel décoché', [m.el('nouvel-employe-overlay').classList.contains('open'), m.el('ne-nom').value, m.el('ne-telephone').value, m.el('ne-nip-manuel').checked, m.el('ne-nip-zone').style.display], [true, '', '', false, 'none']);
+  eq('toucher en dehors de la fenêtre la ferme', (m.run(`bgClickNE({target:document.getElementById('nouvel-employe-overlay')})`), m.el('nouvel-employe-overlay').classList.contains('open')), false);
+  eq('… mais toucher DEDANS ne la ferme pas', (m.el('admin-body').children[0].children[0].onclick(), m.run(`bgClickNE({target:document.getElementById('ne-nom')})`), m.el('nouvel-employe-overlay').classList.contains('open')), true);
+  m.el('ne-nip-manuel').checked = true;
+  m.run('basculerNipManuel()');
+  eq('cocher « je choisis le NIP » montre le champ NIP', m.el('ne-nip-zone').style.display, 'block');
+  m.el('ne-nip').value = '482915';
+  m.el('ne-nip-manuel').checked = false;
+  m.run('basculerNipManuel()');
+  eq('décocher le cache et vide un NIP déjà tapé (il ne doit pas être envoyé en cachette)', [m.el('ne-nip-zone').style.display, m.el('ne-nip').value], ['none', '']);
+  await m.run('creerEmploye()');
+  eq('sans nom : rien n\'est appelé, message clair', [m.dernierToast(), m.appels.fonctions.length], ['⚠ Entre un nom', 0]);
+  m.el('ne-nom').value = 'Nouvelle Personne';
+  await m.run('creerEmploye()');
+  eq('sans téléphone : rien n\'est appelé', [m.dernierToast(), m.appels.fonctions.length], ['⚠ Entre un numéro de téléphone', 0]);
+  m.el('ne-telephone').value = '819 555-9999';
+  m.el('ne-nip-manuel').checked = true;
+  m.el('ne-nip').value = '123';
+  await m.run('creerEmploye()');
+  eq('NIP manuel de moins de 6 chiffres : refusé AVANT d\'appeler le serveur', [m.dernierToast(), m.appels.fonctions.length], ['⚠ Le NIP doit avoir exactement 6 chiffres', 0]);
+  m.el('ne-nip-manuel').checked = false;
+  const relu = m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length;
+  await m.run('creerEmploye()');
+  eq('nom et téléphone présents, sans NIP manuel : la fonction est appelée SANS champ « nip »', m.appels.fonctions[0], { nom: 'admin-employes', corps: { action: 'creer', nom: 'Nouvelle Personne', telephone: '819 555-9999' } });
+  eq('la fenêtre se ferme, la liste est relue, le NIP est montré UNE FOIS (informer, pas un toast qui disparaîtrait)', [m.el('nouvel-employe-overlay').classList.contains('open'), m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length - relu, m.dernierInfo()], [false, 1, ['Compte créé : Nouvelle Personne', 'NIP : 482915 (choisi au hasard)', 'J’ai noté le NIP']]);
+  m.fin();
+}
+{
+  const m = await mondeEmp({ fonction: (corps) => ({ data: { ok: true, employe: { id: 'x', nom: corps.nom, telephone: corps.telephone, actif: true }, nip: corps.nip, nip_genere: false }, error: null }) });
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  m.el('ne-nom').value = 'Choix Manuel'; m.el('ne-telephone').value = '8195551234'; m.el('ne-nip-manuel').checked = true; m.el('ne-nip').value = '482917';
+  await m.run('creerEmploye()');
+  eq('un NIP choisi par Joé est envoyé au serveur, et redit SANS « (choisi au hasard) »', [m.appels.fonctions[0].corps, m.dernierInfo()[1]], [{ action: 'creer', nom: 'Choix Manuel', telephone: '8195551234', nip: '482917' }, 'NIP : 482917']);
+  m.fin();
+}
+{
+  // Chaque erreur du serveur, en mots simples ; rien n'est jamais annoncé comme un succès
+  const essaiCreation = async (reponse) => {
+    const m = await mondeEmp({ fonction: typeof reponse === 'function' ? reponse : () => reponse });
+    await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+    m.run('ouvrirNouvelEmploye()');
+    m.el('ne-nom').value = 'X'; m.el('ne-telephone').value = '8195551111';
+    await m.run('creerEmploye()');
+    const t = m.dernierToast(), ouverte = m.el('nouvel-employe-overlay').classList.contains('open');
+    m.fin();
+    return { toast: t, ouverte };
+  };
+  const http = (statut, corps) => ({ data: null, error: { message: 'non-2xx', context: { status: statut, json: async () => corps } } });
+  eq('téléphone déjà utilisé : le message du serveur est montré, la fenêtre RESTE ouverte (rien n\'est perdu)', await essaiCreation(http(409, { ok: false, erreur: 'telephone_deja_utilise', message: 'Ce numéro est déjà celui de Marc.' })), { toast: '❌ Ce numéro est déjà celui de Marc.', ouverte: true });
+  eq('NIP trop facile', (await essaiCreation(http(400, { ok: false, erreur: 'nip_trop_facile', message: 'NIP trop facile à deviner.' }))).toast, '❌ NIP trop facile à deviner.');
+  eq('pas administrateur', (await essaiCreation(http(403, { ok: false, erreur: 'non_autorise', message: 'Réservé à l\'administrateur.' }))).toast, '❌ Réservé à l’administrateur.');
+  eq('la fonction n\'est pas installée (404)', (await essaiCreation(http(404, { code: 'NOT_FOUND' }))).toast, '❌ La fonction « admin-employes » n’est pas installée sur Supabase.');
+  eq('pas de réseau (aucune réponse)', (await essaiCreation({ data: null, error: { name: 'FunctionsFetchError', message: 'x', context: new TypeError('Failed to fetch') } })).toast, '📴 Pas de réseau : rien n’a été changé.');
+  eq('une réponse illisible : jamais annoncée comme un succès', (await essaiCreation({ data: null, error: null })).toast, '❌ Une erreur est survenue.');
+  eq('une réponse SANS « ok:true » n\'est jamais prise pour un succès, même si elle contient des données', (await essaiCreation({ data: { nip: '123456' }, error: null })).toast, '❌ Une erreur est survenue.');
+  eq('un code reconnu mais SANS message du serveur : un texte par défaut compréhensible (pas le texte générique)', (await essaiCreation(http(400, { ok: false, erreur: 'nom_invalide', message: '' }))).toast, '❌ Renseignement invalide.');
+  eq('l\'appel plante carrément', (await essaiCreation(() => { throw new Error('boum'); })).toast, '❌ boum');
+  const m2 = await mondeEmp({ fonction: () => { throw new TypeError('Failed to fetch'); } });
+  await m2.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  await m2.run('reseau.enLigne=true;');
+  m2.el('ne-nom').value = 'X'; m2.el('ne-telephone').value = '8195551111';
+  await m2.run('creerEmploye()');
+  eq('l\'appel plante avec une VRAIE panne de réseau (TypeError « Failed to fetch ») : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+
+log('\n=== DÉSACTIVER / RÉACTIVER ===');
+{
+  const m = await mondeEmp({ confirme: true, fonction: () => ({ data: { ok: true, employe: {} }, error: null }) });
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(m, 'e-luc'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('désactiver demande UNE confirmation nommée, avec ce que ça change', m.appels.confirmations[0], ['Désactiver Luc Boisvert ?', 'Il ne pourra plus se connecter ni voir quoi que ce soit. Son historique est conservé.', 'Désactiver', 'Annuler']);
+  eq('… puis appelle le serveur avec le bon identifiant, confirme par un message, relit la liste', [m.appels.fonctions[0].corps, m.dernierToast(), m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [{ action: 'desactiver', id: 'e-luc' }, '✔ Luc Boisvert est désactivé', 2]);
+  m.fin();
+  const non = await mondeEmp({ confirme: false });
+  await non.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(non, 'e-luc'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('« Annuler » : RIEN n\'est appelé', non.appels.fonctions.length, 0);
+  non.fin();
+  const re = await mondeEmp({ fonction: () => ({ data: { ok: true, employe: {} }, error: null }) });
+  await re.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(re, 'e-marc'), 'Réactiver').onclick();
+  await attendre(30);
+  eq('réactiver ne demande AUCUNE confirmation (sans risque) : appel direct, bon message', [re.appels.confirmations.length, re.appels.fonctions[0].corps, re.dernierToast()], [0, { action: 'reactiver', id: 'e-marc' }, '✔ Marc Tremblay est réactivé']);
+  re.fin();
+}
+
+log('\n=== RÉINITIALISER LE NIP ===');
+{
+  const m = await mondeEmp({ confirme: true, fonction: () => ({ data: { ok: true, employe: {}, nip: '135790', nip_genere: true }, error: null }) });
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(m, 'e-luc'), '🔑 NIP').onclick();
+  await attendre(30);
+  eq('demande confirmation nommée, prévient que l\'ancien NIP ne marche plus', m.appels.confirmations[0], ['Nouveau NIP pour Luc Boisvert ?', 'L’ancien NIP ne fonctionnera plus.', 'Nouveau NIP', 'Annuler']);
+  eq('… appelle le serveur (SANS proposer de NIP : toujours choisi au hasard), montre le nouveau NIP UNE FOIS', [m.appels.fonctions[0].corps, m.dernierInfo()], [{ action: 'reinitialiser_nip', id: 'e-luc' }, ['Nouveau NIP de Luc Boisvert', '135790', 'J’ai noté le NIP']]);
+  eq('aucun toast : le NIP ne doit JAMAIS disparaître tout seul', m.appels.toasts.length, 0);
+  m.fin();
+  const non = await mondeEmp({ confirme: false });
+  await non.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(non, 'e-luc'), '🔑 NIP').onclick();
+  await attendre(30);
+  eq('« Annuler » : rien n\'est appelé, rien n\'est montré', [non.appels.fonctions.length, non.appels.informations.length], [0, 0]);
+  non.fin();
+}
+
+log('\n=== SUPPRIMER (OU DÉSACTIVER S\'IL Y A DE L\'HISTORIQUE) ===');
+{
+  const m = await mondeEmp({ confirme: true, fonction: () => ({ data: { ok: true, resultat: 'supprime', employe: {} }, error: null }) });
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(m, 'e-luc'), '🗑').onclick();
+  await attendre(30);
+  eq('demande confirmation, prévient qu\'un employé avec de l\'historique est désactivé plutôt que supprimé', m.appels.confirmations[0], ['Supprimer Luc Boisvert ?', 'S’il a de l’historique (quarts, passes…), il sera désactivé à la place.', 'Supprimer', 'Annuler']);
+  eq('supprimé pour de vrai : le message le dit', [m.appels.fonctions[0].corps, m.dernierToast()], [{ action: 'supprimer', id: 'e-luc' }, '🗑 Luc Boisvert est supprimé']);
+  m.fin();
+  const av = await mondeEmp({ confirme: true, fonction: () => ({ data: { ok: true, resultat: 'desactive', employe: {}, message: 'a de l\'historique' }, error: null }) });
+  await av.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  boutonEmp(ligneEmploye(av, 'e-luc'), '🗑').onclick();
+  await attendre(30);
+  eq('avec de l\'historique : DÉSACTIVÉ, pas supprimé, et le message le dit clairement', av.dernierToast(), '⚠ Luc Boisvert a de l’historique : désactivé plutôt que supprimé');
+  av.fin();
+}
+{
+  // Un employé introuvable (supprimé ailleurs entre-temps) : la liste se relit toute seule, jamais de « succès » inventé
+  const m = await mondeEmp({ confirme: true, fonction: () => ({ data: null, error: { message: 'x', context: { status: 404, json: async () => ({ ok: false, erreur: 'employe_introuvable', message: 'Employé introuvable.' }) } } }) });
+  await m.run(`_adminOnglet='employes';chargerPanneauAdmin();`); await attendre(30);
+  const relu = m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length;
+  boutonEmp(ligneEmploye(m, 'e-luc'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('« introuvable » : message ET relecture automatique de la liste (elle a changé ailleurs)', [m.dernierToast(), m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length - relu], ['❌ Cet employé n’existe plus (la liste va se rafraîchir).', 1]);
+  m.fin();
+}
+
+log('\n=== LE CODE : LE PANNEAU ADMINISTRATEUR (étape 19) ===');
+{
+  const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admE = lire('js/admin-employes.js');
+  vrai('la page charge admin-employes.js juste après admin.js', page.indexOf('js/admin.js') < page.indexOf('js/admin-employes.js') && page.indexOf('js/admin-employes.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('le panneau a une zone d\'onglets ENTRE l\'en-tête et le corps, et la fenêtre « ＋ Nouvel employé »', page.indexOf('id="admin-header"') < page.indexOf('id="admin-tabs"') && page.indexOf('id="admin-tabs"') < page.indexOf('id="admin-body"') && page.includes('id="nouvel-employe-overlay"'));
+  vrai('la fenêtre « Nouvel employé » se ferme au toucher en dehors, comme les autres', /onclick="bgClickNE\(event\)"/.test(page));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
+  vrai('les onglets sont une FONCTION (pas une liste figée au chargement) : les fichiers des futurs onglets peuvent se charger après celui-ci', /function ongletsAdmin\(\)/.test(adm));
+  vrai('ouvrir le panneau repart toujours sur l\'onglet « Problèmes »', /_adminOnglet='problemes';/.test(adm));
+  vrai('un compte administrateur ne se gère pas ici : la liste ne montre ses boutons qu\'aux employés', /if\(u\.role==='employe'\)\{/.test(admE));
+  vrai('le NIP n\'est JAMAIS envoyé par toast (qui disparaît seul) : toujours informer()', /await informer\('Nouveau NIP de/.test(admE) && /await informer\('Compte créé/.test(admE) && !/toast\([^)]*\+\s*(r\.)?nip\b/.test(admE));
+  vrai('création, désactivation, réactivation, suppression et réinitialisation passent TOUJOURS par la fonction serveur, jamais une écriture directe sur « utilisateurs »', /action:'creer'/.test(admE) && /action:actif\?'reactiver':'desactiver'/.test(admE) && /action:'reinitialiser_nip'/.test(admE) && /action:'supprimer'/.test(admE) && !/db\.from\('utilisateurs'\)\.(update|insert|delete)/.test(admE));
+  vrai('le style : les onglets, la liste des employés, les badges actif/inactif', /\.admin-tab\.active\{background:var\(--accent\)/.test(css) && /\.emp-badge\.actif\{background:rgba\(74,222,128/.test(css) && /\.emp-badge\.inactif\{background:rgba\(239,68,68/.test(css));
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

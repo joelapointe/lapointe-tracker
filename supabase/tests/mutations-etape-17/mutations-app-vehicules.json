@@ -1,0 +1,122 @@
+[
+  {
+    "nom": "le nouvel onglet « Véhicules » disparaît de la liste des onglets",
+    "fichier": "js/admin.js",
+    "de": "{id:'vehicules',icone:'🚚',label:'Véhicules',titre:'Véhicules',charger:(typeof chargerVehiculesAdmin==='function')?chargerVehiculesAdmin:null},\n  ];",
+    "vers": "];"
+  },
+  {
+    "nom": "la liste des véhicules n'est plus installée après la lecture (toujours vide, même si le serveur répond)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "vehiculesAdmin=Array.isArray(data)?data:[];",
+    "vers": "vehiculesAdmin=[];"
+  },
+  {
+    "nom": "une erreur de lecture n'affiche plus de message clair (l'écran reste vide, silencieusement)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "if(error){\n    body.innerHTML='<div style=\"padding:16px;color:#ef4444;font-size:13px;\">❌ Impossible de charger les véhicules. Vérifie la connexion, puis réessaie.</div>';\n    return;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "le badge « Actif »/« Désactivé » ne suit plus l'état réel du véhicule (toujours « Actif »)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "badge.className='emp-badge '+(v.actif?'actif':'inactif');\n    badge.textContent=v.actif?'Actif':'Désactivé';",
+    "vers": "badge.className='emp-badge actif';\n    badge.textContent='Actif';"
+  },
+  {
+    "nom": "le bouton Désactiver/Réactiver dit toujours « Désactiver », même sur un véhicule déjà désactivé",
+    "fichier": "js/admin-vehicules.js",
+    "de": "btEtat.textContent=v.actif?'Désactiver':'Réactiver';",
+    "vers": "btEtat.textContent='Désactiver';"
+  },
+  {
+    "nom": "aucune ligne ne se dessine (la liste reste toujours vide à l'écran, même avec des véhicules)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "vehiculesAdmin.forEach(v=>{",
+    "vers": "[].forEach(v=>{"
+  },
+  {
+    "nom": "le message « Aucun véhicule. » ne se distingue plus d'une vraie erreur (même texte pour les deux)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "vide.textContent='Aucun véhicule.';",
+    "vers": "vide.textContent='❌ Impossible de charger les véhicules.';"
+  },
+  {
+    "nom": "une désactivation ne demande plus AUCUNE confirmation (dangereux : un toucher accidentel désactive un camion)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "if(!actif&&!(await confirmer('Désactiver '+v.nom+' ?','Il ne sera plus proposé pour une nouvelle passe. Son historique est conservé.','Désactiver','Annuler'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "réactiver demande maintenant une confirmation inutile (aucun risque à réactiver)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "const actif=!v.actif;\n  if(!actif",
+    "vers": "const actif=!v.actif;\n  if(true"
+  },
+  {
+    "nom": "désactiver/réactiver écrit toujours « actif:true », même en désactivant",
+    "fichier": "js/admin-vehicules.js",
+    "de": "const r=await db.from('equipes').update({actif}).eq('id',v.id);",
+    "vers": "const r=await db.from('equipes').update({actif:true}).eq('id',v.id);"
+  },
+  {
+    "nom": "après avoir désactivé/réactivé, la liste ne se relit plus (l'écran reste périmé)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "toast(actif?'✔ '+v.nom+' est réactivé':'✔ '+v.nom+' est désactivé');\n  await chargerVehiculesAdmin();",
+    "vers": "toast(actif?'✔ '+v.nom+' est réactivé':'✔ '+v.nom+' est désactivé');"
+  },
+  {
+    "nom": "« ＋ Nouveau véhicule » reste coincé en mode « Renommer » après une renommage précédente",
+    "fichier": "js/admin-vehicules.js",
+    "de": "function ouvrirNouveauVehicule(){\n  _vehiculeIdEnEdition=null;",
+    "vers": "function ouvrirNouveauVehicule(){"
+  },
+  {
+    "nom": "« Renommer » n'affiche plus le nom actuel dans le champ (il faudrait le retaper en entier)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "document.getElementById('nv-nom').value=v.nom;",
+    "vers": "document.getElementById('nv-nom').value='';"
+  },
+  {
+    "nom": "toucher en dehors de la fenêtre « Nouveau véhicule » ne la ferme plus",
+    "fichier": "js/admin-vehicules.js",
+    "de": "function bgClickNV(e){\n  if(e.target===document.getElementById('nouveau-vehicule-overlay')) fermerNouveauVehicule();\n}",
+    "vers": "function bgClickNV(e){\n}"
+  },
+  {
+    "nom": "un nom vide est maintenant accepté (envoyé au serveur sans rien vérifier)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "if(!nom){toast('⚠ Entre un nom de véhicule');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "les espaces autour du nom ne sont plus retirés avant l'envoi",
+    "fichier": "js/admin-vehicules.js",
+    "de": "const nom=document.getElementById('nv-nom').value.trim();",
+    "vers": "const nom=document.getElementById('nv-nom').value;"
+  },
+  {
+    "nom": "« Renommer » crée un NOUVEAU véhicule au lieu de modifier celui qu'on renomme",
+    "fichier": "js/admin-vehicules.js",
+    "de": "const r=enEdition\n      ?await db.from('equipes').update({nom}).eq('id',enEdition)\n      :await db.from('equipes').insert([{nom}]);",
+    "vers": "const r=await db.from('equipes').insert([{nom}]);"
+  },
+  {
+    "nom": "après avoir créé ou renommé un véhicule, la liste ne se relit plus (le nouveau nom n'apparaît pas)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "fermerNouveauVehicule();\n  await chargerVehiculesAdmin();",
+    "vers": "fermerNouveauVehicule();"
+  },
+  {
+    "nom": "un nom déjà utilisé (contrainte unique du serveur) n'est plus expliqué en mots simples",
+    "fichier": "js/admin-vehicules.js",
+    "de": "if(String(error&&error.code)==='23505') return '❌ Ce nom de véhicule existe déjà.';",
+    "vers": ""
+  },
+  {
+    "nom": "une panne de réseau n'est plus détectée sur une création/modification de véhicule (jamais marqué hors réseau)",
+    "fichier": "js/admin-vehicules.js",
+    "de": "catch(e){error=e;signalerEchecReseau(e);}",
+    "vers": "catch(e){error=e;}"
+  }
+]

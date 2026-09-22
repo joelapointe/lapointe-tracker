@@ -133,7 +133,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -651,11 +651,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -861,13 +861,168 @@ log('\n=== LE CODE : LE PANNEAU ADMINISTRATEUR (étape 19) ===');
   vrai('la page charge admin-employes.js juste après admin.js', page.indexOf('js/admin.js') < page.indexOf('js/admin-employes.js') && page.indexOf('js/admin-employes.js') < page.indexOf('js/liste-arrets.js'));
   vrai('le panneau a une zone d\'onglets ENTRE l\'en-tête et le corps, et la fenêtre « ＋ Nouvel employé »', page.indexOf('id="admin-header"') < page.indexOf('id="admin-tabs"') && page.indexOf('id="admin-tabs"') < page.indexOf('id="admin-body"') && page.includes('id="nouvel-employe-overlay"'));
   vrai('la fenêtre « Nouvel employé » se ferme au toucher en dehors, comme les autres', /onclick="bgClickNE\(event\)"/.test(page));
-  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
   vrai('les onglets sont une FONCTION (pas une liste figée au chargement) : les fichiers des futurs onglets peuvent se charger après celui-ci', /function ongletsAdmin\(\)/.test(adm));
   vrai('ouvrir le panneau repart toujours sur l\'onglet « Problèmes »', /_adminOnglet='problemes';/.test(adm));
   vrai('un compte administrateur ne se gère pas ici : la liste ne montre ses boutons qu\'aux employés', /if\(u\.role==='employe'\)\{/.test(admE));
   vrai('le NIP n\'est JAMAIS envoyé par toast (qui disparaît seul) : toujours informer()', /await informer\('Nouveau NIP de/.test(admE) && /await informer\('Compte créé/.test(admE) && !/toast\([^)]*\+\s*(r\.)?nip\b/.test(admE));
   vrai('création, désactivation, réactivation, suppression et réinitialisation passent TOUJOURS par la fonction serveur, jamais une écriture directe sur « utilisateurs »', /action:'creer'/.test(admE) && /action:actif\?'reactiver':'desactiver'/.test(admE) && /action:'reinitialiser_nip'/.test(admE) && /action:'supprimer'/.test(admE) && !/db\.from\('utilisateurs'\)\.(update|insert|delete)/.test(admE));
   vrai('le style : les onglets, la liste des employés, les badges actif/inactif', /\.admin-tab\.active\{background:var\(--accent\)/.test(css) && /\.emp-badge\.actif\{background:rgba\(74,222,128/.test(css) && /\.emp-badge\.inactif\{background:rgba\(239,68,68/.test(css));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 19 (SUITE) : L'ONGLET « VÉHICULES » (www/js/admin.js, admin-vehicules.js)
+// Un véhicule = une ligne de « equipes » (nom, actif) : AUCUNE fonction serveur (contrairement aux employés) — des écritures
+// directes suffisent, les règles d'accès (equipes_admin) laissant déjà tout faire à l'administrateur. Jamais de suppression
+// (un véhicule reste lié à son historique) : seulement créer, renommer, désactiver/réactiver.
+// ══════════════════════════════════════════════════════════════════════
+const VEHICULES = [
+  { id: 'v-1', nom: 'Camion 1', actif: true },
+  { id: 'v-2', nom: 'Camion sel', actif: false },
+];
+const mondeVeh = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, equipes: VEHICULES.map((v) => ({ ...v })), ...o });
+  await m.run('loadStops()');
+  return m;
+};
+const ligneVehicule = (m, nom) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === nom);
+const boutonVeh = (ligne, texte) => ligne.children[2].children.find((b) => b.textContent === texte);
+
+log('\n=== L\'ONGLET « VÉHICULES » : LA LISTE ===');
+{
+  const m = await mondeVeh();
+  await m.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`);
+  await attendre(30);
+  vrai('la liste vient d\'une lecture DIRECTE de la table « equipes » (pas de fonction serveur, contrairement aux employés)', m.appels.lectures.includes('equipes'));
+  const c1 = ligneVehicule(m, 'Camion 1'), c2 = ligneVehicule(m, 'Camion sel');
+  vrai('un véhicule actif : son nom, le badge « Actif »', !!c1 && c1.children[1].textContent === 'Actif' && c1.children[1].className === 'emp-badge actif');
+  vrai('un véhicule désactivé : le badge « Désactivé »', !!c2 && c2.children[1].textContent === 'Désactivé' && c2.children[1].className === 'emp-badge inactif');
+  vrai('chaque véhicule a deux boutons : Renommer, Désactiver/Réactiver (jamais Supprimer)', c1.children[2].children.map((b) => b.textContent).join('|') === '✏️ Renommer|Désactiver' && c2.children[2].children.map((b) => b.textContent).join('|') === '✏️ Renommer|Réactiver');
+  vrai('le bouton « ＋ NOUVEAU VÉHICULE » est là, au-dessus de la liste', m.el('admin-body').children[0].children[0].textContent === '＋ NOUVEAU VÉHICULE');
+  m.fin();
+}
+{
+  const vide = await mondeVeh({ equipes: [] });
+  await vide.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  vrai('aucun véhicule : « Aucun véhicule. », le bouton « ＋ NOUVEAU VÉHICULE » reste là', vide.el('admin-body').children[1].textContent === 'Aucun véhicule.');
+  vide.fin();
+  const err = await mondeVeh({ erreurLecture: ['equipes'] });
+  await err.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste ne peut pas être lue : message clair, jamais « Aucun véhicule » (ce serait un mensonge)', err.el('admin-body').innerHTML.includes('❌ Impossible de charger les véhicules') && !err.el('admin-body').innerHTML.includes('Aucun véhicule'));
+  err.fin();
+  const planté = await mondeVeh({ lectureLance: ['equipes'] });
+  await planté.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  vrai('… même si l\'appel plante carrément (jamais de plantage de l\'écran)', planté.el('admin-body').innerHTML.includes('❌ Impossible de charger les véhicules'));
+  planté.fin();
+}
+
+log('\n=== « ＋ NOUVEAU VÉHICULE » ===');
+{
+  const ins = (v, d) => { d.equipes.push({ id: 'v-nouveau', nom: v[0].nom, actif: true }); return { data: null, error: null }; };
+  const m = await mondeVeh({ ecritures: { 'equipes.insert': ins } });
+  await m.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  m.el('nv-nom').value = 'reste du précédent';
+  m.el('admin-body').children[0].children[0].onclick();
+  eq('le bouton ouvre la fenêtre en mode création : titre, bouton « Créer », champ vide', [m.el('nouveau-vehicule-overlay').classList.contains('open'), m.el('nv-titre').textContent, m.el('nv-btn-save').textContent, m.el('nv-nom').value], [true, '＋ Nouveau véhicule', 'Créer', '']);
+  eq('toucher en dehors de la fenêtre la ferme', (m.run(`bgClickNV({target:document.getElementById('nouveau-vehicule-overlay')})`), m.el('nouveau-vehicule-overlay').classList.contains('open')), false);
+  eq('… mais toucher DEDANS ne la ferme pas', (m.el('admin-body').children[0].children[0].onclick(), m.run(`bgClickNV({target:document.getElementById('nv-nom')})`), m.el('nouveau-vehicule-overlay').classList.contains('open')), true);
+  await m.run('sauvegarderVehicule()');
+  eq('sans nom : rien n\'est écrit, message clair', [m.dernierToast(), m.appels.ecritures.length], ['⚠ Entre un nom de véhicule', 0]);
+  m.el('nv-nom').value = '  Camion 3  ';
+  await m.run('sauvegarderVehicule()');
+  eq('le nom est envoyé nettoyé (espaces autour retirés) : une CRÉATION, sans id ni actif imposés', m.appels.ecritures[0], { table: 'equipes', op: 'insert', valeur: [{ nom: 'Camion 3' }], filtres: undefined });
+  eq('la fenêtre se ferme, message « créé », la liste relue le montre', [m.el('nouveau-vehicule-overlay').classList.contains('open'), m.dernierToast(), !!ligneVehicule(m, 'Camion 3')], [false, '✔ Véhicule créé', true]);
+  m.fin();
+}
+
+log('\n=== « RENOMMER » (MÊME FENÊTRE QUE « ＋ NOUVEAU », PRÉ-REMPLIE) ===');
+{
+  const upd = (v, d, f) => { d.equipes.find((x) => x.id === f[0][1]).nom = v.nom; return { data: null, error: null }; };
+  const m = await mondeVeh({ ecritures: { 'equipes.update': upd } });
+  await m.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  boutonVeh(ligneVehicule(m, 'Camion 1'), '✏️ Renommer').onclick();
+  eq('« Renommer » ouvre la même fenêtre, pré-remplie avec le nom actuel, bouton « Enregistrer »', [m.el('nouveau-vehicule-overlay').classList.contains('open'), m.el('nv-titre').textContent, m.el('nv-btn-save').textContent, m.el('nv-nom').value], [true, 'Renommer un véhicule', 'Enregistrer', 'Camion 1']);
+  m.el('nv-nom').value = 'Camion Un';
+  await m.run('sauvegarderVehicule()');
+  eq('l\'écriture est une MODIFICATION du bon véhicule (jamais une nouvelle création)', m.appels.ecritures[0], { table: 'equipes', op: 'update', valeur: { nom: 'Camion Un' }, filtres: [['id', 'v-1']] });
+  eq('la fenêtre se ferme, message « renommé », la liste relue le montre', [m.el('nouveau-vehicule-overlay').classList.contains('open'), m.dernierToast(), !!ligneVehicule(m, 'Camion Un')], [false, '✔ Véhicule renommé', true]);
+  boutonVeh(ligneVehicule(m, 'Camion sel'), '✏️ Renommer').onclick();
+  m.run('fermerNouveauVehicule()');
+  m.el('admin-body').children[0].children[0].onclick();
+  eq('après avoir fermé une « Renommer », « ＋ Nouveau » repart bien en mode création (jamais coincé en renommage)', [m.el('nv-titre').textContent, m.el('nv-btn-save').textContent], ['＋ Nouveau véhicule', 'Créer']);
+  m.el('nv-nom').value = 'Camion Quatre';
+  await m.run('sauvegarderVehicule()');
+  eq('… et « Créer » écrit vraiment une CRÉATION (pas un renommage du véhicule ouvert juste avant)', m.appels.ecritures[1], { table: 'equipes', op: 'insert', valeur: [{ nom: 'Camion Quatre' }], filtres: undefined });
+  m.fin();
+}
+
+log('\n=== ERREURS (CRÉER / RENOMMER UN VÉHICULE) ===');
+{
+  const essai = async (rep) => {
+    const m = await mondeVeh({ ecritures: { 'equipes.insert': rep } });
+    await m.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+    m.run('ouvrirNouveauVehicule()');
+    m.el('nv-nom').value = 'X';
+    await m.run('sauvegarderVehicule()');
+    const t = m.dernierToast(), ouverte = m.el('nouveau-vehicule-overlay').classList.contains('open');
+    m.fin();
+    return { toast: t, ouverte };
+  };
+  eq('nom déjà utilisé (contrainte unique) : message clair en mots simples, la fenêtre RESTE ouverte (rien n\'est perdu)', await essai({ data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "equipes_nom_unique"' } }), { toast: '❌ Ce nom de véhicule existe déjà.', ouverte: true });
+  eq('pas de réseau (message du serveur) : message clair', await essai({ data: null, error: { message: 'Failed to fetch' } }), { toast: '📴 Pas de réseau : rien n’a été changé.', ouverte: true });
+  eq('une autre erreur du serveur : son message tel quel', await essai({ data: null, error: { message: 'permission denied for table equipes' } }), { toast: '❌ permission denied for table equipes', ouverte: true });
+  const m2 = await mondeVeh({ ecritures: { 'equipes.insert': () => { throw new TypeError('Failed to fetch'); } } });
+  await m2.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  await m2.run('reseau.enLigne=true;');
+  m2.run('ouvrirNouveauVehicule()');
+  m2.el('nv-nom').value = 'X';
+  await m2.run('sauvegarderVehicule()');
+  eq('l\'appel plante avec une VRAIE panne de réseau (TypeError « Failed to fetch ») : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+
+log('\n=== DÉSACTIVER / RÉACTIVER UN VÉHICULE ===');
+{
+  const upd = (v, d, f) => { d.equipes.find((x) => x.id === f[0][1]).actif = v.actif; return { data: null, error: null }; };
+  const m = await mondeVeh({ confirme: true, ecritures: { 'equipes.update': upd } });
+  await m.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  boutonVeh(ligneVehicule(m, 'Camion 1'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('désactiver demande UNE confirmation nommée, avec ce que ça change', m.appels.confirmations[0], ['Désactiver Camion 1 ?', 'Il ne sera plus proposé pour une nouvelle passe. Son historique est conservé.', 'Désactiver', 'Annuler']);
+  eq('… puis écrit directement sur « equipes » (pas de fonction serveur), confirme par un message, relit la liste', [m.appels.ecritures[0], m.dernierToast(), ligneVehicule(m, 'Camion 1').children[1].textContent], [{ table: 'equipes', op: 'update', valeur: { actif: false }, filtres: [['id', 'v-1']] }, '✔ Camion 1 est désactivé', 'Désactivé']);
+  m.fin();
+  const non = await mondeVeh({ confirme: false });
+  await non.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  boutonVeh(ligneVehicule(non, 'Camion 1'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('« Annuler » : RIEN n\'est écrit', non.appels.ecritures.length, 0);
+  non.fin();
+  const re = await mondeVeh({ ecritures: { 'equipes.update': upd } });
+  await re.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  boutonVeh(ligneVehicule(re, 'Camion sel'), 'Réactiver').onclick();
+  await attendre(30);
+  eq('réactiver ne demande AUCUNE confirmation (sans risque) : écriture directe, bon message', [re.appels.confirmations.length, re.appels.ecritures[0], re.dernierToast()], [0, { table: 'equipes', op: 'update', valeur: { actif: true }, filtres: [['id', 'v-2']] }, '✔ Camion sel est réactivé']);
+  re.fin();
+  const planté = await mondeVeh({ ecritures: { 'equipes.update': () => { throw new TypeError('Failed to fetch'); } } });
+  await planté.run(`_adminOnglet='vehicules';chargerPanneauAdmin();`); await attendre(30);
+  await planté.run('reseau.enLigne=true;');
+  boutonVeh(ligneVehicule(planté, 'Camion sel'), 'Réactiver').onclick();
+  await attendre(30);
+  eq('désactiver/réactiver qui plante avec une VRAIE panne de réseau (TypeError « Failed to fetch ») : le téléphone se sait hors réseau ensuite', planté.run('reseau.enLigne'), false);
+  planté.fin();
+}
+
+log('\n=== LE CODE : L\'ONGLET « VÉHICULES » (étape 19) ===');
+{
+  const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admV = lire('js/admin-vehicules.js');
+  vrai('la page charge admin-vehicules.js juste après admin-employes.js, avant liste-arrets.js', page.indexOf('js/admin-employes.js') < page.indexOf('js/admin-vehicules.js') && page.indexOf('js/admin-vehicules.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('la fenêtre « Nouveau véhicule » est dans la page, et se ferme au toucher en dehors, comme les autres', page.includes('id="nouveau-vehicule-overlay"') && /onclick="bgClickNV\(event\)"/.test(page));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-vehicule-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouvel-employe-overlay,#nouveau-vehicule-overlay,#prob-overlay'));
+  vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'vehicules',icone:'🚚',label:'Véhicules',titre:'Véhicules',charger:\(typeof chargerVehiculesAdmin==='function'\)\?chargerVehiculesAdmin:null\}/.test(adm));
+  vrai('un véhicule ne se supprime JAMAIS ici (il reste lié à son historique) : seulement créer, renommer, désactiver/réactiver', !/db\.from\('equipes'\)\.delete\(\)/.test(admV) && /db\.from\('equipes'\)\.insert/.test(admV) && /db\.from\('equipes'\)\.update\(\{nom\}\)/.test(admV) && /db\.from\('equipes'\)\.update\(\{actif\}\)/.test(admV));
+  vrai('aucune fonction serveur ici : des écritures directes sur « equipes » (contrairement aux employés)', !/db\.functions\.invoke/.test(admV));
+  vrai('le nom est toujours nettoyé (espaces autour retirés) avant d\'être envoyé', /const nom=document\.getElementById\('nv-nom'\)\.value\.trim\(\);/.test(admV));
+  vrai('le style : les mêmes badges actif/inactif que les employés sont réutilisés (pas de nouvelle classe CSS dupliquée)', !/\.veh-/.test(css));
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

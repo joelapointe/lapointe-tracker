@@ -10,6 +10,7 @@ function ongletsAdmin(){
   return [
     {id:'problemes',icone:'⚠',label:'Problèmes',titre:'Problèmes signalés',charger:loadProblemes},
     {id:'employes',icone:'👤',label:'Employés',titre:'Employés',charger:(typeof chargerEmployesAdmin==='function')?chargerEmployesAdmin:null},
+    {id:'vehicules',icone:'🚚',label:'Véhicules',titre:'Véhicules',charger:(typeof chargerVehiculesAdmin==='function')?chargerVehiculesAdmin:null},
   ];
 }
 let _adminOnglet='problemes';

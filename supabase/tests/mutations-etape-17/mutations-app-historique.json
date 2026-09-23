@@ -1,0 +1,98 @@
+[
+  {
+    "nom": "le nouvel onglet « Historique » disparaît de la liste des onglets",
+    "fichier": "js/admin.js",
+    "de": "{id:'historique',icone:'📜',label:'Historique',titre:'Historique des passes',charger:(typeof chargerHistoriqueAdmin==='function')?chargerHistoriqueAdmin:null},\n  ];",
+    "vers": "];"
+  },
+  {
+    "nom": "choisir une route ne charge plus jamais ses passes",
+    "fichier": "js/admin-historique.js",
+    "de": "select.onchange=()=>{\n    routeHistoriqueAdmin=select.value||null;\n    if(routeHistoriqueAdmin) chargerPassesHistoriqueAdmin(resultat);\n    else{ resultat.innerHTML=''; resultat.appendChild(messageVideHistorique()); }\n  };",
+    "vers": "select.onchange=()=>{routeHistoriqueAdmin=select.value||null;};"
+  },
+  {
+    "nom": "une erreur de lecture n'affiche plus de message clair (l'écran reste vide, silencieusement)",
+    "fichier": "js/admin-historique.js",
+    "de": "if(error){\n    resultat.innerHTML='<div style=\"padding:16px;color:#ef4444;font-size:13px;\">❌ Impossible de charger les passes. Vérifie la connexion, puis réessaie.</div>';\n    return;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "les passes ne sont plus demandées triées par numero décroissant (la plus vieille pourrait sembler la plus récente)",
+    "fichier": "js/admin-historique.js",
+    "de": ".order('numero',{ascending:false});",
+    "vers": ";"
+  },
+  {
+    "nom": "une passe encore en cours n'affiche plus l'avertissement (Joé pourrait croire qu'il peut commencer une nouvelle saison)",
+    "fichier": "js/admin-historique.js",
+    "de": "if(enCours.length){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "le bouton « Nouvelle saison » n'est plus DÉSACTIVÉ même quand une passe est encore en cours",
+    "fichier": "js/admin-historique.js",
+    "de": "btNouvelle.disabled=enCours.length>0;",
+    "vers": "btNouvelle.disabled=false;"
+  },
+  {
+    "nom": "la durée d'une passe n'est plus calculée (toujours un tiret, même quand début et fin sont connus)",
+    "fichier": "js/admin-historique.js",
+    "de": "function dureeTexte(debut,fin){\n  if(!debut||!fin) return '—';",
+    "vers": "function dureeTexte(debut,fin){\n  return '—';"
+  },
+  {
+    "nom": "toucher « Voir le détail » une deuxième fois ne cache plus rien (le détail s'empile au lieu de se refermer)",
+    "fichier": "js/admin-historique.js",
+    "de": "if(zoneDetail){zoneDetail.remove();zoneDetail=null;btDetail.textContent='▼ Voir le détail';return;}",
+    "vers": ""
+  },
+  {
+    "nom": "le détail d'une passe montre maintenant l'adresse même quand un nom de client existe (jamais ce que Joé a demandé)",
+    "fichier": "js/admin-historique.js",
+    "de": "const nomClient=(l.stops&&(l.stops.client||l.stops.adresse))||'?';",
+    "vers": "const nomClient=(l.stops&&l.stops.adresse)||'?';"
+  },
+  {
+    "nom": "une passe sans aucun arrêt complété n'affiche plus de message clair (case vide, sans explication)",
+    "fichier": "js/admin-historique.js",
+    "de": "zoneDetail.textContent='Aucun arrêt complété.';",
+    "vers": "zoneDetail.textContent='';"
+  },
+  {
+    "nom": "« Nouvelle saison » ne demande plus AUCUNE confirmation (dangereux : ferait avancer la saison d'un toucher accidentel)",
+    "fichier": "js/admin-historique.js",
+    "de": "if(!(await confirmer('Nouvelle saison pour '+nomRoute+' ?','Les prochaines passes recommenceront à « Passe n° 1 ». L’historique (toutes les passes déjà faites) reste conservé, rien n’est effacé.','Nouvelle saison','Annuler'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "« Nouvelle saison » appelle maintenant une fonction serveur INEXISTANTE (mauvais nom)",
+    "fichier": "js/admin-historique.js",
+    "de": "const r=await db.rpc('admin_nouvelle_saison_route',{p_route_id:routeHistoriqueAdmin});",
+    "vers": "const r=await db.rpc('admin_nouvelle_saison_route_zzz',{p_route_id:routeHistoriqueAdmin});"
+  },
+  {
+    "nom": "un refus (passe encore en cours) est maintenant annoncé comme un succès",
+    "fichier": "js/admin-historique.js",
+    "de": "if(!data||data.statut==='refuse'){toast('❌ Impossible : une passe de cette route est encore en cours.');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "une réponse SANS « statut: ok » n'est plus jamais rejetée (prise pour un succès)",
+    "fichier": "js/admin-historique.js",
+    "de": "if(data.statut!=='ok'){toast('❌ Impossible de commencer une nouvelle saison');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "après une nouvelle saison réussie, les routes ne sont plus relues (numero_base resterait périmé dans le reste de l'application)",
+    "fichier": "js/admin-historique.js",
+    "de": "await loadRoutes();   // routes[].numero_base change : relu pour que le reste de l'application le voie tout de suite",
+    "vers": ""
+  },
+  {
+    "nom": "une panne de réseau n'est plus détectée en changeant de saison (jamais marqué hors réseau)",
+    "fichier": "js/admin-historique.js",
+    "de": "catch(e){error=e;signalerEchecReseau(e);}",
+    "vers": "catch(e){error=e;}"
+  }
+]

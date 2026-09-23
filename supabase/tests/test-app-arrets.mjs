@@ -49,6 +49,8 @@ function monde(o = {}) {
     reglages: o.reglages ?? [],
     types_service: o.typesService ?? [],
     quarts: o.quarts ?? [],
+    passes: o.passesTable ?? [],
+    passe_arrets: o.passeArrets ?? [],
   };
   const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], informations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
   const reponsesRpc = o.rpc ?? {};
@@ -138,7 +140,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js', 'js/admin-quarts.js', 'js/admin-export.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js', 'js/admin-quarts.js', 'js/admin-export.js', 'js/admin-historique.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -656,11 +658,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab'], ['💰 Export', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab'], ['💰 Export', 'admin-tab'], ['📜 Historique', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -1637,6 +1639,153 @@ log('\n=== LE CODE : L\'ONGLET « EXPORT » (étape 19, morceau 5) ===');
   vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:\(typeof chargerExportAdmin==='function'\)\?chargerExportAdmin:null\}/.test(adm));
   vrai('aucune écriture ici (une lecture calculée seulement) : ni db.from(...).insert/update/delete, ni db.functions.invoke', !/\.insert\(|\.update\(|\.delete\(\)|db\.functions\.invoke/.test(admE));
   vrai('la construction du CSV (csvExportPaie) est séparée du déclenchement du téléchargement (Blob/URL, propre au navigateur, jamais testable ici)', /function csvExportPaie\(/.test(admE) && /function telechargerExportPaieCsv\(/.test(admE) && /new Blob\(/.test(admE));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ONGLET « HISTORIQUE » (www/js/admin.js, admin-historique.js) — demande de Joé (22 sept.) : repartir le numéro de passe à 1
+// pour une route, une fois ses passes vérifiées, SANS PERDRE l'historique. Le vrai « numero » ne change jamais (SQL 25) : la
+// liste se lit DIRECTEMENT (pas de fonction serveur) ; « Nouvelle saison » passe par admin_nouvelle_saison_route (jamais une
+// écriture directe), qui REFUSE si une passe de la route est encore en cours.
+// ══════════════════════════════════════════════════════════════════════
+const ROUTES_HIST = [{ id: 'r-1', nom: 'Charette', couleur: '#c8e63c', numero_base: 0 }];
+// (le faux serveur ne trie pas vraiment .order() : déjà dans l'ordre numero DÉCROISSANT qu'une vraie lecture triée renverrait)
+const PASSES_HIST = [
+  { id: 'p-2', route_id: 'r-1', numero: 2, tache: MEC, debut: '2026-09-05T08:00:00.000Z', fin: '2026-09-05T11:00:00.000Z', statut: 'terminee', nb_arrets_total: 5, nb_arrets_faits: 4 },
+  { id: 'p-1', route_id: 'r-1', numero: 1, tache: MEC, debut: '2026-09-01T08:00:00.000Z', fin: '2026-09-01T12:00:00.000Z', statut: 'terminee', nb_arrets_total: 5, nb_arrets_faits: 5 },
+];
+const mondeHistorique = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, routes: ROUTES_HIST.map((r) => ({ ...r })), passesTable: PASSES_HIST.map((p) => ({ ...p })), ...o });
+  await m.run('loadStops()');
+  return m;
+};
+const champRoute = (m) => m.el('admin-body').children[0].children[1];
+const zoneResultatHist = (m) => m.el('admin-body').children[1];
+const choisirRouteHist = async (m, routeId) => { champRoute(m).value = routeId || ''; champRoute(m).onchange(); await attendre(30); };
+
+log('\n=== L\'ONGLET « HISTORIQUE » : CHOISIR UNE ROUTE ===');
+{
+  const m = await mondeHistorique();
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  eq('le menu déroulant propose « — Choisir une route — » puis les routes', champRoute(m).children.map((o) => [o.value, o.textContent]), [['', '— Choisir une route —'], ['r-1', 'Charette']]);
+  eq('aucune route choisie : rien n\'est encore lu, un message invite à en choisir une', [m.appels.lectures.includes('passes'), zoneResultatHist(m).children[0].textContent], [false, 'Choisis une route pour voir ses passes.']);
+  m.fin();
+}
+
+log('\n=== CHOISIR UNE ROUTE : LA LISTE DES PASSES TERMINÉES ===');
+{
+  const m = await mondeHistorique();
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m, 'r-1');
+  vrai('la liste vient d\'une lecture DIRECTE de la table « passes » (pas de fonction serveur)', m.appels.lectures.includes('passes'));
+  vrai('demandée triée par numero DÉCROISSANT (la plus récente en premier)', m.appels.orders.some((o) => o[0] === 'passes' && o[1] === 'numero' && o[2] && o[2].ascending === false));
+  const zone = zoneResultatHist(m);
+  eq('la plus RÉCENTE en premier (numero décroissant)', [zone.children[0].children[0].children[0].textContent, zone.children[1].children[0].children[0].textContent], ['Passe n° 2 · ' + MEC, 'Passe n° 1 · ' + MEC]);
+  vrai('chaque ligne montre la durée et faits/total', zone.children[0].children[0].children[1].textContent.includes('3.0 h') && zone.children[0].children[0].children[1].textContent.includes('4/5') && zone.children[1].children[0].children[1].textContent.includes('4.0 h') && zone.children[1].children[0].children[1].textContent.includes('5/5'));
+  vrai('le bouton « 🔄 Nouvelle saison » est là, ACTIF (aucune passe en cours)', zone.children[2].textContent === '🔄 Nouvelle saison pour cette route' && zone.children[2].disabled === false);
+  m.fin();
+}
+{
+  const m = await mondeHistorique({ passesTable: [] });
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m, 'r-1');
+  eq('aucune passe : message clair, le bouton « Nouvelle saison » reste là (actif)', [zoneResultatHist(m).children[0].textContent, zoneResultatHist(m).children[1].disabled], ['Aucune passe terminée pour cette route.', false]);
+  m.fin();
+}
+{
+  const avecEnCours = PASSES_HIST.concat([{ id: 'p-3', route_id: 'r-1', numero: 3, tache: MEC, debut: '2026-09-10T08:00:00.000Z', fin: null, statut: 'en_cours', nb_arrets_total: 5, nb_arrets_faits: 1 }]);
+  const m = await mondeHistorique({ passesTable: avecEnCours });
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m, 'r-1');
+  const zone = zoneResultatHist(m);
+  eq('une passe encore en cours : avertissement, et le bouton « Nouvelle saison » est DÉSACTIVÉ', [zone.children[0].textContent, zone.children[3].textContent, zone.children[3].disabled, zone.children[3].className], ['⚠ 1 passe(s) encore en cours sur cette route : impossible de commencer une nouvelle saison avant qu’elles soient terminées.', '🔄 Nouvelle saison pour cette route', true, 'lf-btn']);
+  m.fin();
+}
+{
+  const err = await mondeHistorique({ erreurLecture: ['passes'] });
+  await err.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(err, 'r-1');
+  vrai('la liste ne peut pas être lue : message clair, jamais une liste vide (ce serait un mensonge)', zoneResultatHist(err).innerHTML.includes('❌ Impossible de charger les passes') && !zoneResultatHist(err).innerHTML.includes('Aucune passe'));
+  err.fin();
+}
+
+log('\n=== LE DÉTAIL D\'UNE PASSE (QUELS CLIENTS, À QUELLE HEURE, PAR QUI) ===');
+{
+  const arrets = [
+    { id: 'pa-1', passe_id: 'p-2', complete_le: '2026-09-05T09:00:00.000Z', stops: { adresse: '304 rue de l’Église', client: 'Famille Tremblay' }, utilisateurs: { nom: 'Luc Boisvert' } },
+    { id: 'pa-2', passe_id: 'p-2', complete_le: '2026-09-05T09:30:00.000Z', stops: { adresse: '220 rue du Moulin', client: null }, utilisateurs: { nom: 'Luc Boisvert' } },
+  ];
+  const m = await mondeHistorique({ passeArrets: arrets });
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m, 'r-1');
+  const ligneP2 = zoneResultatHist(m).children[0];
+  const btDetail = ligneP2.children[1].children[0];
+  eq('le bouton dit « ▼ Voir le détail »', btDetail.textContent, '▼ Voir le détail');
+  btDetail.onclick(); await attendre(30);
+  vrai('la lecture vient directement de « passe_arrets » (pas de fonction serveur)', m.appels.lectures.includes('passe_arrets'));
+  const zoneDetail = ligneP2.children[2];
+  const dh = (iso) => m.run(`dateHeure(${JSON.stringify(iso)})`);
+  eq('chaque arrêt complété montre le client (ou l’adresse s’il n’a pas de nom de client) et qui l’a fait, quand', [zoneDetail.children[0].textContent, zoneDetail.children[1].textContent, btDetail.textContent],
+    ['· Famille Tremblay — ' + dh(arrets[0].complete_le) + ' (par Luc Boisvert)', '· 220 rue du Moulin — ' + dh(arrets[1].complete_le) + ' (par Luc Boisvert)', '▲ Cacher le détail']);
+  btDetail.onclick();
+  eq('toucher de nouveau CACHE le détail (jamais deux fois la lecture pour rien)', [ligneP2.children.length, btDetail.textContent, m.appels.lectures.filter((t) => t === 'passe_arrets').length], [2, '▼ Voir le détail', 1]);
+  m.fin();
+}
+{
+  const m = await mondeHistorique({ passeArrets: [] });
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m, 'r-1');
+  const ligneP2 = zoneResultatHist(m).children[0];
+  ligneP2.children[1].children[0].onclick(); await attendre(30);
+  eq('une passe sans aucun arrêt complété (rare) : message clair, jamais vide sans explication', ligneP2.children[2].textContent, 'Aucun arrêt complété.');
+  m.fin();
+}
+
+log('\n=== « NOUVELLE SAISON » POUR UNE ROUTE ===');
+{
+  const m = await mondeHistorique({ confirme: true, rpc: { admin_nouvelle_saison_route: (args) => ({ data: { statut: 'ok', route_id: args.p_route_id, numero_base: 2 }, error: null }) } });
+  await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m, 'r-1');
+  const lu = m.appels.lectures.filter((t) => t === 'routes').length;
+  zoneResultatHist(m).children[2].onclick(); await attendre(30);
+  eq('demande une confirmation nommée, explique que l\'historique reste', m.appels.confirmations[0], ['Nouvelle saison pour Charette ?', 'Les prochaines passes recommenceront à « Passe n° 1 ». L’historique (toutes les passes déjà faites) reste conservé, rien n’est effacé.', 'Nouvelle saison', 'Annuler']);
+  eq('… appelle la fonction serveur (JAMAIS une écriture directe) avec le bon route_id, confirme, relit les routes (numero_base a changé)', [m.appels.rpc.find((r) => r.nom === 'admin_nouvelle_saison_route').args, m.dernierToast(), m.appels.lectures.filter((t) => t === 'routes').length - lu], [{ p_route_id: 'r-1' }, '🔄 Nouvelle saison : la prochaine passe de Charette sera la n° 1', 1]);
+  m.fin();
+  const non = await mondeHistorique({ confirme: false });
+  await non.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(non, 'r-1');
+  zoneResultatHist(non).children[2].onclick(); await attendre(30);
+  vrai('« Annuler » : rien n\'est appelé', non.appels.rpc.every((r) => r.nom !== 'admin_nouvelle_saison_route'));
+  non.fin();
+}
+{
+  const essai = async (rep) => {
+    const m = await mondeHistorique({ confirme: true, rpc: { admin_nouvelle_saison_route: rep } });
+    await m.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+    await choisirRouteHist(m, 'r-1');
+    zoneResultatHist(m).children[2].onclick(); await attendre(30);
+    const t = m.dernierToast();
+    m.fin();
+    return t;
+  };
+  eq('la fonction REFUSE (une passe s\'est mise à courir entre-temps) : message clair', await essai({ data: { statut: 'refuse', raison: 'passe_en_cours' }, error: null }), '❌ Impossible : une passe de cette route est encore en cours.');
+  eq('une réponse SANS « statut: ok » n\'est jamais prise pour un succès', await essai({ data: { autre: true }, error: null }), '❌ Impossible de commencer une nouvelle saison');
+  eq('pas de réseau', await essai({ data: null, error: { message: 'Failed to fetch' } }), '📴 Pas de réseau : rien n’a été changé.');
+  const m2 = await mondeHistorique({ confirme: true, rpc: { admin_nouvelle_saison_route: () => { throw new TypeError('Failed to fetch'); } } });
+  await m2.run(`_adminOnglet='historique';chargerPanneauAdmin();`); await attendre(30);
+  await choisirRouteHist(m2, 'r-1');
+  await m2.run('reseau.enLigne=true;');
+  zoneResultatHist(m2).children[2].onclick(); await attendre(30);
+  eq('l\'appel plante avec une VRAIE panne de réseau : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+
+log('\n=== LE CODE : L\'ONGLET « HISTORIQUE » ===');
+{
+  const page = lire('index.html'), adm = lire('js/admin.js'), admH = lire('js/admin-historique.js');
+  vrai('la page charge admin-historique.js juste après admin-export.js, avant liste-arrets.js', page.indexOf('js/admin-export.js') < page.indexOf('js/admin-historique.js') && page.indexOf('js/admin-historique.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'historique',icone:'📜',label:'Historique',titre:'Historique des passes',charger:\(typeof chargerHistoriqueAdmin==='function'\)\?chargerHistoriqueAdmin:null\}/.test(adm));
+  vrai('« Nouvelle saison » passe TOUJOURS par la fonction serveur admin_nouvelle_saison_route (SQL 25), JAMAIS une écriture directe sur passes/routes', /db\.rpc\('admin_nouvelle_saison_route'/.test(admH) && !/from\(\s*['"](passes|routes)['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(admH));
+  vrai('le vrai numero n\'est JAMAIS renommé ici : aucune écriture sur la colonne numero elle-même', !/numero\s*:/.test(admH.replace(/numero_base/g, '')));
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

@@ -601,3 +601,6 @@
 .regl-unite{font-size:12px;color:var(--muted);}
 .regl-btn{margin-left:auto;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:#161c24;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
 .regl-btn:active{filter:brightness(.85);}
+
+/* Étape 19 (suite) : l'onglet « Historique » (admin-historique.js) — le détail des arrêts complétés d'une passe passée */
+.hist-detail{flex-basis:100%;margin-top:6px;padding-top:6px;border-top:1px solid rgba(37,45,58,.6);}

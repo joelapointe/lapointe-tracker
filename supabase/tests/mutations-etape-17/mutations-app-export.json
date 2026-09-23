@@ -1,0 +1,128 @@
+[
+  {
+    "nom": "le nouvel onglet « Export » disparaît de la liste des onglets",
+    "fichier": "js/admin.js",
+    "de": "{id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:(typeof chargerExportAdmin==='function')?chargerExportAdmin:null},\n  ];",
+    "vers": "];"
+  },
+  {
+    "nom": "les champs de date ne sont plus remplis par défaut (période vide à l'ouverture)",
+    "fichier": "js/admin-export.js",
+    "de": "debutInput.value=def.debut;",
+    "vers": "debutInput.value='';"
+  },
+  {
+    "nom": "un début ou une fin vide est maintenant accepté (envoyé au serveur sans rien vérifier)",
+    "fichier": "js/admin-export.js",
+    "de": "if(!debutVal||!finVal){toast('⚠ Choisis une période');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "une fin avant le début n'est plus refusée AVANT d'appeler le serveur",
+    "fichier": "js/admin-export.js",
+    "de": "if(!(finExclusive.getTime()>debut.getTime())){toast('⚠ La date de fin doit être après (ou égale à) la date de début');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "« Au » n'est plus INCLUS : le dernier jour choisi disparaît du calcul (la borne envoyée n'avance plus d'un jour)",
+    "fichier": "js/admin-export.js",
+    "de": "finExclusive.setDate(finExclusive.getDate()+1);",
+    "vers": ""
+  },
+  {
+    "nom": "l'export appelle maintenant une fonction serveur INEXISTANTE (mauvais nom)",
+    "fichier": "js/admin-export.js",
+    "de": "const r=await db.rpc('admin_export_paie',{p_debut:debut.toISOString(),p_fin:finExclusive.toISOString()});",
+    "vers": "const r=await db.rpc('admin_export_paie_zzz',{p_debut:debut.toISOString(),p_fin:finExclusive.toISOString()});"
+  },
+  {
+    "nom": "une réponse sans « statut » est maintenant prise pour un succès quand même",
+    "fichier": "js/admin-export.js",
+    "de": "if(!data||!data.statut){toast('❌ Réponse illisible du serveur');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "un refus (quarts à valider) est maintenant affiché comme un succès (le tableau vide se dessine à la place du message)",
+    "fichier": "js/admin-export.js",
+    "de": "if(data.statut==='refuse'){exportPaieAdmin=null;afficherRefusExport(data,resultat);return;}",
+    "vers": ""
+  },
+  {
+    "nom": "le message de refus (quarts à valider) ne nomme plus les employés concernés",
+    "fichier": "js/admin-export.js",
+    "de": "div.textContent='⚠ Export refusé : '+(data.quarts||[]).length+' quart(s) à valider dans cette période ('+noms+'). Règle-les dans l’onglet « Quarts » avant de générer l’export.';",
+    "vers": "div.textContent='⚠ Export refusé.';"
+  },
+  {
+    "nom": "le bouton « Aller à l'onglet Quarts » mène maintenant vers le MAUVAIS onglet",
+    "fichier": "js/admin-export.js",
+    "de": "btAller.onclick=()=>changerOngletAdmin('quarts');",
+    "vers": "btAller.onclick=()=>changerOngletAdmin('reglages');"
+  },
+  {
+    "nom": "un statut de réponse inconnu (ni ok ni refuse) est maintenant pris pour un succès",
+    "fichier": "js/admin-export.js",
+    "de": "if(data.statut!=='ok'){toast('❌ Impossible de générer l’export');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "aucune heure pour la période : plus aucun message (l'écran reste vide, silencieusement)",
+    "fichier": "js/admin-export.js",
+    "de": "vide.textContent='Aucune heure pour cette période.';",
+    "vers": "vide.textContent='';"
+  },
+  {
+    "nom": "l'avertissement des périodes d'équipage à vérifier ne s'affiche plus jamais",
+    "fichier": "js/admin-export.js",
+    "de": "if(av>0){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "la répartition par véhicule/route n'est plus affichée pour chaque employé",
+    "fichier": "js/admin-export.js",
+    "de": "(e.repartition||[]).forEach(r=>{texte+='\\n· '+r.vehicule+' / '+r.route+' : '+r.heures+' h';});",
+    "vers": ""
+  },
+  {
+    "nom": "les heures hors équipage ne sont plus affichées",
+    "fichier": "js/admin-export.js",
+    "de": "if(e.hors_equipage>0) texte+='\\n· Hors équipage : '+e.hors_equipage+' h';",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton « Télécharger (CSV) » n'apparaît plus après un export réussi",
+    "fichier": "js/admin-export.js",
+    "de": "btDl.textContent='⬇ Télécharger (CSV)';",
+    "vers": "btDl.textContent='';"
+  },
+  {
+    "nom": "une panne de réseau n'est plus détectée en générant un export (jamais marqué hors réseau)",
+    "fichier": "js/admin-export.js",
+    "de": "catch(e){error=e;signalerEchecReseau(e);}",
+    "vers": "catch(e){error=e;}"
+  },
+  {
+    "nom": "le CSV n'a plus d'en-tête (première ligne de données prise pour l'en-tête par un tableur)",
+    "fichier": "js/admin-export.js",
+    "de": "const lignes=[['Employé','Total heures','Quarts','Véhicule','Route','Heures']];",
+    "vers": "const lignes=[];"
+  },
+  {
+    "nom": "les heures hors équipage disparaissent complètement du fichier CSV (jamais une ligne)",
+    "fichier": "js/admin-export.js",
+    "de": "if(e.hors_equipage>0) lignes.push([e.nom,e.heures,e.quarts,'','Hors équipage',e.hors_equipage]);",
+    "vers": ""
+  },
+  {
+    "nom": "un employé sans répartition ET sans hors-équipage disparaît complètement du fichier CSV",
+    "fichier": "js/admin-export.js",
+    "de": "if(!rep.length&&!(e.hors_equipage>0)) lignes.push([e.nom,e.heures,e.quarts,'','','']);",
+    "vers": ""
+  },
+  {
+    "nom": "un nom avec une virgule ou des guillemets n'est plus échappé (fichier CSV cassé, colonnes décalées)",
+    "fichier": "js/admin-export.js",
+    "de": "return /[\",\\r\\n]/.test(s)?'\"'+s.replace(/\"/g,'\"\"')+'\"':s;",
+    "vers": "return s;"
+  }
+]

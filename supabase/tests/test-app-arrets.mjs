@@ -138,7 +138,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js', 'js/admin-quarts.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js', 'js/admin-quarts.js', 'js/admin-export.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -656,11 +656,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab'], ['💰 Export', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -1506,6 +1506,137 @@ log('\n=== LE CODE : L\'ONGLET « QUARTS » (étape 19, morceau 5) ===');
   vrai('corriger un quart passe TOUJOURS par la fonction serveur admin_corriger_quart (SQL 24), JAMAIS une écriture directe sur quarts/equipage_periodes/equipage_journal', /db\.rpc\('admin_corriger_quart'/.test(admQ) && !/from\(\s*['"](equipage_periodes|equipage_journal|quarts)['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(admQ));
   vrai('annuler un transfert, lui, passe par la fonction serveur déjà prête (deux lignes à faire correspondre)', /db\.rpc\('admin_annuler_transfert'/.test(admQ));
   vrai('la note tapée est envoyée telle quelle (jamais pré-concaténée côté app) : c\'est la fonction serveur qui l\'ajoute à celle déjà là', /p_note:note/.test(admQ) && !/q\.note/.test(admQ));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 19 (SUITE, MORCEAU 5, PARTIE B) : L'ONGLET « EXPORT » (www/js/admin.js, admin-export.js)
+// admin_export_paie (étape 9b) existe déjà côté serveur : heures par employé pour une période, réparties par véhicule/route.
+// Rien à écrire ici : une lecture calculée seulement (aucun rapport avec le principe « jamais d'écriture directe » des quarts).
+// L'export REFUSE tant qu'un quart de la période est à valider ou encore ouvert.
+// ══════════════════════════════════════════════════════════════════════
+const mondeExport = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, ...o });
+  await m.run('loadStops()');
+  return m;
+};
+// Les champs de date et la zone de résultat sont des FERMETURES (comme le champ de chaque réglage) : retrouvés par structure,
+// pas par document.getElementById (ils n'existent que dans cet onglet, jamais dans le HTML figé de la page).
+const champExpDebut = (m) => m.el('admin-body').children[0].children[0].children[1];
+const champExpFin = (m) => m.el('admin-body').children[0].children[1].children[1];
+const boutonGenererExport = (m) => m.el('admin-body').children[1];
+const resultatExport = (m) => m.el('admin-body').children[2];
+const genererExport = (m) => boutonGenererExport(m).onclick();
+
+log('\n=== L\'ONGLET « EXPORT » : LA PÉRIODE PAR DÉFAUT ===');
+{
+  const m = await mondeExport();
+  await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  eq('les deux champs de date sont déjà remplis (une période par défaut), le bouton « Générer » est là', [champExpDebut(m).value !== '', champExpFin(m).value !== '', boutonGenererExport(m).textContent], [true, true, '📊 Générer']);
+  m.fin();
+}
+
+log('\n=== GÉNÉRER L\'EXPORT : SUCCÈS ===');
+{
+  const REPONSE_OK = { statut: 'ok', periode: {}, employes: [
+    { utilisateur_id: 'e-luc', nom: 'Luc Boisvert', heures: 42.5, quarts: 5, repartition: [{ vehicule: 'Camion 1', route: 'Charette', heures: 40 }], hors_equipage: 2.5 },
+    { utilisateur_id: 'e-marc', nom: 'Marc Tremblay', heures: 10, quarts: 1, repartition: [], hors_equipage: 0 },
+  ], avertissements: { periodes_equipage_a_verifier: 0 } };
+  const m = await mondeExport({ rpc: { admin_export_paie: (args) => ({ data: { ...REPONSE_OK, periode: args }, error: null }) } });
+  await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  champExpDebut(m).value = '2026-09-01';
+  champExpFin(m).value = '2026-09-15';
+  genererExport(m); await attendre(30);
+  eq('« Au » est INCLUS à l\'écran : la borne envoyée au serveur est le LENDEMAIN minuit (admin_export_paie compare avec <)', m.appels.rpc.find((r) => r.nom === 'admin_export_paie').args, { p_debut: new Date('2026-09-01T00:00:00').toISOString(), p_fin: new Date('2026-09-16T00:00:00').toISOString() });
+  const zone = resultatExport(m);
+  eq('chaque employé montre ses heures, ses quarts, sa répartition par véhicule/route, et le hors-équipage s\'il y en a', [zone.children[0].children[0].children[0].textContent, zone.children[0].children[0].children[1].textContent, zone.children[1].children[0].children[1].textContent],
+    ['Luc Boisvert', '42.5 h · 5 quarts\n· Camion 1 / Charette : 40 h\n· Hors équipage : 2.5 h', '10 h · 1 quart']);
+  vrai('le bouton « ⬇ Télécharger (CSV) » apparaît après un export réussi', zone.children[2].textContent === '⬇ Télécharger (CSV)');
+  m.fin();
+}
+{
+  const m = await mondeExport({ rpc: { admin_export_paie: { data: { statut: 'ok', employes: [], avertissements: { periodes_equipage_a_verifier: 3 } }, error: null } } });
+  await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  genererExport(m); await attendre(30);
+  eq('aucune heure pour la période : message clair (pas de tableau vide trompeur), l\'avertissement d\'équipage à vérifier est montré', [resultatExport(m).children[1].textContent, resultatExport(m).children[0].textContent], ['Aucune heure pour cette période.', '⚠ 3 période(s) d’équipage à vérifier — voir l’onglet Quarts.']);
+  m.fin();
+}
+
+log('\n=== GÉNÉRER L\'EXPORT : REFUSÉ (QUARTS À RÉGLER D\'ABORD) ===');
+{
+  const m = await mondeExport({ rpc: { admin_export_paie: { data: { statut: 'refuse', raison: 'quarts_a_valider', quarts: [{ quart_id: 'q1', employe: 'Luc Boisvert', debut: '2026-09-05T00:00:00Z', fin: '2026-09-05T08:00:00Z' }] }, error: null } } });
+  await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  genererExport(m); await attendre(30);
+  eq('message clair, nomme l\'employé concerné, AUCUN tableau montré', resultatExport(m).children[0].textContent, '⚠ Export refusé : 1 quart(s) à valider dans cette période (Luc Boisvert). Règle-les dans l’onglet « Quarts » avant de générer l’export.');
+  eq('un bouton mène directement à l\'onglet Quarts', resultatExport(m).children[1].textContent, 'Aller à l’onglet Quarts');
+  resultatExport(m).children[1].onclick();
+  eq('… et l\'onglet change vraiment', m.run('_adminOnglet'), 'quarts');
+  m.fin();
+}
+{
+  const m = await mondeExport({ rpc: { admin_export_paie: { data: { statut: 'refuse', raison: 'quarts_ouverts', quarts: [{ quart_id: 'q2', employe: 'Nina Roy', debut: '2026-09-10T00:00:00Z' }] }, error: null } } });
+  await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  genererExport(m); await attendre(30);
+  eq('quarts encore ouverts : message clair, mais PAS de bouton « aller » (rien que l\'administrateur puisse faire directement)', [resultatExport(m).children[0].textContent, resultatExport(m).children.length], ['⚠ Export refusé : 1 quart(s) encore ouverts (pas terminés) dans cette période (Nina Roy). Attends qu’ils soient fermés.', 1]);
+  m.fin();
+}
+
+log('\n=== GÉNÉRER L\'EXPORT : VALIDATION ET ERREURS ===');
+{
+  const m = await mondeExport();
+  await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  champExpDebut(m).value = ''; champExpFin(m).value = '2026-09-15';
+  genererExport(m); await attendre(30);
+  eq('date de début vide : refusé avant d\'appeler le serveur', [m.dernierToast(), m.appels.rpc.filter((r) => r.nom === 'admin_export_paie').length], ['⚠ Choisis une période', 0]);
+  champExpDebut(m).value = '2026-09-20'; champExpFin(m).value = '2026-09-10';
+  genererExport(m); await attendre(30);
+  eq('« au » avant « du » : refusé avant d\'appeler le serveur', [m.dernierToast(), m.appels.rpc.filter((r) => r.nom === 'admin_export_paie').length], ['⚠ La date de fin doit être après (ou égale à) la date de début', 0]);
+  champExpDebut(m).value = '2026-09-10'; champExpFin(m).value = '2026-09-10';
+  genererExport(m); await attendre(30);
+  eq('« du » et « au » la MÊME date (une seule journée) : accepté, le serveur est appelé', m.appels.rpc.filter((r) => r.nom === 'admin_export_paie').length, 1);
+  m.fin();
+}
+{
+  const essai = async (rep) => {
+    const m = await mondeExport({ rpc: { admin_export_paie: rep } });
+    await m.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+    genererExport(m); await attendre(30);
+    const t = m.dernierToast();
+    m.fin();
+    return t;
+  };
+  eq('pas de réseau : message clair', await essai({ data: null, error: { message: 'Failed to fetch' } }), '📴 Pas de réseau : réessaie plus tard.');
+  eq('une autre erreur du serveur : son message tel quel', await essai({ data: null, error: { message: 'permission denied' } }), '❌ permission denied');
+  eq('une réponse sans « statut » n\'est jamais prise pour un succès', await essai({ data: {}, error: null }), '❌ Réponse illisible du serveur');
+  eq('un « statut » ni « ok » ni « refuse » (inconnu) n\'est jamais pris pour un succès non plus', await essai({ data: { statut: 'huh', employes: [{ nom: 'X', heures: 1, quarts: 1 }] }, error: null }), '❌ Impossible de générer l’export');
+  const m2 = await mondeExport({ rpc: { admin_export_paie: () => { throw new TypeError('Failed to fetch'); } } });
+  await m2.run(`_adminOnglet='export';chargerPanneauAdmin();`); await attendre(30);
+  await m2.run('reseau.enLigne=true;');
+  genererExport(m2); await attendre(30);
+  eq('l\'appel plante avec une VRAIE panne de réseau : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+
+log('\n=== LE CSV : UNE FONCTION PURE, TESTABLE SANS NAVIGATEUR ===');
+{
+  const m = await mondeExport();
+  const donnees = { employes: [
+    { nom: 'Luc Boisvert', heures: 42.5, quarts: 5, repartition: [{ vehicule: 'Camion 1', route: 'Charette', heures: 40 }], hors_equipage: 2.5 },
+    { nom: 'Marc "Le Chef" Tremblay', heures: 10, quarts: 1, repartition: [], hors_equipage: 0 },
+  ] };
+  const csv = m.run(`csvExportPaie(${JSON.stringify(donnees)})`);
+  const lignes = csv.split('\r\n');
+  eq('l\'en-tête, puis une ligne par (employé, véhicule, route)', [lignes[0], lignes[1]], ['Employé,Total heures,Quarts,Véhicule,Route,Heures', 'Luc Boisvert,42.5,5,Camion 1,Charette,40']);
+  eq('le hors-équipage devient sa PROPRE ligne (colonne Véhicule vide)', lignes[2], 'Luc Boisvert,42.5,5,,Hors équipage,2.5');
+  eq('un employé sans répartition ET sans hors-équipage a quand même UNE ligne (jamais disparu du fichier), un nom avec des guillemets est échappé (doublés, tout le champ entre guillemets)', lignes[3], '"Marc ""Le Chef"" Tremblay",10,1,,,');
+}
+
+log('\n=== LE CODE : L\'ONGLET « EXPORT » (étape 19, morceau 5) ===');
+{
+  const page = lire('index.html'), adm = lire('js/admin.js'), admE = lire('js/admin-export.js');
+  vrai('la page charge admin-export.js juste après admin-quarts.js, avant liste-arrets.js', page.indexOf('js/admin-quarts.js') < page.indexOf('js/admin-export.js') && page.indexOf('js/admin-export.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:\(typeof chargerExportAdmin==='function'\)\?chargerExportAdmin:null\}/.test(adm));
+  vrai('aucune écriture ici (une lecture calculée seulement) : ni db.from(...).insert/update/delete, ni db.functions.invoke', !/\.insert\(|\.update\(|\.delete\(\)|db\.functions\.invoke/.test(admE));
+  vrai('la construction du CSV (csvExportPaie) est séparée du déclenchement du téléchargement (Blob/URL, propre au navigateur, jamais testable ici)', /function csvExportPaie\(/.test(admE) && /function telechargerExportPaieCsv\(/.test(admE) && /new Blob\(/.test(admE));
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

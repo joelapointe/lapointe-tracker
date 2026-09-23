@@ -14,6 +14,7 @@ function ongletsAdmin(){
     {id:'reglages',icone:'🕒',label:'Réglages',titre:'Réglages',charger:(typeof chargerReglagesAdmin==='function')?chargerReglagesAdmin:null},
     {id:'types-service',icone:'🧰',label:'Services',titre:'Types de service',charger:(typeof chargerTypesServiceAdmin==='function')?chargerTypesServiceAdmin:null},
     {id:'quarts',icone:'⏱',label:'Quarts',titre:'Quarts à valider',charger:(typeof chargerQuartsAdmin==='function')?chargerQuartsAdmin:null},
+    {id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:(typeof chargerExportAdmin==='function')?chargerExportAdmin:null},
   ];
 }
 let _adminOnglet='problemes';

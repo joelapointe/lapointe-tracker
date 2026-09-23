@@ -473,10 +473,11 @@ log('\n=== 14b — LE POURCENTAGE EN GROS ET « TERMINER » ===');
   vrai('un pourcentage piégé devient 0 (rien n\'est exécuté)', !bandeau(m).includes('<img') && bandeau(m).includes('0 %'), bandeau(m));
 
   // — Les services (demande de Joé, 21 sept. : « ajouter les services coupe de gazon, engrais, ramassage de feuilles ») —
+  // Étape 19 : le menu déroulant « ＋ STOP » n'est plus figé dans index.html, il vient de la table types_service (admin-types-service.js) ;
+  // TYPES_SERVICE_DEFAUT (liste-arrets.js) est le FILET (table illisible) qui garde ces mêmes 8 services, dans le même ordre.
   {
-    const page = lire('index.html');
-    const options = [...page.matchAll(/<select id="f-svc">([^]*?)<\/select>/g)][0]?.[1].match(/<option>([^<]*)<\/option>/g)?.map((x) => x.replace(/<\/?option>/g, '')) ?? [];
-    eq('le formulaire « ＋ STOP » propose les services d\'hiver ET ceux de l\'été (coupe de gazon, engrais, ramassage de feuilles), « Autre » en dernier', options, ['Déneigement mécanique', 'Déneigement manuel', 'Épandage de sel', 'Entretien paysager', 'Coupe de gazon', 'Engrais', 'Ramassage de feuilles', 'Autre']);
+    eq('le filet (TYPES_SERVICE_DEFAUT) propose les services d\'hiver ET ceux de l\'été (coupe de gazon, engrais, ramassage de feuilles), « Autre » en dernier', [...lire('js/liste-arrets.js').matchAll(/TYPES_SERVICE_DEFAUT=\[([^\]]*)\]/g)][0]?.[1].split(',').map((x) => x.replace(/'/g, '')), ['Déneigement mécanique', 'Déneigement manuel', 'Épandage de sel', 'Entretien paysager', 'Coupe de gazon', 'Engrais', 'Ramassage de feuilles', 'Autre']);
+    vrai('le menu déroulant « ＋ STOP » n\'est plus figé dans la page : les options sont vides tant que le JS ne les a pas remplies', /<select id="f-svc"><\/select>/.test(lire('index.html')));
     vrai('… et « Débuter la passe » propose comme tâches les services des arrêts de la route (donc les nouveaux services dès qu\'un arrêt les utilise)', lire('js/passe.js').includes('stops.forEach(s=>{if(s.route_id===routeId&&s.actif!==false&&s.service) vus.add(s.service);});'));
   }
 

@@ -17,6 +17,7 @@ async function loadStops(){
     await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
     await chargerVehiculesEtEquipages(); // noms des camions et équipages à bord (étape 13f)
     if(typeof chargerReglagesQuart==='function') await chargerReglagesQuart();   // rappel, pause, durée maximale d'un quart (étape 17, quart.js) : AVANT le quart, pour que le premier contrôle les connaisse
+    if(typeof chargerTypesService==='function') await chargerTypesService();   // le menu déroulant « ＋ Nouveau stop » (étape 19, liste-arrets.js)
     if(typeof chargerMonQuart==='function') await chargerMonQuart();   // suis-je en service ? (étape 17, quart.js)
     demarrerRelecturePositions();
     if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // la position du camion, si je conduis une passe (étape 18, tracking.js)

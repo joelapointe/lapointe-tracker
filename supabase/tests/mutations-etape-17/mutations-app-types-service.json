@@ -1,0 +1,122 @@
+[
+  {
+    "nom": "le nouvel onglet « Services » disparaît de la liste des onglets",
+    "fichier": "js/admin.js",
+    "de": "{id:'types-service',icone:'🧰',label:'Services',titre:'Types de service',charger:(typeof chargerTypesServiceAdmin==='function')?chargerTypesServiceAdmin:null},\n  ];",
+    "vers": "];"
+  },
+  {
+    "nom": "la liste des types de service n'est plus installée après la lecture (toujours vide, même si le serveur répond)",
+    "fichier": "js/admin-types-service.js",
+    "de": "typesServiceAdmin=Array.isArray(data)?data:[];",
+    "vers": "typesServiceAdmin=[];"
+  },
+  {
+    "nom": "une erreur de lecture n'affiche plus de message clair (l'écran reste vide, silencieusement)",
+    "fichier": "js/admin-types-service.js",
+    "de": "if(error){\n    body.innerHTML='<div style=\"padding:16px;color:#ef4444;font-size:13px;\">❌ Impossible de charger les types de service. Vérifie la connexion, puis réessaie.</div>';\n    return;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "le badge « Actif »/« Désactivé » ne suit plus l'état réel du type (toujours « Actif »)",
+    "fichier": "js/admin-types-service.js",
+    "de": "badge.className='emp-badge '+(t.actif?'actif':'inactif');\n    badge.textContent=t.actif?'Actif':'Désactivé';",
+    "vers": "badge.className='emp-badge actif';\n    badge.textContent='Actif';"
+  },
+  {
+    "nom": "le bouton Désactiver/Réactiver dit toujours « Désactiver », même sur un type déjà désactivé",
+    "fichier": "js/admin-types-service.js",
+    "de": "btEtat.textContent=t.actif?'Désactiver':'Réactiver';",
+    "vers": "btEtat.textContent='Désactiver';"
+  },
+  {
+    "nom": "aucune ligne ne se dessine (la liste reste toujours vide à l'écran, même avec des types)",
+    "fichier": "js/admin-types-service.js",
+    "de": "typesServiceAdmin.forEach(t=>{",
+    "vers": "[].forEach(t=>{"
+  },
+  {
+    "nom": "une désactivation ne demande plus AUCUNE confirmation (dangereux : un toucher accidentel désactive un type)",
+    "fichier": "js/admin-types-service.js",
+    "de": "if(!actif&&!(await confirmer('Désactiver '+t.nom+' ?','Il ne sera plus proposé pour un nouvel arrêt. Les arrêts déjà créés avec ce type ne changent pas.','Désactiver','Annuler'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "désactiver/réactiver écrit toujours « actif:true », même en désactivant",
+    "fichier": "js/admin-types-service.js",
+    "de": "const r=await db.from('types_service').update({actif}).eq('id',t.id);",
+    "vers": "const r=await db.from('types_service').update({actif:true}).eq('id',t.id);"
+  },
+  {
+    "nom": "après avoir désactivé/réactivé, la liste ne se relit plus (l'écran reste périmé)",
+    "fichier": "js/admin-types-service.js",
+    "de": "toast(actif?'✔ '+t.nom+' est réactivé':'✔ '+t.nom+' est désactivé');\n  await chargerTypesServiceAdmin();",
+    "vers": "toast(actif?'✔ '+t.nom+' est réactivé':'✔ '+t.nom+' est désactivé');"
+  },
+  {
+    "nom": "« ＋ Nouveau type de service » reste coincé en mode « Renommer » après un renommage précédent",
+    "fichier": "js/admin-types-service.js",
+    "de": "function ouvrirNouveauTypeService(){\n  _typeServiceIdEnEdition=null;",
+    "vers": "function ouvrirNouveauTypeService(){"
+  },
+  {
+    "nom": "« Renommer » n'affiche plus le nom actuel dans le champ",
+    "fichier": "js/admin-types-service.js",
+    "de": "document.getElementById('nts-nom').value=t.nom;",
+    "vers": "document.getElementById('nts-nom').value='';"
+  },
+  {
+    "nom": "un nom vide est maintenant accepté (envoyé au serveur sans rien vérifier)",
+    "fichier": "js/admin-types-service.js",
+    "de": "if(!nom){toast('⚠ Entre un nom de type de service');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "les espaces autour du nom ne sont plus retirés avant l'envoi",
+    "fichier": "js/admin-types-service.js",
+    "de": "const nom=document.getElementById('nts-nom').value.trim();",
+    "vers": "const nom=document.getElementById('nts-nom').value;"
+  },
+  {
+    "nom": "« Renommer » crée un NOUVEAU type au lieu de modifier celui qu'on renomme",
+    "fichier": "js/admin-types-service.js",
+    "de": "const r=enEdition\n      ?await db.from('types_service').update({nom}).eq('id',enEdition)\n      :await db.from('types_service').insert([{nom}]);",
+    "vers": "const r=await db.from('types_service').insert([{nom}]);"
+  },
+  {
+    "nom": "après avoir créé ou renommé un type, la liste de l'onglet ne se relit plus",
+    "fichier": "js/admin-types-service.js",
+    "de": "fermerNouveauTypeService();\n  await chargerTypesServiceAdmin();",
+    "vers": "fermerNouveauTypeService();"
+  },
+  {
+    "nom": "après avoir créé ou renommé un type, le menu déroulant « ＋ Nouveau stop » n'est plus rafraîchi (il faudrait fermer et rouvrir l'app)",
+    "fichier": "js/admin-types-service.js",
+    "de": "if(typeof chargerTypesService==='function') await chargerTypesService();   // le menu déroulant « ＋ Nouveau stop » (liste-arrets.js) suit tout de suite",
+    "vers": ""
+  },
+  {
+    "nom": "un nom déjà utilisé (contrainte unique) n'est plus expliqué en mots simples",
+    "fichier": "js/admin-types-service.js",
+    "de": "if(String(error&&error.code)==='23505') return '❌ Ce nom de type de service existe déjà.';",
+    "vers": ""
+  },
+  {
+    "nom": "une panne de réseau n'est plus détectée sur une création/modification de type (jamais marqué hors réseau)",
+    "fichier": "js/admin-types-service.js",
+    "de": "catch(e){error=e;signalerEchecReseau(e);}",
+    "vers": "catch(e){error=e;}"
+  },
+  {
+    "nom": "le menu « ＋ Nouveau stop » n'est plus rempli à l'ouverture (les options restent celles d'avant, ou vides)",
+    "fichier": "js/liste-arrets.js",
+    "de": "  document.getElementById('f-client').value='';\n  remplirTypesService();",
+    "vers": "  document.getElementById('f-client').value='';"
+  },
+  {
+    "nom": "le filet (8 options d'avant l'étape 19) ne prend plus le relais si la table est illisible : le menu resterait vide",
+    "fichier": "js/liste-arrets.js",
+    "de": "(typesServiceActifs.length?typesServiceActifs:TYPES_SERVICE_DEFAUT).forEach(nom=>{",
+    "vers": "typesServiceActifs.forEach(nom=>{"
+  }
+]

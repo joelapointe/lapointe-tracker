@@ -47,6 +47,7 @@ function monde(o = {}) {
     equipage_periodes: o.equipages ?? [],
     parcours_segments: o.segments ?? [],   // les tronçons du tracé (étape 18b, parcours.js)
     reglages: o.reglages ?? [],
+    types_service: o.typesService ?? [],
   };
   const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], informations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
   const reponsesRpc = o.rpc ?? {};
@@ -134,7 +135,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -652,11 +653,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -862,7 +863,7 @@ log('\n=== LE CODE : LE PANNEAU ADMINISTRATEUR (étape 19) ===');
   vrai('la page charge admin-employes.js juste après admin.js', page.indexOf('js/admin.js') < page.indexOf('js/admin-employes.js') && page.indexOf('js/admin-employes.js') < page.indexOf('js/liste-arrets.js'));
   vrai('le panneau a une zone d\'onglets ENTRE l\'en-tête et le corps, et la fenêtre « ＋ Nouvel employé »', page.indexOf('id="admin-header"') < page.indexOf('id="admin-tabs"') && page.indexOf('id="admin-tabs"') < page.indexOf('id="admin-body"') && page.includes('id="nouvel-employe-overlay"'));
   vrai('la fenêtre « Nouvel employé » se ferme au toucher en dehors, comme les autres', /onclick="bgClickNE\(event\)"/.test(page));
-  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
   vrai('les onglets sont une FONCTION (pas une liste figée au chargement) : les fichiers des futurs onglets peuvent se charger après celui-ci', /function ongletsAdmin\(\)/.test(adm));
   vrai('ouvrir le panneau repart toujours sur l\'onglet « Problèmes »', /_adminOnglet='problemes';/.test(adm));
   vrai('un compte administrateur ne se gère pas ici : la liste ne montre ses boutons qu\'aux employés', /if\(u\.role==='employe'\)\{/.test(admE));
@@ -1018,7 +1019,7 @@ log('\n=== LE CODE : L\'ONGLET « VÉHICULES » (étape 19) ===');
   const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admV = lire('js/admin-vehicules.js');
   vrai('la page charge admin-vehicules.js juste après admin-employes.js, avant liste-arrets.js', page.indexOf('js/admin-employes.js') < page.indexOf('js/admin-vehicules.js') && page.indexOf('js/admin-vehicules.js') < page.indexOf('js/liste-arrets.js'));
   vrai('la fenêtre « Nouveau véhicule » est dans la page, et se ferme au toucher en dehors, comme les autres', page.includes('id="nouveau-vehicule-overlay"') && /onclick="bgClickNV\(event\)"/.test(page));
-  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-vehicule-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouvel-employe-overlay,#nouveau-vehicule-overlay,#prob-overlay'));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-vehicule-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay'));
   vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'vehicules',icone:'🚚',label:'Véhicules',titre:'Véhicules',charger:\(typeof chargerVehiculesAdmin==='function'\)\?chargerVehiculesAdmin:null\}/.test(adm));
   vrai('un véhicule ne se supprime JAMAIS ici (il reste lié à son historique) : seulement créer, renommer, désactiver/réactiver', !/db\.from\('equipes'\)\.delete\(\)/.test(admV) && /db\.from\('equipes'\)\.insert/.test(admV) && /db\.from\('equipes'\)\.update\(\{nom\}\)/.test(admV) && /db\.from\('equipes'\)\.update\(\{actif\}\)/.test(admV));
   vrai('aucune fonction serveur ici : des écritures directes sur « equipes » (contrairement aux employés)', !/db\.functions\.invoke/.test(admV));
@@ -1130,6 +1131,185 @@ log('\n=== LE CODE : L\'ONGLET « RÉGLAGES » (étape 19) ===');
   vrai('l\'écran est GÉNÉRIQUE : aucun nom de réglage n\'est écrit en dur (un futur réglage ajouté par SQL apparaîtrait tout seul, sans changer ce fichier)', !/rappel_en_service_heures|suggestion_pause_heures|duree_max_quart_heures|duree_max_passe_heures|fin_equipe_apres_passe_heures|alerte_quart_termine_heures/.test(admR));
   vrai('seule « valeur » est écrite (jamais « cle » ni « description », non accordées en écriture par les règles d\'accès)', /db\.from\('reglages'\)\.update\(\{valeur:v\}\)/.test(admR) && !/update\(\{[^}]*cle:/.test(admR) && !/update\(\{[^}]*description:/.test(admR));
   vrai('aucune fonction serveur ici, aucun SQL requis : une écriture directe sur « reglages »', !/db\.functions\.invoke/.test(admR));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 19 (SUITE) : L'ONGLET « SERVICES » (types de service, www/js/admin.js, admin-types-service.js, SQL 23)
+// Un type de service = une ligne de « types_service » (nom, actif) : AUCUNE fonction serveur (comme les véhicules) — des
+// écritures directes suffisent. stops.service reste un simple texte SANS lien (clé étrangère) vers cette table : renommer
+// ou désactiver un type ne change jamais les arrêts déjà créés. On ne supprime donc jamais un type ici, seulement « Désactiver ».
+// ══════════════════════════════════════════════════════════════════════
+const TYPES_SERVICE = [
+  { id: 'ts-1', nom: 'Déneigement mécanique', actif: true },
+  { id: 'ts-2', nom: 'Engrais', actif: false },
+];
+const mondeTS = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, typesService: TYPES_SERVICE.map((t) => ({ ...t })), ...o });
+  await m.run('loadStops()');
+  return m;
+};
+const ligneTS = (m, nom) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === nom);
+const boutonTS = (ligne, texte) => ligne.children[2].children.find((b) => b.textContent === texte);
+
+log('\n=== L\'ONGLET « SERVICES » : LA LISTE ===');
+{
+  const m = await mondeTS();
+  await m.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste vient d\'une lecture DIRECTE de la table « types_service » (pas de fonction serveur)', m.appels.lectures.includes('types_service'));
+  const c1 = ligneTS(m, 'Déneigement mécanique'), c2 = ligneTS(m, 'Engrais');
+  vrai('un type actif : le badge « Actif »', !!c1 && c1.children[1].textContent === 'Actif' && c1.children[1].className === 'emp-badge actif');
+  vrai('un type désactivé : le badge « Désactivé »', !!c2 && c2.children[1].textContent === 'Désactivé' && c2.children[1].className === 'emp-badge inactif');
+  vrai('chaque type a deux boutons : Renommer, Désactiver/Réactiver (jamais Supprimer)', c1.children[2].children.map((b) => b.textContent).join('|') === '✏️ Renommer|Désactiver' && c2.children[2].children.map((b) => b.textContent).join('|') === '✏️ Renommer|Réactiver');
+  vrai('le bouton « ＋ NOUVEAU TYPE DE SERVICE » est là, au-dessus de la liste', m.el('admin-body').children[0].children[0].textContent === '＋ NOUVEAU TYPE DE SERVICE');
+  m.fin();
+}
+{
+  const vide = await mondeTS({ typesService: [] });
+  await vide.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  vrai('aucun type : « Aucun type de service. »', vide.el('admin-body').children[1].textContent === 'Aucun type de service.');
+  vide.fin();
+  const err = await mondeTS({ erreurLecture: ['types_service'] });
+  await err.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste ne peut pas être lue : message clair, jamais « Aucun type » (ce serait un mensonge)', err.el('admin-body').innerHTML.includes('❌ Impossible de charger les types de service') && !err.el('admin-body').innerHTML.includes('Aucun type'));
+  err.fin();
+  const planté = await mondeTS({ lectureLance: ['types_service'] });
+  await planté.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  vrai('… même si l\'appel plante carrément (jamais de plantage de l\'écran)', planté.el('admin-body').innerHTML.includes('❌ Impossible de charger les types de service'));
+  planté.fin();
+}
+
+log('\n=== « ＋ NOUVEAU TYPE DE SERVICE » ===');
+{
+  const ins = (v, d) => { d.types_service.push({ id: 'ts-nouveau', nom: v[0].nom, actif: true }); return { data: null, error: null }; };
+  const m = await mondeTS({ ecritures: { 'types_service.insert': ins } });
+  await m.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  m.el('admin-body').children[0].children[0].onclick();
+  eq('le bouton ouvre la fenêtre en mode création : titre, bouton « Créer », champ vide', [m.el('nouveau-type-service-overlay').classList.contains('open'), m.el('nts-titre').textContent, m.el('nts-btn-save').textContent, m.el('nts-nom').value], [true, '＋ Nouveau type de service', 'Créer', '']);
+  eq('toucher en dehors de la fenêtre la ferme', (m.run(`bgClickNTS({target:document.getElementById('nouveau-type-service-overlay')})`), m.el('nouveau-type-service-overlay').classList.contains('open')), false);
+  await m.run('sauvegarderTypeService()');
+  eq('sans nom : rien n\'est écrit, message clair', [m.dernierToast(), m.appels.ecritures.length], ['⚠ Entre un nom de type de service', 0]);
+  m.el('nts-nom').value = '  Déglaçage  ';
+  await m.run('sauvegarderTypeService()');
+  eq('le nom est envoyé nettoyé (espaces autour retirés) : une CRÉATION', m.appels.ecritures[0], { table: 'types_service', op: 'insert', valeur: [{ nom: 'Déglaçage' }], filtres: undefined });
+  eq('la fenêtre se ferme, message « créé », la liste relue le montre', [m.el('nouveau-type-service-overlay').classList.contains('open'), m.dernierToast(), !!ligneTS(m, 'Déglaçage')], [false, '✔ Type de service créé', true]);
+  m.fin();
+}
+
+log('\n=== « RENOMMER » ET DÉSACTIVER/RÉACTIVER UN TYPE DE SERVICE ===');
+{
+  const upd = (v, d, f) => { Object.assign(d.types_service.find((x) => x.id === f[0][1]), v); return { data: null, error: null }; };
+  const m = await mondeTS({ ecritures: { 'types_service.update': upd } });
+  await m.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  boutonTS(ligneTS(m, 'Déneigement mécanique'), '✏️ Renommer').onclick();
+  eq('« Renommer » ouvre la même fenêtre, pré-remplie avec le nom actuel, bouton « Enregistrer »', [m.el('nouveau-type-service-overlay').classList.contains('open'), m.el('nts-titre').textContent, m.el('nts-btn-save').textContent, m.el('nts-nom').value], [true, 'Renommer un type de service', 'Enregistrer', 'Déneigement mécanique']);
+  m.el('nts-nom').value = 'Déneigement';
+  await m.run('sauvegarderTypeService()');
+  eq('l\'écriture est une MODIFICATION du bon type (jamais une nouvelle création)', m.appels.ecritures[0], { table: 'types_service', op: 'update', valeur: { nom: 'Déneigement' }, filtres: [['id', 'ts-1']] });
+  m.run('ouvrirNouveauTypeService()');
+  eq('rouvrir « ＋ Nouveau » ensuite repart bien en mode création (jamais coincé en renommage)', [m.el('nts-titre').textContent, m.el('nts-btn-save').textContent], ['＋ Nouveau type de service', 'Créer']);
+  m.el('nts-nom').value = 'Toiture';
+  await m.run('sauvegarderTypeService()');
+  eq('… et « Créer » écrit vraiment une CRÉATION (pas un renommage du type ouvert juste avant)', m.appels.ecritures[1], { table: 'types_service', op: 'insert', valeur: [{ nom: 'Toiture' }], filtres: undefined });
+  m.fin();
+}
+{
+  const upd = (v, d, f) => { Object.assign(d.types_service.find((x) => x.id === f[0][1]), v); return { data: null, error: null }; };
+  const m = await mondeTS({ confirme: true, ecritures: { 'types_service.update': upd } });
+  await m.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  boutonTS(ligneTS(m, 'Déneigement mécanique'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('désactiver demande UNE confirmation nommée, avec ce que ça change', m.appels.confirmations[0], ['Désactiver Déneigement mécanique ?', 'Il ne sera plus proposé pour un nouvel arrêt. Les arrêts déjà créés avec ce type ne changent pas.', 'Désactiver', 'Annuler']);
+  eq('… puis écrit directement sur « types_service » (pas de fonction serveur), confirme, relit la liste', [m.appels.ecritures[0], m.dernierToast(), ligneTS(m, 'Déneigement mécanique').children[1].textContent], [{ table: 'types_service', op: 'update', valeur: { actif: false }, filtres: [['id', 'ts-1']] }, '✔ Déneigement mécanique est désactivé', 'Désactivé']);
+  m.fin();
+  const non = await mondeTS({ confirme: false });
+  await non.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  boutonTS(ligneTS(non, 'Déneigement mécanique'), 'Désactiver').onclick();
+  await attendre(30);
+  eq('« Annuler » : RIEN n\'est écrit', non.appels.ecritures.length, 0);
+  non.fin();
+  const re = await mondeTS({ ecritures: { 'types_service.update': upd } });
+  await re.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  boutonTS(ligneTS(re, 'Engrais'), 'Réactiver').onclick();
+  await attendre(30);
+  eq('réactiver ne demande AUCUNE confirmation (sans risque) : écriture directe, bon message', [re.appels.confirmations.length, re.appels.ecritures[0], re.dernierToast()], [0, { table: 'types_service', op: 'update', valeur: { actif: true }, filtres: [['id', 'ts-2']] }, '✔ Engrais est réactivé']);
+  re.fin();
+  const planté = await mondeTS({ ecritures: { 'types_service.update': () => { throw new TypeError('Failed to fetch'); } } });
+  await planté.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  await planté.run('reseau.enLigne=true;');
+  boutonTS(ligneTS(planté, 'Engrais'), 'Réactiver').onclick();
+  await attendre(30);
+  eq('désactiver/réactiver qui plante avec une VRAIE panne de réseau (TypeError « Failed to fetch ») : le téléphone se sait hors réseau ensuite', planté.run('reseau.enLigne'), false);
+  planté.fin();
+}
+
+log('\n=== ERREURS (CRÉER / RENOMMER UN TYPE DE SERVICE) ===');
+{
+  const essai = async (rep) => {
+    const m = await mondeTS({ ecritures: { 'types_service.insert': rep } });
+    await m.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+    m.run('ouvrirNouveauTypeService()');
+    m.el('nts-nom').value = 'X';
+    await m.run('sauvegarderTypeService()');
+    const t = m.dernierToast(), ouverte = m.el('nouveau-type-service-overlay').classList.contains('open');
+    m.fin();
+    return { toast: t, ouverte };
+  };
+  eq('nom déjà utilisé (contrainte unique) : message clair, la fenêtre RESTE ouverte', await essai({ data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } }), { toast: '❌ Ce nom de type de service existe déjà.', ouverte: true });
+  eq('pas de réseau (message du serveur) : message clair', await essai({ data: null, error: { message: 'Failed to fetch' } }), { toast: '📴 Pas de réseau : rien n’a été changé.', ouverte: true });
+  eq('une autre erreur du serveur : son message tel quel', await essai({ data: null, error: { message: 'permission denied for table types_service' } }), { toast: '❌ permission denied for table types_service', ouverte: true });
+  const m2 = await mondeTS({ ecritures: { 'types_service.insert': () => { throw new TypeError('Failed to fetch'); } } });
+  await m2.run(`_adminOnglet='types-service';chargerPanneauAdmin();`); await attendre(30);
+  await m2.run('reseau.enLigne=true;');
+  m2.run('ouvrirNouveauTypeService()');
+  m2.el('nts-nom').value = 'X';
+  await m2.run('sauvegarderTypeService()');
+  eq('l\'appel plante avec une VRAIE panne de réseau (TypeError « Failed to fetch ») : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+
+log('\n=== LE CODE : L\'ONGLET « SERVICES » (étape 19) ===');
+{
+  const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admTS = lire('js/admin-types-service.js');
+  vrai('la page charge admin-types-service.js juste après admin-reglages.js, avant liste-arrets.js', page.indexOf('js/admin-reglages.js') < page.indexOf('js/admin-types-service.js') && page.indexOf('js/admin-types-service.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('la fenêtre « Nouveau type de service » est dans la page, et se ferme au toucher en dehors, comme les autres', page.includes('id="nouveau-type-service-overlay"') && /onclick="bgClickNTS\(event\)"/.test(page));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-type-service-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay'));
+  vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'types-service',icone:'🧰',label:'Services',titre:'Types de service',charger:\(typeof chargerTypesServiceAdmin==='function'\)\?chargerTypesServiceAdmin:null\}/.test(adm));
+  vrai('un type de service ne se supprime JAMAIS ici (les arrêts déjà créés ne doivent pas perdre leur texte) : seulement créer, renommer, désactiver/réactiver', !/db\.from\('types_service'\)\.delete\(\)/.test(admTS) && /db\.from\('types_service'\)\.insert/.test(admTS) && /db\.from\('types_service'\)\.update\(\{nom\}\)/.test(admTS) && /db\.from\('types_service'\)\.update\(\{actif\}\)/.test(admTS));
+  vrai('aucune fonction serveur ici : des écritures directes sur « types_service » (comme les véhicules)', !/db\.functions\.invoke/.test(admTS));
+  vrai('après avoir créé ou renommé un type, le menu déroulant « ＋ Nouveau stop » est aussi rafraîchi tout de suite', /await chargerTypesService\(\);/.test(admTS));
+  vrai('le style : les mêmes badges actif/inactif que les employés/véhicules sont réutilisés (pas de nouvelle classe CSS dupliquée)', !/\.svc-/.test(css) && !/\.ts-item/.test(css));
+}
+
+log('\n=== LE MENU « TYPE DE SERVICE » DE « ＋ NOUVEAU STOP » VIENT DE « types_service » (étape 19) ===');
+{
+  // (le faux serveur ne filtre pas vraiment .eq() : on vérifie SÉPARÉMENT que le filtre est bien demandé, et qu'une réponse déjà filtrée est bien lue)
+  const actifs = [{ id: 't1', nom: 'Coupe de gazon', actif: true }, { id: 't2', nom: 'Déneigement mécanique', actif: true }];
+  const m = monde({ typesService: actifs });
+  await m.run('loadStops()');
+  vrai('la lecture demande bien SEULEMENT les types actifs (actif=true)', m.appels.eq.some((e) => e[0] === 'types_service' && e[1] === 'actif' && e[2] === true));
+  eq('au chargement, les types actifs sont installés pour le menu', m.run('typesServiceActifs'), ['Coupe de gazon', 'Déneigement mécanique']);
+  m.run('openModal()');
+  eq('ouvrir « ＋ Nouveau stop » remplit le menu déroulant avec ces types (jamais le type désactivé)', m.el('f-svc').children.map((o) => o.value), ['Coupe de gazon', 'Déneigement mécanique']);
+  m.fin();
+}
+{
+  // Le filet : la table est illisible (pas de réseau, ou le SQL 23 pas encore exécuté) -> le menu garde les 8 options d'avant l'étape 19
+  const m = monde({ erreurLecture: ['types_service'] });
+  await m.run('loadStops()');
+  eq('table illisible : le filet (les 8 anciennes options) est utilisé, rien ne casse', m.run('typesServiceActifs'), []);
+  m.run('openModal()');
+  eq('… le menu déroulant reste utilisable (les 8 options d\'avant l\'étape 19)', m.el('f-svc').children.map((o) => o.value), ['Déneigement mécanique', 'Déneigement manuel', 'Épandage de sel', 'Entretien paysager', 'Coupe de gazon', 'Engrais', 'Ramassage de feuilles', 'Autre']);
+  m.fin();
+}
+{
+  // Rouvrir « ＋ Nouveau stop » garde le choix déjà fait s'il existe toujours dans la liste rafraîchie
+  const m = monde({ typesService: [{ id: 't1', nom: 'Coupe de gazon', actif: true }, { id: 't2', nom: 'Engrais', actif: true }] });
+  await m.run('loadStops()');
+  m.run('openModal()');
+  m.el('f-svc').value = 'Engrais';
+  m.run('remplirTypesService()');
+  eq('re-remplir le menu GARDE le choix déjà fait (s\'il est toujours dans la liste)', m.el('f-svc').value, 'Engrais');
+  m.fin();
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

@@ -1,5 +1,30 @@
 // js/liste-arrets.js — Liste des arrêts et ajout d'un arrêt
 // (extrait de l'ancien index.html)
+
+// Étape 19 : le menu déroulant « Type de service » de « ＋ Nouveau stop » vient de la table types_service (modifiable par
+// l'administrateur, admin-types-service.js) plutôt que d'une liste figée. TYPES_SERVICE_DEFAUT (les 8 options d'avant l'étape 19)
+// sert de filet : si la table est illisible (pas de réseau, ou le SQL 23 pas encore exécuté par Joé), le menu reste utilisable.
+const TYPES_SERVICE_DEFAUT=['Déneigement mécanique','Déneigement manuel','Épandage de sel','Entretien paysager','Coupe de gazon','Engrais','Ramassage de feuilles','Autre'];
+let typesServiceActifs=[];
+async function chargerTypesService(){
+  try{
+    const{data,error}=await db.from('types_service').select('nom').eq('actif',true).order('nom');
+    if(error) throw error;
+    typesServiceActifs=Array.isArray(data)?data.map(x=>x.nom):[];
+  }catch(e){/* le filet (TYPES_SERVICE_DEFAUT) prend le relais dans remplirTypesService() */}
+}
+function remplirTypesService(){
+  const sel=document.getElementById('f-svc');
+  if(!sel) return;
+  const avant=sel.value;
+  sel.innerHTML='';
+  (typesServiceActifs.length?typesServiceActifs:TYPES_SERVICE_DEFAUT).forEach(nom=>{
+    const o=document.createElement('option');
+    o.value=nom;o.textContent=nom;
+    sel.appendChild(o);
+  });
+  if(avant&&Array.from(sel.children).some(o=>o.value===avant)) sel.value=avant;
+}
 function openListe(){
   renderListe();
   document.getElementById('liste-overlay').classList.add('open');
@@ -80,6 +105,7 @@ function openModal(){
   document.getElementById('f-zone').value=zone;
   document.getElementById('f-addr').value='';
   document.getElementById('f-client').value='';
+  remplirTypesService();
 }
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
 function bgClick(e){if(e.target===document.getElementById('overlay'))closeModal();}

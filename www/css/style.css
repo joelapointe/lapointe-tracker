@@ -485,7 +485,7 @@
 #bandeau-reseau{white-space:normal;text-align:right;max-width:calc(100vw - 24px);}
 #bandeau-reseau.actif{pointer-events:auto;cursor:pointer;}
 /* Les fenêtres qui montent du bas de l'écran restent au-dessus de la barre d'accueil d'un iPhone (0 ailleurs) */
-#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
+#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
 #gestes-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:4000;align-items:center;justify-content:center;padding:20px;}
 #gestes-overlay.open{display:flex;}
 #gestes-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 16px 16px;width:100%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;}
@@ -563,6 +563,11 @@
 #nouveau-vehicule-overlay.open{display:flex;}
 #nouveau-vehicule-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
 #nouveau-vehicule-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
+
+#nouveau-type-service-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}
+#nouveau-type-service-overlay.open{display:flex;}
+#nouveau-type-service-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
+#nouveau-type-service-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
 
 /* Étape 19 : le panneau administrateur devient plusieurs onglets (admin.js), le premier : « Employés » (admin-employes.js). */
 #admin-tabs{display:flex;gap:6px;padding:10px 16px 0;flex-shrink:0;overflow-x:auto;}

@@ -114,6 +114,12 @@ function renderAll(){
   majBandeauPasse();                // « Débuter la passe », ou le résumé de la passe en cours (passe.js)
   if(typeof majParcours==='function') majParcours();   // le tracé qui suit les rues, pendant une passe (étape 18b, parcours.js)
   if(typeof majPastilleQuart==='function') majPastilleQuart();   // la pastille « En service » (étape 17, quart.js)
+  // Bug corrigé (22 sept.) : la liste ouverte (liste-arrets.js) n'était RAFRAÎCHIE qu'après un déplacement ▲▼ fait par l'administrateur
+  // lui-même (ordre.js). Un changement arrivé en arrière-plan (même le sien : le temps réel renvoie SES PROPRES écritures) laissait
+  // la liste ouverte périmée : ses boutons ▲▼ gardent l'ancienne POSITION dans stops[], qui ne pointe plus le bon client une fois le
+  // tableau stops remplacé par une relecture. En la rafraîchissant ici (comme la carte, toujours reconstruite au complet), ses boutons
+  // restent toujours à jour.
+  if(typeof renderListe==='function'&&document.getElementById('liste-overlay').classList.contains('open')) renderListe();
 }
 
 // Barre du bas : l'avancement de ce qui est affiché (une route, ou toutes les routes ensemble),

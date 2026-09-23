@@ -100,8 +100,7 @@ async function deplacerArret(e,idx,delta){
   }finally{
     showSync(false);
     _deplacementEnCours=false;
-    renderAll();
-    if(document.getElementById('liste-overlay').classList.contains('open')) renderListe();
+    renderAll();   // (rafraîchit aussi la liste ouverte, si elle l'est : voir arrets.js)
     if(typeof planifierMajParcours==='function') planifierMajParcours();   // le nouvel ordre crée de nouveaux couples de clients : leurs tronçons sont calculés un peu plus tard (parcours.js)
   }
 }

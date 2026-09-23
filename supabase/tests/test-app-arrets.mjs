@@ -1908,6 +1908,29 @@ log('\n=== LES VRAIES FLÈCHES ▲ ▼, ET TOUT SE REDESSINE APRÈS UN DÉPLACEM
   f.fin();
 }
 {
+  // Bug signalé par Joé (22 sept.) : « monter/descendre de plus de 2 cases ne fonctionne pas ». Cause : la liste ouverte n'était
+  // redessinée qu'après un déplacement fait par l'administrateur LUI-MÊME (l'appel explicite dans deplacerArret) — jamais quand
+  // stops[] est remplacé par une AUTRE lecture arrivée entre-temps (le temps réel renvoie même SES PROPRES écritures, ~800 ms
+  // plus tard, planifierRechargementArrets()). Les boutons ▲▼ déjà à l'écran gardent alors une POSITION dans l'ANCIEN tableau
+  // stops[], qui ne pointe plus le bon client une fois le tableau remplacé — d'où l'échec après quelques déplacements rapprochés.
+  // Corrigé en rafraîchissant aussi la liste ouverte depuis renderAll() (comme la carte, déjà toujours reconstruite au complet).
+  const m = monde({ utilisateur: ADMIN, tours: sansMaPasse() });
+  await m.run('loadStops()'); m.routeActive(CH); await m.run('openListe()');
+  const appelDe = (html, etiquette) => (html.match(new RegExp('aria-label="' + etiquette + '"[^>]*onclick="(deplacerArret\\(event,\\d+,-?1\\))"')) || [])[1];
+  const rang = (mm, id) => mm.elementsListe()[adresses(mm).indexOf(STOPS[idx(id)].adresse)].innerHTML;
+  // Un changement arrive EN ARRIÈRE-PLAN : stops[] est remplacé par une NOUVELLE copie, dans un ORDRE DIFFÉRENT (exactement ce
+  // qu'une relecture après le propre déplacement ▲▼ de l'administrateur produirait, une fois triée par la nouvelle valeur d'ordre)
+  await m.run(`stops=[stops[${idx('s4')}],stops[${idx('s1')}],stops[${idx('s2')}],stops[${idx('s3')}],stops[${idx('s5')}],stops[${idx('s6')}]].map(s=>({...s}));`);
+  const nouvelIdxS3 = m.run(`stops.findIndex(s=>s.id==='s3')`);
+  vrai('le scénario simule vraiment le bug : la position de s3 dans stops[] a changé', nouvelIdxS3 !== idx('s3'));
+  await m.run('renderAll()');
+  const bouton = appelDe(rang(m, 's3'), 'Plus tôt dans l’ordre');
+  eq('renderAll() redessine la liste OUVERTE : le bouton ▲ de s3 pointe la position FRAÎCHE dans stops[] (jamais l\'ancienne, périmée)', bouton, `deplacerArret(event,${nouvelIdxS3},-1)`);
+  await m.run(bouton.replace('event', 'null'));
+  eq('… et le déplacement marche vraiment (s3 monte avant s2)', misesAJourOrdre(m), [['s2', 2], ['s3', 1]]);
+  m.fin();
+}
+{
   // Les clients FAITS suivent eux aussi l'ordre de la route (s2 = 0 passe avant s1 = 5)
   const d = monde({ stops: stopsAvec({ s1: 5, s2: 0 }), tours: TOURS().map((t2) => (t2.tache === MEC ? { ...t2, faits: 2, pourcentage: 66, arrets_faits: ['s1', 's2'] } : t2)) }); await d.run('loadStops()'); d.routeActive(CH); await d.run('renderListe()');
   eq('les clients à faire (s3, s4) puis les FAITS dans l\'ordre de la route : s2 (ordre 0) avant s1 (ordre 5)', [adresses(d).slice(0, 3), adresses(d)[3].includes('Église')], [['50 rue Notre-Dame', '215 rue Bellerive', '220 rue du Moulin'], true]);

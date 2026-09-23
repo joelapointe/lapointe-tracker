@@ -1,0 +1,14 @@
+[
+  {
+    "nom": "renderAll() ne rafraîchit plus jamais la liste ouverte (le bug signalé par Joé revient : ▲▼ finissent par agir sur le mauvais client)",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof renderListe==='function'&&document.getElementById('liste-overlay').classList.contains('open')) renderListe();",
+    "vers": ""
+  },
+  {
+    "nom": "la liste se redessine maintenant MÊME FERMÉE (travail inutile à chaque renderAll())",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof renderListe==='function'&&document.getElementById('liste-overlay').classList.contains('open')) renderListe();",
+    "vers": "if(typeof renderListe==='function') renderListe();"
+  }
+]

@@ -48,6 +48,7 @@ function monde(o = {}) {
     parcours_segments: o.segments ?? [],   // les tronçons du tracé (étape 18b, parcours.js)
     reglages: o.reglages ?? [],
     types_service: o.typesService ?? [],
+    quarts: o.quarts ?? [],
   };
   const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], informations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
   const reponsesRpc = o.rpc ?? {};
@@ -67,6 +68,8 @@ function monde(o = {}) {
       q.eq = (c, v) => { appels.eq.push([table, c, v]); q.filtres = [...(q.filtres ?? []), [c, v]]; return q; };
       q.order = (c, opt) => { appels.orders.push([table, c, opt]); return q; };
       q.is = (c, v) => { appels.is.push([table, c, v]); return q; };
+      q.not = (c, op, v) => { appels.is.push([table, 'not.' + c, v]); return q; };
+      q.limit = (n) => { q.plage = [0, n - 1]; return q; };   // (comme .range() : une vraie limite, testée via appels.ranges)
       q.range = (a, b) => { q.plage = [a, b]; return q; };   // (lecture par tranches : comme le vrai service de données)
       q.delete = () => { q.op = 'delete'; return q; };
       q.update = (v) => { q.op = 'update'; q.valeur = v; return q; };
@@ -135,7 +138,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js', 'js/admin-types-service.js', 'js/admin-quarts.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -653,11 +656,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -863,7 +866,7 @@ log('\n=== LE CODE : LE PANNEAU ADMINISTRATEUR (étape 19) ===');
   vrai('la page charge admin-employes.js juste après admin.js', page.indexOf('js/admin.js') < page.indexOf('js/admin-employes.js') && page.indexOf('js/admin-employes.js') < page.indexOf('js/liste-arrets.js'));
   vrai('le panneau a une zone d\'onglets ENTRE l\'en-tête et le corps, et la fenêtre « ＋ Nouvel employé »', page.indexOf('id="admin-header"') < page.indexOf('id="admin-tabs"') && page.indexOf('id="admin-tabs"') < page.indexOf('id="admin-body"') && page.includes('id="nouvel-employe-overlay"'));
   vrai('la fenêtre « Nouvel employé » se ferme au toucher en dehors, comme les autres', /onclick="bgClickNE\(event\)"/.test(page));
-  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les 9 autres fenêtres qui montent du bas)', new RegExp('#nouvel-employe-overlay[^{]*\\{[^}]*align-items:flex-end').test(css) && /#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#correction-quart-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay\{padding-bottom:var\(--sa-bottom\);\}/.test(css));
   vrai('les onglets sont une FONCTION (pas une liste figée au chargement) : les fichiers des futurs onglets peuvent se charger après celui-ci', /function ongletsAdmin\(\)/.test(adm));
   vrai('ouvrir le panneau repart toujours sur l\'onglet « Problèmes »', /_adminOnglet='problemes';/.test(adm));
   vrai('un compte administrateur ne se gère pas ici : la liste ne montre ses boutons qu\'aux employés', /if\(u\.role==='employe'\)\{/.test(admE));
@@ -1019,7 +1022,7 @@ log('\n=== LE CODE : L\'ONGLET « VÉHICULES » (étape 19) ===');
   const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admV = lire('js/admin-vehicules.js');
   vrai('la page charge admin-vehicules.js juste après admin-employes.js, avant liste-arrets.js', page.indexOf('js/admin-employes.js') < page.indexOf('js/admin-vehicules.js') && page.indexOf('js/admin-vehicules.js') < page.indexOf('js/liste-arrets.js'));
   vrai('la fenêtre « Nouveau véhicule » est dans la page, et se ferme au toucher en dehors, comme les autres', page.includes('id="nouveau-vehicule-overlay"') && /onclick="bgClickNV\(event\)"/.test(page));
-  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-vehicule-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay'));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-vehicule-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#correction-quart-overlay,#prob-overlay'));
   vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'vehicules',icone:'🚚',label:'Véhicules',titre:'Véhicules',charger:\(typeof chargerVehiculesAdmin==='function'\)\?chargerVehiculesAdmin:null\}/.test(adm));
   vrai('un véhicule ne se supprime JAMAIS ici (il reste lié à son historique) : seulement créer, renommer, désactiver/réactiver', !/db\.from\('equipes'\)\.delete\(\)/.test(admV) && /db\.from\('equipes'\)\.insert/.test(admV) && /db\.from\('equipes'\)\.update\(\{nom\}\)/.test(admV) && /db\.from\('equipes'\)\.update\(\{actif\}\)/.test(admV));
   vrai('aucune fonction serveur ici : des écritures directes sur « equipes » (contrairement aux employés)', !/db\.functions\.invoke/.test(admV));
@@ -1272,7 +1275,7 @@ log('\n=== LE CODE : L\'ONGLET « SERVICES » (étape 19) ===');
   const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admTS = lire('js/admin-types-service.js');
   vrai('la page charge admin-types-service.js juste après admin-reglages.js, avant liste-arrets.js', page.indexOf('js/admin-reglages.js') < page.indexOf('js/admin-types-service.js') && page.indexOf('js/admin-types-service.js') < page.indexOf('js/liste-arrets.js'));
   vrai('la fenêtre « Nouveau type de service » est dans la page, et se ferme au toucher en dehors, comme les autres', page.includes('id="nouveau-type-service-overlay"') && /onclick="bgClickNTS\(event\)"/.test(page));
-  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-type-service-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay'));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#nouveau-type-service-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#correction-quart-overlay,#prob-overlay'));
   vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'types-service',icone:'🧰',label:'Services',titre:'Types de service',charger:\(typeof chargerTypesServiceAdmin==='function'\)\?chargerTypesServiceAdmin:null\}/.test(adm));
   vrai('un type de service ne se supprime JAMAIS ici (les arrêts déjà créés ne doivent pas perdre leur texte) : seulement créer, renommer, désactiver/réactiver', !/db\.from\('types_service'\)\.delete\(\)/.test(admTS) && /db\.from\('types_service'\)\.insert/.test(admTS) && /db\.from\('types_service'\)\.update\(\{nom\}\)/.test(admTS) && /db\.from\('types_service'\)\.update\(\{actif\}\)/.test(admTS));
   vrai('aucune fonction serveur ici : des écritures directes sur « types_service » (comme les véhicules)', !/db\.functions\.invoke/.test(admTS));
@@ -1310,6 +1313,199 @@ log('\n=== LE MENU « TYPE DE SERVICE » DE « ＋ NOUVEAU STOP » VIENT DE « t
   m.run('remplirTypesService()');
   eq('re-remplir le menu GARDE le choix déjà fait (s\'il est toujours dans la liste)', m.el('f-svc').value, 'Engrais');
   m.fin();
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 19 (SUITE, MORCEAU 5) : L'ONGLET « QUARTS » (www/js/admin.js, admin-quarts.js)
+// Les quarts « à valider » (ouverts ou fermés automatiquement, ou fin contestée) et les transferts d'équipage récents.
+// Corriger un quart : AUCUNE fonction serveur (comme les véhicules) — une écriture directe sur « quarts » suffit (l'administrateur
+// a déjà tous les droits). Annuler un transfert : passe par admin_annuler_transfert (déjà prête depuis l'étape 9a), plus délicat
+// (deux lignes de equipage_periodes à faire correspondre).
+// ══════════════════════════════════════════════════════════════════════
+const QUARTS_A_VALIDER = [
+  { id: 'qz-1', utilisateur_id: 'e-luc', debut: '2026-09-20T12:00:00.000Z', fin: '2026-09-20T20:00:00.000Z', raison_a_valider: 'fin_estimee', note: null, utilisateurs: { nom: 'Luc Boisvert' } },
+  { id: 'qz-2', utilisateur_id: 'e-marc', debut: '2026-09-21T08:00:00.000Z', fin: null, raison_a_valider: 'ouvert_par_equipage', note: 'déjà une remarque', utilisateurs: { nom: 'Marc Tremblay' } },
+];
+// Un transfert = DEUX lignes de equipage_periodes partageant transfert_id (sortie de l'ancien véhicule, entrée dans le nouveau) : seule l'entrée (débute plus tard) doit être affichée.
+const TRANSFERTS = [
+  { id: 'ep-sortie', transfert_id: 'tr-1', utilisateur_id: 'e-nina', debut: '2026-09-21T08:00:00.000Z', fin: '2026-09-21T09:00:00.000Z', passe_id: 'p-a', utilisateurs: { nom: 'Nina Roy' }, passes: { equipes: { nom: 'Camion 1' } } },
+  { id: 'ep-entree', transfert_id: 'tr-1', utilisateur_id: 'e-nina', debut: '2026-09-21T09:00:00.000Z', fin: null, passe_id: 'p-b', utilisateurs: { nom: 'Nina Roy' }, passes: { equipes: { nom: 'Camion 2' } } },
+];
+const mondeQuarts = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, quarts: QUARTS_A_VALIDER.map((q) => ({ ...q })), equipages: TRANSFERTS.map((t) => ({ ...t })), ...o });
+  await m.run('loadStops()');
+  return m;
+};
+const ligneQ = (m, nom) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === nom);
+const boutonQ = (ligne, texte) => ligne.children[1].children.find((b) => b.textContent === texte);
+
+log('\n=== L\'ONGLET « QUARTS » : LES DEUX LISTES ===');
+{
+  const m = await mondeQuarts();
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  vrai('les deux lectures sont DIRECTES (pas de fonction serveur pour la liste)', m.appels.lectures.includes('quarts') && m.appels.lectures.includes('equipage_periodes'));
+  vrai('seuls les quarts « a_valider=true » sont demandés', m.appels.eq.some((e) => e[0] === 'quarts' && e[1] === 'a_valider' && e[2] === true));
+  const luc = ligneQ(m, 'Luc Boisvert'), marc = ligneQ(m, 'Marc Tremblay');
+  vrai('un quart fermé automatiquement : la raison en mots simples, début → fin', !!luc && luc.children[0].children[1].textContent.includes('Fermé automatiquement') && luc.children[0].children[1].textContent.includes('→'));
+  vrai('un quart encore ouvert (fin automatique jamais arrivée) : « en cours »', !!marc && marc.children[0].children[1].textContent.includes('en cours') && marc.children[0].children[1].textContent.includes('ajouté à bord'));
+  vrai('chaque quart à valider a un seul bouton : « ✏️ Vérifier / Corriger »', boutonQ(luc, '✏️ Vérifier / Corriger') !== undefined);
+  const nina = ligneQ(m, 'Nina Roy');
+  vrai('le transfert : SEULE l\'entrée (Camion 2) est affichée, jamais la sortie en double', !!nina && nina.children[0].children[1].textContent.includes('Camion 2') && !nina.children[0].children[1].textContent.includes('Camion 1'));
+  vrai('le transfert a un bouton « ↩ Annuler »', boutonQ(nina, '↩ Annuler') !== undefined);
+  m.fin();
+}
+{
+  const vide = await mondeQuarts({ quarts: [], equipages: [] });
+  await vide.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  eq('aucun quart à valider : « ✔ Aucun quart à valider. », aucun transfert : « Aucun transfert récent. »', [vide.el('admin-body').children[1].textContent, vide.el('admin-body').children[3].textContent], ['✔ Aucun quart à valider.', 'Aucun transfert récent.']);
+  vide.fin();
+  const err = await mondeQuarts({ erreurLecture: ['quarts'] });
+  await err.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste ne peut pas être lue : message clair, jamais une liste vide (ce serait un mensonge)', err.el('admin-body').innerHTML.includes('❌ Impossible de charger les quarts') && !err.el('admin-body').innerHTML.includes('Aucun quart'));
+  err.fin();
+  const err2 = await mondeQuarts({ erreurLecture: ['equipage_periodes'] });
+  await err2.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  vrai('… même si c\'est la lecture des transferts qui échoue (l\'autre moitié de l\'écran)', err2.el('admin-body').innerHTML.includes('❌ Impossible de charger les quarts'));
+  err2.fin();
+}
+
+log('\n=== « VÉRIFIER / CORRIGER » UN QUART ===');
+{
+  const m = await mondeQuarts();
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  eq('la fenêtre s\'ouvre, pré-remplie (nom, raison, début/fin en heure LOCALE, note vide)', [m.el('correction-quart-overlay').classList.contains('open'), m.el('qc-nom').textContent, m.el('qc-raison').textContent, m.el('qc-note').value], [true, 'Luc Boisvert', m.run(`texteRaisonAValider('fin_estimee')`), '']);
+  eq('… les champs début/fin ne sont pas vides (convertis depuis l\'ISO)', [m.el('qc-debut').value === '', m.el('qc-fin').value === ''], [false, false]);
+  eq('toucher en dehors de la fenêtre la ferme', (m.run(`bgClickQC({target:document.getElementById('correction-quart-overlay')})`), m.el('correction-quart-overlay').classList.contains('open')), false);
+  m.fin();
+}
+{
+  // Un quart encore ouvert (fin=null) : le champ fin reste vide à l'ouverture
+  const m = await mondeQuarts();
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(m, 'Marc Tremblay'), '✏️ Vérifier / Corriger').onclick();
+  eq('un quart sans fin connue : le champ fin est vide (pas une fausse heure)', m.el('qc-fin').value, '');
+  m.fin();
+}
+{
+  const rpc = (args) => ({ data: { statut: 'corrige', quart_id: args.p_quart_id }, error: null });
+  const m = await mondeQuarts({ rpc: { admin_corriger_quart: rpc } });
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  await m.run('validerQuart()');
+  eq('sans rien changer : « Valider » appelle quand même la fonction serveur (JAMAIS une écriture directe), avec le même début/fin (en ISO), sans note', m.appels.rpc.find((r) => r.nom === 'admin_corriger_quart').args, { p_quart_id: 'qz-1', p_debut: new Date('2026-09-20T12:00:00.000Z').toISOString(), p_fin: new Date('2026-09-20T20:00:00.000Z').toISOString(), p_note: null });
+  eq('la fenêtre se ferme, message « validé », la liste des « à valider » est RELUE depuis le serveur', [m.el('correction-quart-overlay').classList.contains('open'), m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length], [false, '✔ Quart validé', 2]);
+  m.fin();
+}
+{
+  const rpc = (args) => ({ data: { statut: 'corrige', quart_id: args.p_quart_id }, error: null });
+  const m = await mondeQuarts({ rpc: { admin_corriger_quart: rpc } });
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  m.el('qc-debut').value = '2026-09-20T09:00';
+  m.el('qc-fin').value = '2026-09-20T17:30';
+  m.el('qc-note').value = 'corrigé après appel avec l’employé';
+  await m.run('validerQuart()');
+  eq('l\'heure changée est bien celle envoyée (convertie en ISO), la note tapée est envoyée (le serveur l\'ajoutera à celle déjà là)', m.appels.rpc.find((r) => r.nom === 'admin_corriger_quart').args, { p_quart_id: 'qz-1', p_debut: new Date('2026-09-20T09:00').toISOString(), p_fin: new Date('2026-09-20T17:30').toISOString(), p_note: 'corrigé après appel avec l’employé' });
+  m.fin();
+}
+{
+  const m = await mondeQuarts();
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  m.el('qc-debut').value = ''; m.el('qc-fin').value = '2026-09-20T17:00';
+  await m.run('validerQuart()');
+  eq('début vide : refusé avant d\'appeler le serveur', [m.dernierToast(), m.appels.rpc.filter((r) => r.nom === 'admin_corriger_quart').length], ['⚠ Entre une heure de début et de fin', 0]);
+  m.el('qc-debut').value = '2026-09-20T18:00'; m.el('qc-fin').value = '2026-09-20T17:00';
+  await m.run('validerQuart()');
+  eq('fin avant (ou égale à) le début : refusé avant d\'appeler le serveur', [m.dernierToast(), m.appels.rpc.filter((r) => r.nom === 'admin_corriger_quart').length], ['⚠ La fin doit être après le début', 0]);
+  m.fin();
+}
+
+log('\n=== ERREURS (VALIDER / CORRIGER UN QUART) ===');
+{
+  const essai = async (rep) => {
+    const m = await mondeQuarts({ rpc: { admin_corriger_quart: rep } });
+    await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+    boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+    await m.run('validerQuart()');
+    const t = m.dernierToast(), ouverte = m.el('correction-quart-overlay').classList.contains('open');
+    m.fin();
+    return { toast: t, ouverte };
+  };
+  eq('le nouvel horaire chevauche un autre quart de cet employé (contrainte d\'exclusion 23P01) : message clair', await essai({ data: null, error: { code: '23P01', message: 'conflicting key value violates exclusion constraint' } }), { toast: '❌ Ce nouvel horaire chevauche un autre quart de cet employé.', ouverte: true });
+  eq('« quart_encore_ouvert » (raised par la fonction) : message clair', await essai({ data: null, error: { message: 'quart_encore_ouvert' } }), { toast: '❌ Ce quart est encore ouvert : attends qu’il soit terminé.', ouverte: true });
+  eq('pas de réseau : message clair', await essai({ data: null, error: { message: 'Failed to fetch' } }), { toast: '📴 Pas de réseau : rien n’a été changé.', ouverte: true });
+  const m2 = await mondeQuarts({ rpc: { admin_corriger_quart: () => { throw new TypeError('Failed to fetch'); } } });
+  await m2.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  await m2.run('reseau.enLigne=true;');
+  boutonQ(ligneQ(m2, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  await m2.run('validerQuart()');
+  eq('l\'appel plante avec une VRAIE panne de réseau : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+{
+  // « quart_introuvable » (changé ailleurs entre-temps) : message ET relecture automatique de la liste, comme pour un employé introuvable
+  const m = await mondeQuarts({ rpc: { admin_corriger_quart: { data: null, error: { message: 'quart_introuvable' } } } });
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  const relu = m.appels.lectures.filter((t) => t === 'quarts').length;
+  boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  await m.run('validerQuart()');
+  eq('« introuvable » : message ET relecture automatique de la liste (elle a changé ailleurs)', [m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length - relu], ['❌ Ce quart n’existe plus (la liste va se rafraîchir).', 1]);
+  m.fin();
+}
+{
+  // Une réponse SANS « statut: corrige » n'est jamais prise pour un succès, même si elle contient des données
+  const m = await mondeQuarts({ rpc: { admin_corriger_quart: { data: { autre: true }, error: null } } });
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
+  await m.run('validerQuart()');
+  eq('sans « statut: corrige » : jamais annoncé comme un succès', m.dernierToast(), '❌ Impossible de valider ce quart');
+  m.fin();
+}
+
+log('\n=== ANNULER UN TRANSFERT ===');
+{
+  const m = await mondeQuarts({ confirme: true, rpc: { admin_annuler_transfert: { data: { statut: 'transfert_annule', utilisateur_id: 'e-nina', reste_dans_passe_id: 'p-a' }, error: null } } });
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  const relu = m.appels.lectures.filter((t) => t === 'equipage_periodes').length;
+  boutonQ(ligneQ(m, 'Nina Roy'), '↩ Annuler').onclick();
+  await attendre(30);
+  eq('demande une confirmation nommée', m.appels.confirmations[0], ['Annuler ce transfert ?', 'Nina Roy retourne dans son véhicule d’origine.', 'Annuler le transfert', 'Non']);
+  eq('… appelle la fonction serveur (deux lignes à faire correspondre) avec le bon transfert_id, confirme, RELIT la liste (equipage_periodes)', [m.appels.rpc.find((r) => r.nom === 'admin_annuler_transfert').args, m.dernierToast(), m.appels.lectures.filter((t) => t === 'equipage_periodes').length - relu], [{ p_transfert_id: 'tr-1' }, '↩ Nina Roy est de retour dans son véhicule d’origine', 1]);
+  m.fin();
+  const non = await mondeQuarts({ confirme: false });
+  await non.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneQ(non, 'Nina Roy'), '↩ Annuler').onclick();
+  await attendre(30);
+  vrai('« Non » : rien n\'est appelé', non.appels.rpc.every((r) => r.nom !== 'admin_annuler_transfert'));
+  non.fin();
+}
+{
+  const essaiT = async (rep) => {
+    const m = await mondeQuarts({ confirme: true, rpc: { admin_annuler_transfert: rep } });
+    await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+    boutonQ(ligneQ(m, 'Nina Roy'), '↩ Annuler').onclick();
+    await attendre(30);
+    const t = m.dernierToast();
+    m.fin();
+    return t;
+  };
+  eq('« transfert introuvable » (déjà annulé ailleurs) : message clair', await essaiT({ data: null, error: { message: 'transfert_introuvable' } }), '❌ transfert_introuvable');
+  eq('une réponse SANS « statut: transfert_annule » n\'est jamais prise pour un succès', await essaiT({ data: { autre: true }, error: null }), '❌ Impossible d’annuler ce transfert');
+  eq('pas de réseau', await essaiT({ data: null, error: { message: 'Failed to fetch' } }), '📴 Pas de réseau : rien n’a été changé.');
+}
+
+log('\n=== LE CODE : L\'ONGLET « QUARTS » (étape 19, morceau 5) ===');
+{
+  const page = lire('index.html'), css = lire('css/style.css'), adm = lire('js/admin.js'), admQ = lire('js/admin-quarts.js');
+  vrai('la page charge admin-quarts.js juste après admin-types-service.js, avant liste-arrets.js', page.indexOf('js/admin-types-service.js') < page.indexOf('js/admin-quarts.js') && page.indexOf('js/admin-quarts.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('la fenêtre de correction est dans la page, et se ferme au toucher en dehors, comme les autres', page.includes('id="correction-quart-overlay"') && /onclick="bgClickQC\(event\)"/.test(page));
+  vrai('… et respecte la zone sûre d\'un iPhone (comme les autres fenêtres qui montent du bas)', /#correction-quart-overlay\{display:none;position:fixed;inset:0;[^}]*align-items:flex-end;\}/.test(css) && css.includes('#nouveau-type-service-overlay,#correction-quart-overlay,#prob-overlay'));
+  vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'quarts',icone:'⏱',label:'Quarts',titre:'Quarts à valider',charger:\(typeof chargerQuartsAdmin==='function'\)\?chargerQuartsAdmin:null\}/.test(adm));
+  vrai('corriger un quart passe TOUJOURS par la fonction serveur admin_corriger_quart (SQL 24), JAMAIS une écriture directe sur quarts/equipage_periodes/equipage_journal', /db\.rpc\('admin_corriger_quart'/.test(admQ) && !/from\(\s*['"](equipage_periodes|equipage_journal|quarts)['"]\s*\)\s*\.\s*(insert|update|delete|upsert)/.test(admQ));
+  vrai('annuler un transfert, lui, passe par la fonction serveur déjà prête (deux lignes à faire correspondre)', /db\.rpc\('admin_annuler_transfert'/.test(admQ));
+  vrai('la note tapée est envoyée telle quelle (jamais pré-concaténée côté app) : c\'est la fonction serveur qui l\'ajoute à celle déjà là', /p_note:note/.test(admQ) && !/q\.note/.test(admQ));
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

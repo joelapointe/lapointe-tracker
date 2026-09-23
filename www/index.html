@@ -243,6 +243,22 @@
     </div>
   </div>
 </div>
+
+<!-- Étape 19 : « Vérifier / corriger un quart » (admin-quarts.js) -->
+<div id="correction-quart-overlay" onclick="bgClickQC(event)">
+  <div id="correction-quart-modal">
+    <h2>✏️ Vérifier / corriger un quart</h2>
+    <div class="f"><label>Employé</label><div id="qc-nom" class="qc-lecture">—</div></div>
+    <div class="f"><label>Raison</label><div id="qc-raison" class="qc-lecture">—</div></div>
+    <div class="f"><label>Début</label><input id="qc-debut" type="datetime-local"/></div>
+    <div class="f"><label>Fin</label><input id="qc-fin" type="datetime-local"/></div>
+    <div class="f"><label>Note (optionnelle)</label><textarea id="qc-note" rows="2"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="mb s" onclick="fermerCorrectionQuart()">Annuler</button>
+      <button class="mb p" onclick="validerQuart()">Valider</button>
+    </div>
+  </div>
+</div>
 <!-- Étape 16b : la liste « Gestes non envoyés » (file-attente.js), ouverte en touchant la bande du haut -->
 <div id="gestes-overlay" onclick="bgClickGestes(event)">
   <div id="gestes-boite" role="dialog" aria-modal="true" aria-labelledby="gestes-h">
@@ -399,6 +415,7 @@
 <script src="js/admin-vehicules.js"></script>
 <script src="js/admin-reglages.js"></script>
 <script src="js/admin-types-service.js"></script>
+<script src="js/admin-quarts.js"></script>
 <script src="js/liste-arrets.js"></script>
 <script src="js/ordre.js"></script>
 <script src="js/parcours.js"></script>

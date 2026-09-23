@@ -191,8 +191,9 @@
     #modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--accent);margin-bottom:14px;}
     .f{margin-bottom:12px;}
     .f label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.7px;}
-    .f input,.f select{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Barlow',sans-serif;outline:none;}
-    .f input:focus,.f select:focus{border-color:var(--accent);}
+    .f input,.f select,.f textarea{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Barlow',sans-serif;outline:none;resize:none;}
+    .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--accent);}
+    .f .qc-lecture{padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;}
     #geo-st{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px;text-align:center;}
     #geo-st.ok{color:var(--green);}
     #geo-st.err{color:var(--red);}
@@ -485,7 +486,7 @@
 #bandeau-reseau{white-space:normal;text-align:right;max-width:calc(100vw - 24px);}
 #bandeau-reseau.actif{pointer-events:auto;cursor:pointer;}
 /* Les fenêtres qui montent du bas de l'écran restent au-dessus de la barre d'accueil d'un iPhone (0 ailleurs) */
-#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
+#liste-overlay,#overlay,#admin-overlay,#routes-overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#correction-quart-overlay,#prob-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{padding-bottom:var(--sa-bottom);}
 #gestes-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:4000;align-items:center;justify-content:center;padding:20px;}
 #gestes-overlay.open{display:flex;}
 #gestes-boite{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 16px 16px;width:100%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;}
@@ -568,6 +569,11 @@
 #nouveau-type-service-overlay.open{display:flex;}
 #nouveau-type-service-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
 #nouveau-type-service-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
+
+#correction-quart-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}
+#correction-quart-overlay.open{display:flex;}
+#correction-quart-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease;}
+#correction-quart-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
 
 /* Étape 19 : le panneau administrateur devient plusieurs onglets (admin.js), le premier : « Employés » (admin-employes.js). */
 #admin-tabs{display:flex;gap:6px;padding:10px 16px 0;flex-shrink:0;overflow-x:auto;}

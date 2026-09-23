@@ -1,0 +1,122 @@
+[
+  {
+    "nom": "le nouvel onglet « Quarts » disparaît de la liste des onglets",
+    "fichier": "js/admin.js",
+    "de": "{id:'quarts',icone:'⏱',label:'Quarts',titre:'Quarts à valider',charger:(typeof chargerQuartsAdmin==='function')?chargerQuartsAdmin:null},\n  ];",
+    "vers": "];"
+  },
+  {
+    "nom": "la liste des quarts à valider n'est plus installée après la lecture (toujours vide, même si le serveur répond)",
+    "fichier": "js/admin-quarts.js",
+    "de": "quartsAValiderAdmin=Array.isArray(quarts)?quarts:[];",
+    "vers": "quartsAValiderAdmin=[];"
+  },
+  {
+    "nom": "une erreur de lecture n'affiche plus de message clair (l'écran reste vide, silencieusement)",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(error){\n    body.innerHTML='<div style=\"padding:16px;color:#ef4444;font-size:13px;\">❌ Impossible de charger les quarts. Vérifie la connexion, puis réessaie.</div>';\n    return;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "un transfert affiche maintenant les DEUX lignes (sortie ET entrée) au lieu d'une seule",
+    "fichier": "js/admin-quarts.js",
+    "de": "function dernieresEntreesTransfert(lignes){\n  const parTransfert={};\n  (lignes||[]).forEach(l=>{\n    const g=parTransfert[l.transfert_id];\n    if(!g||l.debut>g.debut) parTransfert[l.transfert_id]=l;\n  });\n  return Object.values(parTransfert);\n}",
+    "vers": "function dernieresEntreesTransfert(lignes){\n  return lignes||[];\n}"
+  },
+  {
+    "nom": "la raison d'un quart à valider n'est plus expliquée en mots simples (texte vide)",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(r==='fin_estimee') return 'Fermé automatiquement (heure estimée) : à confirmer ou corriger.';",
+    "vers": "if(r==='fin_estimee') return '';"
+  },
+  {
+    "nom": "sans quart à valider, aucune ligne ne se dessine du tout dans cette section (message « vide » disparu)",
+    "fichier": "js/admin-quarts.js",
+    "de": "vide.textContent='✔ Aucun quart à valider.';",
+    "vers": "vide.textContent='';"
+  },
+  {
+    "nom": "corriger un quart ouvre la fenêtre MAIS ne pré-remplit plus les heures (début/fin resteraient toujours vides)",
+    "fichier": "js/admin-quarts.js",
+    "de": "document.getElementById('qc-debut').value=versDatetimeLocal(q.debut);\n  document.getElementById('qc-fin').value=q.fin?versDatetimeLocal(q.fin):'';",
+    "vers": ""
+  },
+  {
+    "nom": "toucher en dehors de la fenêtre de correction ne la ferme plus",
+    "fichier": "js/admin-quarts.js",
+    "de": "function bgClickQC(e){\n  if(e.target===document.getElementById('correction-quart-overlay')) fermerCorrectionQuart();\n}",
+    "vers": "function bgClickQC(e){\n}"
+  },
+  {
+    "nom": "un début ou une fin vide est maintenant accepté (envoyé au serveur sans rien vérifier)",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(!debutVal||!finVal){toast('⚠ Entre une heure de début et de fin');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "une fin avant (ou égale à) le début n'est plus refusée AVANT d'appeler le serveur",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(!(fin.getTime()>debut.getTime())){toast('⚠ La fin doit être après le début');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "« Valider » appelle maintenant une fonction serveur INEXISTANTE (mauvais nom)",
+    "fichier": "js/admin-quarts.js",
+    "de": "const r=await db.rpc('admin_corriger_quart',{p_quart_id:q.id,p_debut:debut.toISOString(),p_fin:fin.toISOString(),p_note:note});",
+    "vers": "const r=await db.rpc('admin_corriger_quart_zzz',{p_quart_id:q.id,p_debut:debut.toISOString(),p_fin:fin.toISOString(),p_note:note});"
+  },
+  {
+    "nom": "une réponse SANS « statut: corrige » n'est plus jamais prise pour un succès (elle le serait maintenant)",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(!data||data.statut!=='corrige'){toast('❌ Impossible de valider ce quart');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "après avoir validé/corrigé un quart, la liste ne se relit plus (l'écran reste périmé)",
+    "fichier": "js/admin-quarts.js",
+    "de": "toast('✔ Quart validé');\n  fermerCorrectionQuart();\n  await chargerQuartsAdmin();\n}",
+    "vers": "toast('✔ Quart validé');\n  fermerCorrectionQuart();\n}"
+  },
+  {
+    "nom": "« quart introuvable » n'est plus expliqué en mots simples, et la liste ne se relit plus toute seule",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(msg.includes('quart_introuvable')) return '❌ Ce quart n’existe plus (la liste va se rafraîchir).';",
+    "vers": ""
+  },
+  {
+    "nom": "une panne de réseau n'est plus détectée en validant/corrigeant un quart (jamais marqué hors réseau)",
+    "fichier": "js/admin-quarts.js",
+    "de": "catch(e){error=e;signalerEchecReseau(e);}",
+    "vers": "catch(e){error=e;}"
+  },
+  {
+    "nom": "annuler un transfert ne demande plus AUCUNE confirmation (dangereux : ça déplace vraiment un employé)",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(!(await confirmer('Annuler ce transfert ?',nom+' retourne dans son véhicule d’origine.','Annuler le transfert','Non'))) return;",
+    "vers": ""
+  },
+  {
+    "nom": "annuler un transfert appelle maintenant la fonction avec le MAUVAIS identifiant (celui de la ligne, pas du transfert)",
+    "fichier": "js/admin-quarts.js",
+    "de": "const r=await db.rpc('admin_annuler_transfert',{p_transfert_id:t.transfert_id});",
+    "vers": "const r=await db.rpc('admin_annuler_transfert',{p_transfert_id:t.id});"
+  },
+  {
+    "nom": "une réponse SANS « statut: transfert_annule » est maintenant prise pour un succès quand même",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(!data||data.statut!=='transfert_annule'){toast('❌ Impossible d’annuler ce transfert');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "après avoir annulé un transfert, la liste ne se relit plus",
+    "fichier": "js/admin-quarts.js",
+    "de": "toast('↩ '+nom+' est de retour dans son véhicule d’origine');\n  await chargerQuartsAdmin();",
+    "vers": "toast('↩ '+nom+' est de retour dans son véhicule d’origine');"
+  },
+  {
+    "nom": "le chevauchement (23P01) n'est plus expliqué en mots simples",
+    "fichier": "js/admin-quarts.js",
+    "de": "if(String(error&&error.code)==='23P01') return '❌ Ce nouvel horaire chevauche un autre quart de cet employé.';",
+    "vers": ""
+  }
+]

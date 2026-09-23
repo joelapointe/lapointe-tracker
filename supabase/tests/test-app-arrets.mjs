@@ -169,7 +169,7 @@ const STOPS = [
   { id: 's5', adresse: '110 rue des Gouverneurs', client: 'TEST 7', route_id: SE, service: MEC, lat: 46.445, lon: -72.78, ordre: 4, actif: true, zone_points: [[46.4, -72.7], [46.5, -72.7], [46.5, -72.8]] },
   { id: 's6', adresse: '120 rue Jonette', client: 'TEST 9', route_id: SE, service: MEC, lat: 46.443, lon: -72.76, ordre: 5, actif: true },
 ];
-const ROUTES = [{ id: CH, nom: 'Charette', couleur: '#c8e63c' }, { id: SE, nom: 'Saint-étienne-des-grès', couleur: '#60a5fa' }];
+const ROUTES = [{ id: CH, nom: 'Charette', couleur: '#c8e63c', actif: true }, { id: SE, nom: 'Saint-étienne-des-grès', couleur: '#60a5fa', actif: true }];
 // Luc est chauffeur du tour de déneigement de Charette (avec Marc) ; Gaby est chauffeur du tour de sel
 const TOURS = () => [
   { route_id: CH, tache: MEC, numero: 1, total: 3, faits: 1, pourcentage: 33, arrets_faits: ['s1'],
@@ -658,11 +658,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab'], ['💰 Export', 'admin-tab'], ['📜 Historique', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab'], ['🧰 Services', 'admin-tab'], ['⏱ Quarts', 'admin-tab'], ['💰 Export', 'admin-tab'], ['📜 Historique', 'admin-tab'], ['🗺️ Routes', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -1647,7 +1647,7 @@ log('\n=== LE CODE : L\'ONGLET « EXPORT » (étape 19, morceau 5) ===');
 // liste se lit DIRECTEMENT (pas de fonction serveur) ; « Nouvelle saison » passe par admin_nouvelle_saison_route (jamais une
 // écriture directe), qui REFUSE si une passe de la route est encore en cours.
 // ══════════════════════════════════════════════════════════════════════
-const ROUTES_HIST = [{ id: 'r-1', nom: 'Charette', couleur: '#c8e63c', numero_base: 0 }];
+const ROUTES_HIST = [{ id: 'r-1', nom: 'Charette', couleur: '#c8e63c', numero_base: 0, actif: true }];
 // (le faux serveur ne trie pas vraiment .order() : déjà dans l'ordre numero DÉCROISSANT qu'une vraie lecture triée renverrait)
 const PASSES_HIST = [
   { id: 'p-2', route_id: 'r-1', numero: 2, tache: MEC, debut: '2026-09-05T08:00:00.000Z', fin: '2026-09-05T11:00:00.000Z', statut: 'terminee', nb_arrets_total: 5, nb_arrets_faits: 4 },

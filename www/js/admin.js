@@ -16,6 +16,7 @@ function ongletsAdmin(){
     {id:'quarts',icone:'⏱',label:'Quarts',titre:'Quarts à valider',charger:(typeof chargerQuartsAdmin==='function')?chargerQuartsAdmin:null},
     {id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:(typeof chargerExportAdmin==='function')?chargerExportAdmin:null},
     {id:'historique',icone:'📜',label:'Historique',titre:'Historique des passes',charger:(typeof chargerHistoriqueAdmin==='function')?chargerHistoriqueAdmin:null},
+    {id:'routes',icone:'🗺️',label:'Routes',titre:'Routes et clients',charger:(typeof chargerRoutesAdmin==='function')?chargerRoutesAdmin:null},
   ];
 }
 let _adminOnglet='problemes';

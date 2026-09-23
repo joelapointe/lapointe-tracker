@@ -50,7 +50,10 @@ function renderRoutes(){
     '<div class="route-count">'+stops.length+' stops</div>';
   body.appendChild(all);
 
-  if(routes.length===0){
+  // Une route désactivée (étape 19b, onglet admin « Routes ») ne se propose plus ici — comme un véhicule désactivé pour une
+  // passe : elle reste dans la base (historique intact) et reste gérable dans l'onglet admin, seulement rangée de ce picker.
+  const routesVisibles=routes.filter(r=>r.actif);
+  if(routesVisibles.length===0){
     const empty=document.createElement('div');
     empty.style='padding:20px 16px;color:#6b7a8d;font-size:13px;';
     empty.textContent='Aucune route créée.';
@@ -58,7 +61,7 @@ function renderRoutes(){
     return;
   }
 
-  routes.forEach(r=>{
+  routesVisibles.forEach(r=>{
     const count=stops.filter(s=>s.route_id===r.id).length;
     const nbTours=tours.filter(t=>t.route_id===r.id&&tourEnCours(t)).length;   // passes en cours sur cette route (une par tâche)
     const div=document.createElement('div');

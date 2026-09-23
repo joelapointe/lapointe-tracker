@@ -1,0 +1,68 @@
+[
+  {
+    "nom": "le nouvel onglet « Réglages » disparaît de la liste des onglets",
+    "fichier": "js/admin.js",
+    "de": "{id:'reglages',icone:'🕒',label:'Réglages',titre:'Réglages',charger:(typeof chargerReglagesAdmin==='function')?chargerReglagesAdmin:null},\n  ];",
+    "vers": "];"
+  },
+  {
+    "nom": "la liste des réglages n'est plus installée après la lecture (toujours vide, même si le serveur répond)",
+    "fichier": "js/admin-reglages.js",
+    "de": "reglagesAdmin=Array.isArray(data)?data:[];",
+    "vers": "reglagesAdmin=[];"
+  },
+  {
+    "nom": "une erreur de lecture n'affiche plus de message clair (l'écran reste vide, silencieusement)",
+    "fichier": "js/admin-reglages.js",
+    "de": "if(error){\n    body.innerHTML='<div style=\"padding:16px;color:#ef4444;font-size:13px;\">❌ Impossible de charger les réglages. Vérifie la connexion, puis réessaie.</div>';\n    return;\n  }",
+    "vers": ""
+  },
+  {
+    "nom": "aucune ligne ne se dessine (la liste reste toujours vide à l'écran, même avec des réglages)",
+    "fichier": "js/admin-reglages.js",
+    "de": "reglagesAdmin.forEach(r=>{",
+    "vers": "[].forEach(r=>{"
+  },
+  {
+    "nom": "la description n'est plus affichée (la clé technique serait montrée à la place sans jamais l'être)",
+    "fichier": "js/admin-reglages.js",
+    "de": "desc.textContent=r.description||r.cle;",
+    "vers": "desc.textContent='';"
+  },
+  {
+    "nom": "le champ ne montre plus la valeur actuelle (toujours vide au chargement)",
+    "fichier": "js/admin-reglages.js",
+    "de": "input.value=String(Number(r.valeur));",
+    "vers": "input.value='';"
+  },
+  {
+    "nom": "un réglage à zéro est maintenant accepté (nonsensique : « rappel après 0 heure »)",
+    "fichier": "js/admin-reglages.js",
+    "de": "if(!Number.isFinite(v)||v<=0){toast('⚠ Entre un nombre d’heures valide (plus grand que 0)');return;}",
+    "vers": ""
+  },
+  {
+    "nom": "« Enregistrer » écrit toujours sur le PREMIER réglage de la liste, jamais celui qu'on modifie vraiment",
+    "fichier": "js/admin-reglages.js",
+    "de": "const res=await db.from('reglages').update({valeur:v}).eq('cle',r.cle);",
+    "vers": "const res=await db.from('reglages').update({valeur:v}).eq('cle',reglagesAdmin[0].cle);"
+  },
+  {
+    "nom": "après avoir enregistré un réglage, la liste ne se relit plus (l'écran reste périmé)",
+    "fichier": "js/admin-reglages.js",
+    "de": "toast('✔ Réglage enregistré');\n  await chargerReglagesAdmin();",
+    "vers": "toast('✔ Réglage enregistré');"
+  },
+  {
+    "nom": "une panne de réseau n'est plus détectée en enregistrant un réglage (jamais marqué hors réseau)",
+    "fichier": "js/admin-reglages.js",
+    "de": "catch(e){error=e;signalerEchecReseau(e);}",
+    "vers": "catch(e){error=e;}"
+  },
+  {
+    "nom": "le message d'erreur générique du serveur disparaît (rien n'est dit quand ce n'est ni le réseau ni la validation)",
+    "fichier": "js/admin-reglages.js",
+    "de": "return '❌ '+((error&&error.message)||'Une erreur est survenue.');",
+    "vers": "return '';"
+  }
+]

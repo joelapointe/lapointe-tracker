@@ -581,3 +581,12 @@
 .emp-btn.del{color:var(--red);border-color:rgba(239,68,68,.4);flex:0 0 auto;padding:0 14px;}
 .emp-nip-choix label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;}
 .emp-nip-choix input[type="checkbox"]{width:18px;height:18px;}
+
+/* Étape 19 (suite) : l'onglet « Réglages » (admin-reglages.js) — un écran générique sur la table « reglages » */
+.regl-item{padding:12px 16px;border-bottom:1px solid rgba(37,45,58,.8);}
+.regl-desc{font-size:13px;color:var(--text);line-height:1.4;margin-bottom:8px;}
+.regl-ligne{display:flex;align-items:center;gap:8px;}
+.regl-valeur{width:70px;min-height:40px;padding:0 10px;border-radius:8px;border:1px solid var(--border);background:#0f1318;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;text-align:center;}
+.regl-unite{font-size:12px;color:var(--muted);}
+.regl-btn{margin-left:auto;min-height:40px;padding:0 14px;border-radius:8px;border:1px solid var(--border);background:#161c24;color:var(--accent);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.regl-btn:active{filter:brightness(.85);}

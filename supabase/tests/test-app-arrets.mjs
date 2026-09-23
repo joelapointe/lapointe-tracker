@@ -46,6 +46,7 @@ function monde(o = {}) {
     equipes: o.equipes ?? [],
     equipage_periodes: o.equipages ?? [],
     parcours_segments: o.segments ?? [],   // les tronçons du tracé (étape 18b, parcours.js)
+    reglages: o.reglages ?? [],
   };
   const appels = { rpc: [], eq: [], ecritures: [], statut: [], erreurs: [], toasts: [], ouverts: [], confirmations: [], informations: [], lectures: [], selects: [], orders: [], is: [], ranges: [], fonctions: [], canaux: [], attributions: [] };
   const reponsesRpc = o.rpc ?? {};
@@ -133,7 +134,7 @@ function monde(o = {}) {
     __reponseConfirmation: o.confirme ?? true,
   };
   const ctx = vm.createContext(sandbox);
-  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js'])
+  for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/file-attente.js', 'js/tours.js', 'js/vehicules.js', 'js/equipage.js', 'js/equipage-panneau.js', 'js/passe.js', 'js/resume-passe.js', 'js/arrets.js', 'js/routes.js', 'js/liste-arrets.js', 'js/ordre.js', 'js/parcours.js', 'js/placement.js', 'js/problemes.js', 'js/photos.js', 'js/admin.js', 'js/admin-employes.js', 'js/admin-vehicules.js', 'js/admin-reglages.js'])
     vm.runInContext(lire(f), ctx, { filename: f });
   vm.runInContext('db = __fauxDb; map = __map; currentUser = ' + JSON.stringify(o.utilisateur ?? { id: 'u-luc', nom: 'Luc', role: 'employe' }) + ';', ctx);
   // Les messages : on les note (toast) ; la boîte de confirmation est testée ailleurs : ici on note la question et on répond « oui » ou « non »
@@ -651,11 +652,11 @@ log('\n=== LE PANNEAU ADMINISTRATEUR A DES ONGLETS ===');
   const m = await mondeEmp({ problemes: [] });
   await m.run('openAdmin()'); await attendre(30);
   eq('à l\'ouverture : l\'onglet « Problèmes » est actif, le sous-titre le dit', [m.el('admin-sub').textContent, m.el('admin-tabs').children.map((b) => [b.textContent, b.className])],
-    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab']]]);
+    ['Problèmes signalés', [['⚠ Problèmes', 'admin-tab active'], ['👤 Employés', 'admin-tab'], ['🚚 Véhicules', 'admin-tab'], ['🕒 Réglages', 'admin-tab']]]);
   eq('… aucun appel « admin_lister_utilisateurs » tant qu\'on n\'a pas touché l\'onglet', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 0);
   m.el('admin-tabs').children[1].onclick();
   await attendre(30);
-  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab'], 'Employés', 1]);
+  eq('toucher « Employés » : l\'onglet devient actif, le sous-titre change, la liste se charge', [m.el('admin-tabs').children.map((b) => b.className), m.el('admin-sub').textContent, m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length], [['admin-tab', 'admin-tab active', 'admin-tab', 'admin-tab'], 'Employés', 1]);
   m.el('admin-tabs').children[1].onclick();
   eq('toucher le même onglet une deuxième fois : rien n\'est relu', m.appels.rpc.filter((r) => r.nom === 'admin_lister_utilisateurs').length, 1);
   m.el('admin-tabs').children[0].onclick();
@@ -1023,6 +1024,112 @@ log('\n=== LE CODE : L\'ONGLET « VÉHICULES » (étape 19) ===');
   vrai('aucune fonction serveur ici : des écritures directes sur « equipes » (contrairement aux employés)', !/db\.functions\.invoke/.test(admV));
   vrai('le nom est toujours nettoyé (espaces autour retirés) avant d\'être envoyé', /const nom=document\.getElementById\('nv-nom'\)\.value\.trim\(\);/.test(admV));
   vrai('le style : les mêmes badges actif/inactif que les employés sont réutilisés (pas de nouvelle classe CSS dupliquée)', !/\.veh-/.test(css));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ÉTAPE 19 (SUITE) : L'ONGLET « RÉGLAGES » (www/js/admin.js, admin-reglages.js)
+// La table « reglages » (cle, valeur, description) existe depuis l'étape 7 ; Joé la changeait par SQL. Écran GÉNÉRIQUE (toute la
+// table, sans nommer les réglages en dur) : aucune fonction serveur, AUCUN SQL — les règles d'accès laissent déjà l'administrateur
+// modifier « valeur » (jamais « cle » ni « description », non accordées en écriture).
+// ══════════════════════════════════════════════════════════════════════
+const REGLAGES = [
+  { cle: 'alerte_quart_termine_heures', valeur: 4, description: 'Avertit le chauffeur si l’employé qu’il ajoute à bord a terminé son quart depuis moins de ce nombre d’heures.' },
+  { cle: 'duree_max_quart_heures', valeur: 16, description: 'Un quart encore ouvert après ce nombre d’heures est fermé automatiquement (fin estimée, à valider).' },
+  { cle: 'rappel_en_service_heures', valeur: 12, description: 'Rappel dans l’application : « Tu es encore en service depuis N heures : as-tu oublié de terminer ton quart ? »' },
+];
+const mondeRegl = async (o = {}) => {
+  const m = monde({ utilisateur: ADMIN19, reglages: REGLAGES.map((r) => ({ ...r })), ...o });
+  await m.run('loadStops()');
+  return m;
+};
+const ligneReglage = (m, i) => m.el('admin-body').children[i];
+const inputReglage = (ligne) => ligne.children[1].children[0];
+const boutonReglage = (ligne) => ligne.children[1].children[2];
+
+log('\n=== L\'ONGLET « RÉGLAGES » : LA LISTE (ÉCRAN GÉNÉRIQUE SUR LA TABLE « reglages ») ===');
+{
+  const m = await mondeRegl();
+  await m.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste vient d\'une lecture DIRECTE de la table « reglages » (pas de fonction serveur)', m.appels.lectures.includes('reglages'));
+  const l0 = ligneReglage(m, 0), l1 = ligneReglage(m, 1);
+  eq('chaque réglage montre sa description (déjà en français dans la base) et sa valeur actuelle', [l0.children[0].textContent, inputReglage(l0).value, l1.children[0].textContent, inputReglage(l1).value], [REGLAGES[0].description, '4', REGLAGES[1].description, '16']);
+  vrai('la valeur se change avec un clavier numérique, un bouton « Enregistrer » à côté', inputReglage(l0).type === 'number' && boutonReglage(l0).textContent === 'Enregistrer');
+  m.fin();
+}
+{
+  const vide = await mondeRegl({ reglages: [] });
+  await vide.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+  vrai('aucun réglage : « Aucun réglage. »', vide.el('admin-body').children[0].textContent === 'Aucun réglage.');
+  vide.fin();
+  const err = await mondeRegl({ erreurLecture: ['reglages'] });
+  await err.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+  vrai('la liste ne peut pas être lue : message clair, jamais « Aucun réglage » (ce serait un mensonge)', err.el('admin-body').innerHTML.includes('❌ Impossible de charger les réglages') && !err.el('admin-body').innerHTML.includes('Aucun réglage'));
+  err.fin();
+  const planté = await mondeRegl({ lectureLance: ['reglages'] });
+  await planté.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+  vrai('… même si l\'appel plante carrément (jamais de plantage de l\'écran)', planté.el('admin-body').innerHTML.includes('❌ Impossible de charger les réglages'));
+  planté.fin();
+}
+
+log('\n=== CHANGER UN RÉGLAGE ===');
+{
+  const upd = (v, d, f) => { d.reglages.find((x) => x.cle === f[0][1]).valeur = v.valeur; return { data: null, error: null }; };
+  const m = await mondeRegl({ ecritures: { 'reglages.update': upd } });
+  await m.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+  const lues = m.appels.lectures.filter((t) => t === 'reglages').length;
+  inputReglage(ligneReglage(m, 1)).value = '18';
+  boutonReglage(ligneReglage(m, 1)).onclick();
+  await attendre(30);
+  eq('écrit directement sur « reglages » (SEULE la valeur, jamais cle ni description), confirme, RELIT la liste depuis le serveur (pas seulement ce qu\'on a tapé)', [m.appels.ecritures[0], m.dernierToast(), m.appels.lectures.filter((t) => t === 'reglages').length - lues, inputReglage(ligneReglage(m, 1)).value], [{ table: 'reglages', op: 'update', valeur: { valeur: 18 }, filtres: [['cle', 'duree_max_quart_heures']] }, '✔ Réglage enregistré', 1, '18']);
+  m.fin();
+}
+{
+  // La validation se fait AVANT d'écrire : rien n'est envoyé pour une valeur invalide
+  const essaiInvalide = async (texte) => {
+    const m = await mondeRegl();
+    await m.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+    inputReglage(ligneReglage(m, 0)).value = texte;
+    boutonReglage(ligneReglage(m, 0)).onclick();
+    await attendre(30);
+    const t = m.dernierToast(), n = m.appels.ecritures.length;
+    m.fin();
+    return { toast: t, ecritures: n };
+  };
+  eq('zéro : refusé avant d\'écrire', await essaiInvalide('0'), { toast: '⚠ Entre un nombre d’heures valide (plus grand que 0)', ecritures: 0 });
+  eq('négatif : refusé', await essaiInvalide('-2'), { toast: '⚠ Entre un nombre d’heures valide (plus grand que 0)', ecritures: 0 });
+  eq('vide : refusé', await essaiInvalide(''), { toast: '⚠ Entre un nombre d’heures valide (plus grand que 0)', ecritures: 0 });
+}
+{
+  const essai = async (rep) => {
+    const m = await mondeRegl({ ecritures: { 'reglages.update': rep } });
+    await m.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+    inputReglage(ligneReglage(m, 0)).value = '5';
+    boutonReglage(ligneReglage(m, 0)).onclick();
+    await attendre(30);
+    const t = m.dernierToast();
+    m.fin();
+    return t;
+  };
+  eq('pas de réseau (message du serveur) : message clair', await essai({ data: null, error: { message: 'Failed to fetch' } }), '📴 Pas de réseau : rien n’a été changé.');
+  eq('une autre erreur du serveur : son message tel quel', await essai({ data: null, error: { message: 'permission denied for table reglages' } }), '❌ permission denied for table reglages');
+  const m2 = await mondeRegl({ ecritures: { 'reglages.update': () => { throw new TypeError('Failed to fetch'); } } });
+  await m2.run(`_adminOnglet='reglages';chargerPanneauAdmin();`); await attendre(30);
+  await m2.run('reseau.enLigne=true;');
+  inputReglage(ligneReglage(m2, 0)).value = '5';
+  boutonReglage(ligneReglage(m2, 0)).onclick();
+  await attendre(30);
+  eq('l\'appel plante avec une VRAIE panne de réseau (TypeError « Failed to fetch ») : le téléphone se sait hors réseau ensuite', m2.run('reseau.enLigne'), false);
+  m2.fin();
+}
+
+log('\n=== LE CODE : L\'ONGLET « RÉGLAGES » (étape 19) ===');
+{
+  const page = lire('index.html'), adm = lire('js/admin.js'), admR = lire('js/admin-reglages.js');
+  vrai('la page charge admin-reglages.js juste après admin-vehicules.js, avant liste-arrets.js', page.indexOf('js/admin-vehicules.js') < page.indexOf('js/admin-reglages.js') && page.indexOf('js/admin-reglages.js') < page.indexOf('js/liste-arrets.js'));
+  vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'reglages',icone:'🕒',label:'Réglages',titre:'Réglages',charger:\(typeof chargerReglagesAdmin==='function'\)\?chargerReglagesAdmin:null\}/.test(adm));
+  vrai('l\'écran est GÉNÉRIQUE : aucun nom de réglage n\'est écrit en dur (un futur réglage ajouté par SQL apparaîtrait tout seul, sans changer ce fichier)', !/rappel_en_service_heures|suggestion_pause_heures|duree_max_quart_heures|duree_max_passe_heures|fin_equipe_apres_passe_heures|alerte_quart_termine_heures/.test(admR));
+  vrai('seule « valeur » est écrite (jamais « cle » ni « description », non accordées en écriture par les règles d\'accès)', /db\.from\('reglages'\)\.update\(\{valeur:v\}\)/.test(admR) && !/update\(\{[^}]*cle:/.test(admR) && !/update\(\{[^}]*description:/.test(admR));
+  vrai('aucune fonction serveur ici, aucun SQL requis : une écriture directe sur « reglages »', !/db\.functions\.invoke/.test(admR));
 }
 
 log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');

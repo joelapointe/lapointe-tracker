@@ -11,6 +11,7 @@ function ongletsAdmin(){
     {id:'problemes',icone:'⚠',label:'Problèmes',titre:'Problèmes signalés',charger:loadProblemes},
     {id:'employes',icone:'👤',label:'Employés',titre:'Employés',charger:(typeof chargerEmployesAdmin==='function')?chargerEmployesAdmin:null},
     {id:'vehicules',icone:'🚚',label:'Véhicules',titre:'Véhicules',charger:(typeof chargerVehiculesAdmin==='function')?chargerVehiculesAdmin:null},
+    {id:'reglages',icone:'🕒',label:'Réglages',titre:'Réglages',charger:(typeof chargerReglagesAdmin==='function')?chargerReglagesAdmin:null},
   ];
 }
 let _adminOnglet='problemes';

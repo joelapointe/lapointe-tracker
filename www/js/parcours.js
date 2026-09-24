@@ -98,20 +98,18 @@ function segmentValide(s,a,b){
 function sequenceParcours(routeId,service){
   return enOrdre(stops.filter(s=>s.route_id===routeId&&s.actif!==false&&s.service===service&&s.lat&&s.lon));
 }
-// Les tronçons à dessiner : de MON prochain client jusqu'au dernier, dans l'ordre. Rien sans passe (au volant ou à bord).
+// Le tronçon à dessiner : SEULEMENT du prochain client à celui d'après (jamais toute la suite restante — avec beaucoup de
+// clients, une ligne qui relie tout devient un labyrinthe illisible ; retour de Joé après un essai réel, 23 sept. 2026).
+// Rien sans passe (au volant ou à bord).
 function tronconsAffiches(){
   if(!currentUser) return [];
   const t=(typeof monTourEnCours==='function')?monTourEnCours():null;
   if(!t||!tourEnCours(t)) return [];
   const suite=sequenceParcours(t.route_id,t.tache);
   const k=suite.findIndex(s=>!estFait(s));   // le prochain client (le même que prochainArret() d'ordre.js)
-  if(k<0) return [];
-  const sortie=[];
-  for(let i=k;i+1<suite.length;i++){
-    const s=_indexSegments.get(suite[i].id+'|'+suite[i+1].id);
-    if(s&&s.statut==='ok'&&Array.isArray(s.trace)&&s.trace.length>=2&&segmentValide(s,suite[i],suite[i+1])) sortie.push(s);
-  }
-  return sortie;
+  if(k<0||k+1>=suite.length) return [];
+  const s=_indexSegments.get(suite[k].id+'|'+suite[k+1].id);
+  return (s&&s.statut==='ok'&&Array.isArray(s.trace)&&s.trace.length>=2&&segmentValide(s,suite[k],suite[k+1]))?[s]:[];
 }
 
 // ── Le dessin ──────────────────────────────────────────

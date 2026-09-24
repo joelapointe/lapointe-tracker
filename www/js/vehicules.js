@@ -123,6 +123,32 @@ function positionPerimee(pos){
   return !(Date.now()-Date.parse(pos.maj_le)<=POSITION_PERIMEE_MIN*60000);   // trop vieille, ou date illisible
 }
 
+// Le point glisse d'une lecture à l'autre au lieu de sauter d'un coup (retour de Joé après un essai réel, 23 sept. 2026 :
+// « il se téléporte au 10 secondes, à 90 km/h ça n'a aucun sens »). La durée du glissement suit l'écart RÉEL entre les deux
+// heures de lecture (maj_le) — pas une constante fixe — pour rester juste même si l'envoi (10 s d'habitude) a été retardé ;
+// plafonnée pour ne jamais ramper après un long silence (zone morte, camion arrêté puis reparti loin).
+const GLISSEMENT_PAS_MS=150;
+const GLISSEMENT_DUREE_MAX_MS=15000;
+function deplacerMarqueurCamion(m,lat,lon,majLe){
+  if(m._animCamion){clearInterval(m._animCamion);m._animCamion=null;}
+  const majLeMs=Date.parse(majLe);
+  const duree=(m._posActuelle&&m._majLeMs&&majLeMs)?Math.min(GLISSEMENT_DUREE_MAX_MS,Math.max(0,majLeMs-m._majLeMs)):0;
+  if(majLeMs) m._majLeMs=majLeMs;
+  if(!m._posActuelle||!duree){
+    m.setLatLng([lat,lon]);
+    m._posActuelle=[lat,lon];
+    return;
+  }
+  const depart=m._posActuelle,arrivee=[lat,lon],t0=Date.now();
+  m._animCamion=setInterval(()=>{
+    const p=Math.min(1,(Date.now()-t0)/duree);
+    const pos=[depart[0]+(arrivee[0]-depart[0])*p,depart[1]+(arrivee[1]-depart[1])*p];
+    m.setLatLng(pos);
+    m._posActuelle=pos;
+    if(p>=1){clearInterval(m._animCamion);m._animCamion=null;}
+  },GLISSEMENT_PAS_MS);
+}
+
 function iconeCamion(c,perime){
   return L.divIcon({
     className:'',
@@ -153,17 +179,22 @@ function majVehicules(){
     const perime=positionPerimee(c.position);
     let m=marqueursVehicules[c.passeId];
     if(m){
-      m.setLatLng([c.position.lat,c.position.lon]);
+      deplacerMarqueurCamion(m,c.position.lat,c.position.lon,c.position.maj_le);
       m.setIcon(iconeCamion(c,perime));
       m.setPopupContent(htmlCamion(c,perime));
     } else {
       m=L.marker([c.position.lat,c.position.lon],{icon:iconeCamion(c,perime),zIndexOffset:500}).addTo(map);
+      m._posActuelle=[c.position.lat,c.position.lon];
+      m._majLeMs=Date.parse(c.position.maj_le)||null;
       m.bindPopup(htmlCamion(c,perime));
       marqueursVehicules[c.passeId]=m;
     }
   });
   Object.keys(marqueursVehicules).forEach(id=>{
-    if(!vus[id]){ map.removeLayer(marqueursVehicules[id]); delete marqueursVehicules[id]; }   // passe terminée, ou camion d'une autre route
+    if(!vus[id]){
+      if(marqueursVehicules[id]._animCamion) clearInterval(marqueursVehicules[id]._animCamion);
+      map.removeLayer(marqueursVehicules[id]); delete marqueursVehicules[id];   // passe terminée, ou camion d'une autre route
+    }
   });
 }
 

@@ -1832,10 +1832,18 @@ log('\n=== LES CAMIONS SUR LA CARTE, AVEC LEUR ÉQUIPAGE (étape 13f) ===');
   // — Position ancienne, position qui bouge, camion qui disparaît —
   m = await cas({ positions: [posv('p-luc', 46.443, -72.922, 4)] });
   vrai('position vieille de 4 minutes : le camion reste affiché mais ATTÉNUÉ, avec « ⚠ position il y a 4 min »', html(m.camions[0]).includes('camion perime') && m.camions[0].popup.includes('⚠ position il y a 4 min'), html(m.camions[0]) + m.camions[0].popup);
-  m = await cas({ positions: [posv('p-luc', 46.443, -72.922)] });
-  const avant = m.camions.length; m.donnees.positions = [posv('p-luc', 46.4431, -72.9221)];
+  // Retour de Joé après un essai réel (23 sept. 2026) : « le point de ma position ne me suit pas, il se téléporte au 10 secondes,
+  // à 90 km/h ça n'a aucun sens ». Le marqueur doit maintenant GLISSER d'une lecture à l'autre, pas sauter d'un coup.
+  const ilMs = (ms) => new Date(Date.now() - ms).toISOString();
+  m = await cas({ positions: [{ passe_id: 'p-luc', lat: 46.443, lon: -72.922, precision_m: 8, maj_le: ilMs(5000) }] });
+  const avant = m.camions.length;
+  m.donnees.positions = [{ passe_id: 'p-luc', lat: 46.4431, lon: -72.9221, precision_m: 8, maj_le: ilMs(4700) }];   // 300 ms plus tard que la lecture précédente
   await m.run('rafraichirEnCours()');
-  eq('le camion se DÉPLACE (même marqueur, pas de doublon)', [m.camions.length - avant, m.camions[0].deplacements, m.camions[0].ll], [0, 1, [46.4431, -72.9221]]);
+  eq('le camion ne saute PAS d\'un coup à la nouvelle position : juste après la lecture, il est encore en train de glisser (même marqueur, pas de doublon)',
+    [m.camions.length - avant, m.camions[0].ll], [0, [46.443, -72.922]]);
+  await attendre(500);
+  eq('… puis, le glissement terminé (300 ms : l\'écart réel entre les deux lectures), il arrive bien à la nouvelle position, en plusieurs petits pas',
+    [m.camions.length - avant, m.camions[0].deplacements > 1, m.camions[0].ll], [0, true, [46.4431, -72.9221]]);
   m.donnees.positions = []; await m.run('rafraichirEnCours()');
   eq('plus de position (passe terminée : le serveur l\'efface) : le point disparaît', [m.run('Object.keys(marqueursVehicules).length'), m.retires.filter((x) => x.popup).length], [0, 1]);
 
@@ -2155,7 +2163,7 @@ const F18B = await import('data:text/javascript;base64,' + Buffer.from(stripType
 log('\n=== LE TRACÉ : CE QUI EST DESSINÉ PENDANT UNE PASSE ===');
 {
   const m = await mondeP();
-  eq('Luc conduit, c1 est fait : la ligne va du PROCHAIN client (c2) au dernier (c5) : trois tronçons dans l\'ordre (pas c1→c2)', lignesDe(m), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  eq('Luc conduit, c1 est fait : la ligne va SEULEMENT du prochain client (c2) à celui d\'après (c3) — jamais toute la suite restante (retour de Joé : un labyrinthe avec beaucoup de clients)', lignesDe(m), [trace(1, 2)]);
   const c = groupeActuel(m).couches;
   eq('deux couches superposées : un contour sombre plus épais dessous, la ligne cyan dessus ; ni l\'une ni l\'autre ne capte les touchers', [c.length, c[0].opt.color, c[0].opt.weight, c[1].opt.color, c[1].opt.weight, c.every((x) => x.opt.interactive === false)], [2, '#0b1220', 8, '#22d3ee', 4, true]);
   eq('les deux couches dessinent les MÊMES lignes', c[0].lignes, c[1].lignes);
@@ -2164,7 +2172,7 @@ log('\n=== LE TRACÉ : CE QUI EST DESSINÉ PENDANT UNE PASSE ===');
   m.run('renderAll()'); m.run('renderAll()');
   eq('rien n\'a changé : la carte redessinée ne redessine PAS le tracé (une seule couche créée)', [m.groupes.length, m.appels.attributions.length], [1, 1]);
   m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2']))}, Date.now())`); m.run('renderAll()');
-  eq('c2 devient fait : le tracé se refait, il commence maintenant à c3 (deux tronçons) ; l\'ancienne couche est retirée', [lignesDe(m), m.groupes.length, m.retires.includes(m.groupes[0])], [[trace(2, 3), trace(3, 4)], 2, true]);
+  eq('c2 devient fait : le tracé se refait, il montre maintenant le seul tronçon c3→c4 ; l\'ancienne couche est retirée', [lignesDe(m), m.groupes.length, m.retires.includes(m.groupes[0])], [[trace(2, 3)], 2, true]);
   eq('… la mention n\'est pas posée en double', m.appels.attributions.filter((a) => a[0] === '+').length - m.appels.attributions.filter((a) => a[0] === '-').length, 1);
   m.run(`installerTours(${JSON.stringify(toursCinq(['c1', 'c2', 'c3', 'c4']))}, Date.now())`); m.run('renderAll()');
   eq('un seul client restant (c5) : rien à relier, aucune ligne', lignesDe(m), null);
@@ -2178,7 +2186,7 @@ log('\n=== LE TRACÉ : CE QUI EST DESSINÉ PENDANT UNE PASSE ===');
 }
 {
   const p = await mondeP({ tours: toursCinq(['c1'], { je_suis_chauffeur: false, je_suis_a_bord: true }) });
-  eq('un PASSAGER du camion voit la même ligne', lignesDe(p), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  eq('un PASSAGER du camion voit la même ligne', lignesDe(p), [trace(1, 2)]);
   p.fin();
   const a = await mondeP({ utilisateur: ADMIN, tours: toursCinq(['c1'], sansPasse) });
   eq('l\'administrateur SANS passe (ni au volant ni à bord) : aucune ligne, aucun message', [lignesDe(a), a.dernierToast()], [null, undefined]);
@@ -2190,26 +2198,26 @@ log('\n=== LE TRACÉ : CE QUI EST DESSINÉ PENDANT UNE PASSE ===');
 }
 {
   // Jamais de ligne inventée : un tronçon absent, périmé ou sans route n'est simplement pas dessiné
-  const sans = tousSeg().filter((s) => !(s.de_arret_id === 'c3' && s.vers_arret_id === 'c4'));
+  const sans = tousSeg().filter((s) => !(s.de_arret_id === 'c2' && s.vers_arret_id === 'c3'));
   const a = await mondeP({ segments: sans });
-  eq('le tronçon c3→c4 manque : on dessine c2→c3 et c4→c5, RIEN entre c3 et c4 (jamais de ligne droite inventée)', lignesDe(a), [trace(1, 2), trace(3, 4)]);
+  eq('le tronçon c2→c3 (le seul qu\'on voudrait dessiner) manque : rien n\'est dessiné (jamais de ligne droite inventée)', lignesDe(a), null);
   a.fin();
   const bouge = cinq.map((s) => (s.id === 'c3' ? { ...s, lat: s.lat + 0.001 } : { ...s }));
   const b = await mondeP({ stops: bouge });
-  eq('c3 a changé de place depuis le calcul : ses DEUX tronçons sont périmés et ne sont pas dessinés (reste c4→c5)', lignesDe(b), [trace(3, 4)]);
+  eq('c3 a changé de place depuis le calcul : le tronçon qu\'on voudrait dessiner (c2→c3) est périmé, rien n\'est dessiné', lignesDe(b), null);
   b.fin();
-  const c = await mondeP({ segments: tousSeg().map((s) => (s.de_arret_id === 'c3' ? { ...s, statut: 'sans_route', trace: null } : s)) });
-  eq('un tronçon « sans_route » n\'est pas dessiné', lignesDe(c), [trace(1, 2), trace(3, 4)]);
+  const c = await mondeP({ tours: toursCinq(['c1', 'c2']), segments: tousSeg().map((s) => (s.de_arret_id === 'c3' ? { ...s, statut: 'sans_route', trace: null } : s)) });
+  eq('un tronçon « sans_route » n\'est pas dessiné, même s\'il est le seul qu\'on voudrait montrer (c3 fait : le prochain segment est c3→c4)', lignesDe(c), null);
   c.fin();
   const d = await mondeP({ segments: [...tousSeg(), seg(STOPS[4], STOPS[5]), seg(STOPS[0], STOPS[1])] });
-  eq('les tronçons d\'une autre route (s5→s6) ou d\'un autre trajet sont ignorés', lignesDe(d), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  eq('les tronçons d\'une autre route (s5→s6) ou d\'un autre trajet sont ignorés', lignesDe(d), [trace(1, 2)]);
   d.fin();
   const inverse = cinq.map((s) => ({ ...s, ordre: { c1: 0, c2: 1, c3: 3, c4: 2, c5: 4 }[s.id] }));   // l'administrateur a mis c4 avant c3
   const e = await mondeP({ stops: inverse });
   eq('l\'ordre a changé (c4 avant c3) : les nouveaux couples n\'ont pas encore de tronçon : on ne dessine que ce qui est vrai (rien)', [lignesDe(e), e.run('tronconsManquants()').length], [null, 3]);
   e.fin();
   const f = await mondeP({ segments: [{ ...tousSeg()[1], trace: [[46.4, -72.9]] }, tousSeg()[2]] });
-  eq('un tronçon dont la ligne n\'a qu\'un point est ignoré (jamais de plantage)', lignesDe(f), [trace(2, 3)]);
+  eq('un tronçon dont la ligne n\'a qu\'un point est ignoré (jamais de plantage) : rien n\'est dessiné', lignesDe(f), null);
   f.fin();
 }
 
@@ -2222,7 +2230,7 @@ log('\n=== LE BOUTON 🛣 : ENLEVER ET REMETTRE LES LIGNES ===');
   m.run('renderAll()');
   eq('… un redessin de la carte ne les remet PAS', lignesDe(m), null);
   m.run('basculerTrace()');
-  eq('un deuxième toucher : elles reviennent, le message le dit, le choix est gardé', [lignesDe(m), m.el('btn-trace').classList.contains('on'), m.dernierToast(), m.memoire.get('lp_trace_visible')], [[trace(1, 2), trace(2, 3), trace(3, 4)], true, '🛣 Tracé affiché', '1']);
+  eq('un deuxième toucher : elle revient, le message le dit, le choix est gardé', [lignesDe(m), m.el('btn-trace').classList.contains('on'), m.dernierToast(), m.memoire.get('lp_trace_visible')], [[trace(1, 2)], true, '🛣 Tracé affiché', '1']);
   m.fin();
   const c = await mondeP({ memo: { lp_trace_visible: '0' } });
   eq('un téléphone où l\'employé les avait cachées les garde cachées à l\'ouverture', [lignesDe(c), c.el('btn-trace').classList.contains('on')], [null, false]);
@@ -2249,14 +2257,14 @@ log('\n=== LES TRONÇONS : LECTURE, COPIE, TEMPS RÉEL ===');
   eq('… « forcer » relit', m.appels.lectures.filter((x) => x === 'parcours_segments').length, lus + 1);
   eq('le temps réel : UN canal « parcours-changes » sur la table parcours_segments, ouvert après la première lecture réussie (pas en double)', [m.appels.canaux.length, m.appels.canaux[0].nom, m.appels.canaux[0].liens.map((l) => [l.filtre.table, l.filtre.event])], [1, 'parcours-changes', [['parcours_segments', '*']]]);
   // De nouveaux tronçons arrivent en rafale : UNE seule relecture, et la carte suit
-  m.donnees.parcours_segments = m.donnees.parcours_segments.filter((s) => !(s.de_arret_id === 'c3'));
+  m.donnees.parcours_segments = m.donnees.parcours_segments.filter((s) => !(s.de_arret_id === 'c2'));
   await m.run('chargerSegments({forcer:true})'); m.run('renderAll()');
-  eq('(le tronçon c3→c4 manque : la ligne a un trou)', lignesDe(m), [trace(1, 2), trace(3, 4)]);
-  m.donnees.parcours_segments.push(seg(cinq[2], cinq[3]));
+  eq('(le tronçon c2→c3, le seul qu\'on voudrait montrer, manque : rien n\'est dessiné)', lignesDe(m), null);
+  m.donnees.parcours_segments.push(seg(cinq[1], cinq[2]));
   const avant = m.appels.lectures.filter((x) => x === 'parcours_segments').length;
   m.run('planifierRechargementParcours();planifierRechargementParcours();planifierRechargementParcours()');
   await attendre(1800);
-  eq('trois avis du temps réel d\'un coup : UNE seule relecture, et le trou se comble à l\'écran', [m.appels.lectures.filter((x) => x === 'parcours_segments').length - avant, lignesDe(m)], [1, [trace(1, 2), trace(2, 3), trace(3, 4)]]);
+  eq('trois avis du temps réel d\'un coup : UNE seule relecture, et la ligne réapparaît', [m.appels.lectures.filter((x) => x === 'parcours_segments').length - avant, lignesDe(m)], [1, [trace(1, 2)]]);
   m.fin();
 }
 {
@@ -2274,7 +2282,7 @@ log('\n=== LES TRONÇONS : LECTURE, COPIE, TEMPS RÉEL ===');
   const o = { lectureLance: [] };
   const r = monde({ stops: copies(), tours: toursCinq(), segments: tousSeg(), ...o }); await r.run('loadStops()'); r.run('clearTimeout(_tMajParcours)');
   o.lectureLance.push('parcours_segments');
-  eq('le signal disparaît pendant la relecture : false, les tronçons connus sont GARDÉS (les lignes restent), et le téléphone se sait hors réseau', [await r.run('chargerSegments({forcer:true})'), (r.run('renderAll()'), lignesDe(r)), r.run('reseau.enLigne')], [false, [trace(1, 2), trace(2, 3), trace(3, 4)], false]);
+  eq('le signal disparaît pendant la relecture : false, les tronçons connus sont GARDÉS (les lignes restent), et le téléphone se sait hors réseau', [await r.run('chargerSegments({forcer:true})'), (r.run('renderAll()'), lignesDe(r)), r.run('reseau.enLigne')], [false, [trace(1, 2)], false]);
   r.fin();
 }
 {
@@ -2330,11 +2338,11 @@ const erreurHttp = (statut, corps) => ({ data: null, error: { message: 'Edge Fun
   eq('… il n\'y a plus rien à calculer', a.run('tronconsManquants().length'), 0);
   a.fin();
   // L'administrateur conduit aussi un camion : après le calcul, les nouvelles lignes apparaissent tout de suite sur SA carte
-  const v = await mondeP({ utilisateur: ADMIN, tours: toursCinq(['c1']), segments: tousSeg().slice(0, 2), fonction: (corps, d) => { d.parcours_segments.push(...tousSeg().slice(2)); return bilan({ calcules: 2 }); } });
+  const v = await mondeP({ utilisateur: ADMIN, tours: toursCinq(['c1']), segments: tousSeg().filter((s) => s.de_arret_id !== 'c2'), fonction: (corps, d) => { d.parcours_segments.push(seg(cinq[1], cinq[2])); return bilan({ calcules: 1 }); } });
   v.run('clearTimeout(_tMajParcours)');
-  eq('(avant : seul c2→c3 est connu)', lignesDe(v), [trace(1, 2)]);
+  eq('(avant : le tronçon c2→c3, le seul qu\'on voudrait montrer, n\'est pas encore connu)', lignesDe(v), null);
   await v.run('majParcoursManuel()');
-  eq('après le calcul, la carte de l\'administrateur (en passe) montre les nouvelles lignes sans rien toucher', lignesDe(v), [trace(1, 2), trace(2, 3), trace(3, 4)]);
+  eq('après le calcul, la carte de l\'administrateur (en passe) montre la nouvelle ligne tout de suite', lignesDe(v), [trace(1, 2)]);
   v.fin();
   const u = await mondeA({ segments: tousSeg().slice(0, 3), fonction: (corps, d) => { d.parcours_segments.push(...tousSeg().slice(3)); return bilan({ calcules: 1 }); } });
   await u.run('majParcoursManuel()');

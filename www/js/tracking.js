@@ -1,19 +1,36 @@
 // js/tracking.js — Étape 18 : la position du camion, envoyée au serveur par le téléphone du CHAUFFEUR
 //
-// Décisions de Joé (21 septembre 2026) : la position part toutes les 10 secondes, SEULEMENT pendant sa passe en cours. Le serveur n'accepte la position que du
-// chauffeur d'une passe en cours (envoyer_position, SQL 05) : un passager n'envoie rien, et la position n'est jamais envoyée en dehors d'une passe. Les autres
-// téléphones lisent la table « positions » (tours.js : chargerPositionsVehicules) et en tirent les camions à l'écran et les clients « en cours » (zone bleue).
+// Décisions de Joé (21 septembre 2026, revu le 23 septembre après un essai réel) : la position part toutes les 3 secondes,
+// SEULEMENT pendant sa passe en cours (assez souvent pour que le camion bouge sur la carte comme un vrai GPS de navigation,
+// même à 90 km/h ; avant l'étape 20 c'était 10 s, trop grossier). Le serveur n'accepte la position que du chauffeur d'une
+// passe en cours (envoyer_position, SQL 05) : un passager n'envoie rien, et la position n'est jamais envoyée en dehors d'une
+// passe. Les autres téléphones lisent la table « positions » (tours.js : chargerPositionsVehicules), en tirent les camions à
+// l'écran et les clients « en cours » (zone bleue), et FONT GLISSER le point d'une lecture à l'autre plutôt que de sauter
+// d'un coup (vehicules.js, étape 20).
 // Jamais de position inventée : sans lecture récente du GPS (moins de 20 secondes), on n'envoie rien. Sans réseau, on n'envoie rien non plus et rien n'est gardé :
 // seule la DERNIÈRE position compte (une position de plus de 3 minutes ne compte plus : config.js). Une position n'est jamais mise dans la file des gestes.
 // Partie 2 (Android) : pendant MA passe, un suivi de premier plan du téléphone (plugin @capacitor-community/background-geolocation, notification permanente
-// « Lapointe Tracker — Passe en cours : la position du camion est partagée ») continue de lire le GPS quand l'application est en arrière-plan ou l'écran éteint ;
-// chaque lecture alimente position.js (noterPosition), et la minuterie ci-dessous l'envoie comme d'habitude. Voir « LE SUIVI EN ARRIÈRE-PLAN » plus bas.
+// « Lapointe Tracker — Passe en cours : la position du camion est partagée ») continue de lire le GPS quand l'application est en arrière-plan ou l'écran éteint.
+// Retour de Joé après un essai réel écran éteint (23 sept. 2026) : « le point saute d'un coup où je suis rendu quand je rallume l'écran ». Cause probable :
+// Android peut mettre en pause la MINUTERIE JavaScript ci-dessous pendant que l'écran est éteint, même si le service de localisation (natif, premier plan) continue
+// bien de lire le GPS — rien n'est alors envoyé pendant tout ce temps. Chaque lecture reçue du service (lectureArrierePlan, plus bas) TENTE maintenant aussi
+// d'envoyer (tenterEnvoiPosition), sans dépendre SEULEMENT de la minuterie : tant que le service natif tourne, l'envoi suit, écran allumé ou non.
 // L'ancien suivi (une ligne par employé, upsert direct dans « positions ») est retiré.
-let POSITION_ENVOI_S=10;               // décision de Joé : toutes les 10 secondes
+let POSITION_ENVOI_S=3;                // décision de Joé, revue le 23 sept. : toutes les 3 secondes (effet d'un vrai GPS de navigation)
 const POSITION_ENVOI_FRAICHE_S=20;     // on n'envoie qu'une lecture du GPS de moins de 20 secondes
-let POSITION_ENVOI_DELAI_MS=8000;      // un envoi sans réponse au bout de 8 secondes est abandonné (le suivant part 10 secondes après le début du précédent)
+let POSITION_ENVOI_DELAI_MS=2500;      // un envoi sans réponse au bout de 2,5 secondes est abandonné (le suivant part 3 secondes après le début du précédent)
 let _minuterieEnvoiPosition=null;
 let _envoiPositionEnCours=false;
+let _dernierEnvoiTenteLe=0;            // pour ne pas tenter un envoi plus souvent que POSITION_ENVOI_S, que la tentative vienne de la minuterie ou d'une lecture en arrière-plan
+
+// Tente un envoi si ça fait au moins POSITION_ENVOI_S secondes depuis la dernière tentative (minuterie OU lecture en arrière-plan confondues) : appelée par
+// les deux, pour que l'envoi suive le service natif même si la minuterie JavaScript est mise en pause (écran éteint).
+function tenterEnvoiPosition(){
+  const maintenant=Date.now();
+  if(maintenant-_dernierEnvoiTenteLe<POSITION_ENVOI_S*1000-250) return;   // (marge de 250 ms) déjà tenté récemment : la prochaine lecture ou le prochain tour s'en chargera
+  _dernierEnvoiTenteLe=maintenant;
+  envoyerPositionDuCamion();
+}
 
 // La passe dont MON téléphone envoie la position : celle que je conduis, et que le serveur connaît déjà (un départ gardé sans réseau et pas encore envoyé
 // n'existe pas encore pour lui : la position partira dès son retour). Sinon null.
@@ -66,8 +83,8 @@ async function envoyerPositionDuCamion(){
 
 // Démarre l'envoi régulier (une seule minuterie) : appelé au chargement de l'application (arrets.js : loadStops). Sans passe à moi en cours, chaque tour ne fait rien.
 function tourEnvoiPosition(){
-  envoyerPositionDuCamion();   // (ne lève jamais d'erreur)
-  majSuiviArrierePlan();       // le suivi du téléphone (Android) suit ma passe : il démarre avec elle, s'arrête avec elle
+  tenterEnvoiPosition();   // (ne lève jamais d'erreur)
+  majSuiviArrierePlan();   // le suivi du téléphone (Android) suit ma passe : il démarre avec elle, s'arrête avec elle
 }
 function demarrerEnvoiPosition(){
   if(_minuterieEnvoiPosition) return;
@@ -153,7 +170,10 @@ function lectureArrierePlan(suivi,passeId,lecture,erreur){
     else refusSuiviArrierePlan(suivi,passeId,erreur);
     return;
   }
-  if(lecture&&typeof lecture.latitude==='number'&&typeof lecture.longitude==='number') noterPosition(lecture.latitude,lecture.longitude,lecture.accuracy,lecture.time);
+  if(lecture&&typeof lecture.latitude==='number'&&typeof lecture.longitude==='number'){
+    noterPosition(lecture.latitude,lecture.longitude,lecture.accuracy,lecture.time);
+    tenterEnvoiPosition();   // suit le service natif même si la minuterie ci-dessus est en pause (écran éteint)
+  }
 }
 async function demarrerSuiviArrierePlan(p,passeId){
   await demanderPermissionNotifications();

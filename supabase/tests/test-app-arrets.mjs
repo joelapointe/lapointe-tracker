@@ -1338,15 +1338,19 @@ const mondeQuarts = async (o = {}) => {
   await m.run('loadStops()');
   return m;
 };
-const ligneQ = (m, nom) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === nom);
+// « en service » (étape 20) montre AUSSI Marc (fin=null) avec sa propre ligne (« Depuis … », pas de raison) : ligneQ cible
+// spécifiquement la ligne « à valider » (jamais celle-là) ; ligneEnService cible l'inverse.
+const ligneQ = (m, nom) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === nom && !c.children[0].children[1].textContent.startsWith('Depuis '));
+const ligneEnService = (m, nom) => m.el('admin-body').children.find((c) => c.className === 'emp-item' && c.children[0].children[0].textContent === nom && c.children[0].children[1].textContent.startsWith('Depuis '));
 const boutonQ = (ligne, texte) => ligne.children[1].children.find((b) => b.textContent === texte);
 
 log('\n=== L\'ONGLET « QUARTS » : LES DEUX LISTES ===');
 {
   const m = await mondeQuarts();
   await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
-  vrai('les deux lectures sont DIRECTES (pas de fonction serveur pour la liste)', m.appels.lectures.includes('quarts') && m.appels.lectures.includes('equipage_periodes'));
-  vrai('seuls les quarts « a_valider=true » sont demandés', m.appels.eq.some((e) => e[0] === 'quarts' && e[1] === 'a_valider' && e[2] === true));
+  vrai('les trois lectures sont DIRECTES (pas de fonction serveur pour la liste)', m.appels.lectures.includes('quarts') && m.appels.lectures.includes('equipage_periodes'));
+  vrai('« en service » demande les quarts SANS fin (étape 20), sans condition sur a_valider', m.appels.is.some((e) => e[0] === 'quarts' && e[1] === 'fin' && e[2] === null));
+  vrai('« à valider » demande en plus seulement a_valider=true', m.appels.eq.some((e) => e[0] === 'quarts' && e[1] === 'a_valider' && e[2] === true));
   const luc = ligneQ(m, 'Luc Boisvert'), marc = ligneQ(m, 'Marc Tremblay');
   vrai('un quart fermé automatiquement : la raison en mots simples, début → fin', !!luc && luc.children[0].children[1].textContent.includes('Fermé automatiquement') && luc.children[0].children[1].textContent.includes('→'));
   vrai('un quart encore ouvert (fin automatique jamais arrivée) : « en cours »', !!marc && marc.children[0].children[1].textContent.includes('en cours') && marc.children[0].children[1].textContent.includes('ajouté à bord'));
@@ -1354,12 +1358,16 @@ log('\n=== L\'ONGLET « QUARTS » : LES DEUX LISTES ===');
   const nina = ligneQ(m, 'Nina Roy');
   vrai('le transfert : SEULE l\'entrée (Camion 2) est affichée, jamais la sortie en double', !!nina && nina.children[0].children[1].textContent.includes('Camion 2') && !nina.children[0].children[1].textContent.includes('Camion 1'));
   vrai('le transfert a un bouton « ↩ Annuler »', boutonQ(nina, '↩ Annuler') !== undefined);
+  const marcService = ligneEnService(m, 'Marc Tremblay');
+  vrai('« en service » (étape 20) : Marc (fin=null) y est, avec « Depuis … » et un bouton « ⏹ Terminer »', !!marcService && marcService.children[0].children[1].textContent.startsWith('Depuis ') && boutonQ(marcService, '⏹ Terminer') !== undefined);
+  // (Luc, déjà fermé, ne serait pas renvoyé par le VRAI filtre .is('fin', null) — déjà prouvé ci-dessus par la requête demandée ;
+  // ce faux Supabase ne simule pas le filtrage lui-même, seulement la requête, comme pour a_valider plus haut.)
   m.fin();
 }
 {
   const vide = await mondeQuarts({ quarts: [], equipages: [] });
   await vide.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
-  eq('aucun quart à valider : « ✔ Aucun quart à valider. », aucun transfert : « Aucun transfert récent. »', [vide.el('admin-body').children[1].textContent, vide.el('admin-body').children[3].textContent], ['✔ Aucun quart à valider.', 'Aucun transfert récent.']);
+  eq('personne en service, aucun quart à valider, aucun transfert', [vide.el('admin-body').children[1].textContent, vide.el('admin-body').children[3].textContent, vide.el('admin-body').children[5].textContent], ['Personne en service.', '✔ Aucun quart à valider.', 'Aucun transfert récent.']);
   vide.fin();
   const err = await mondeQuarts({ erreurLecture: ['quarts'] });
   await err.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
@@ -1396,7 +1404,7 @@ log('\n=== « VÉRIFIER / CORRIGER » UN QUART ===');
   boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
   await m.run('validerQuart()');
   eq('sans rien changer : « Valider » appelle quand même la fonction serveur (JAMAIS une écriture directe), avec le même début/fin (en ISO), sans note', m.appels.rpc.find((r) => r.nom === 'admin_corriger_quart').args, { p_quart_id: 'qz-1', p_debut: new Date('2026-09-20T12:00:00.000Z').toISOString(), p_fin: new Date('2026-09-20T20:00:00.000Z').toISOString(), p_note: null });
-  eq('la fenêtre se ferme, message « validé », la liste des « à valider » est RELUE depuis le serveur', [m.el('correction-quart-overlay').classList.contains('open'), m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length], [false, '✔ Quart validé', 2]);
+  eq('la fenêtre se ferme, message « validé », la liste (en service + à valider) est RELUE depuis le serveur', [m.el('correction-quart-overlay').classList.contains('open'), m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length], [false, '✔ Quart validé', 4]);
   m.fin();
 }
 {
@@ -1453,7 +1461,7 @@ log('\n=== ERREURS (VALIDER / CORRIGER UN QUART) ===');
   const relu = m.appels.lectures.filter((t) => t === 'quarts').length;
   boutonQ(ligneQ(m, 'Luc Boisvert'), '✏️ Vérifier / Corriger').onclick();
   await m.run('validerQuart()');
-  eq('« introuvable » : message ET relecture automatique de la liste (elle a changé ailleurs)', [m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length - relu], ['❌ Ce quart n’existe plus (la liste va se rafraîchir).', 1]);
+  eq('« introuvable » : message ET relecture automatique de la liste (elle a changé ailleurs)', [m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length - relu], ['❌ Ce quart n’existe plus (la liste va se rafraîchir).', 2]);
   m.fin();
 }
 {
@@ -1464,6 +1472,38 @@ log('\n=== ERREURS (VALIDER / CORRIGER UN QUART) ===');
   await m.run('validerQuart()');
   eq('sans « statut: corrige » : jamais annoncé comme un succès', m.dernierToast(), '❌ Impossible de valider ce quart');
   m.fin();
+}
+
+log('\n=== TERMINER LE QUART D\'UN EMPLOYÉ EN SERVICE (étape 20) ===');
+{
+  const m = await mondeQuarts({ confirme: true, rpc: { admin_terminer_quart: (args) => ({ data: { statut: 'termine', quart_id: args.p_quart_id, fin: '2026-09-23T22:00:00.000Z' }, error: null }) } });
+  await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  const relu = m.appels.lectures.filter((t) => t === 'quarts').length;
+  boutonQ(ligneEnService(m, 'Marc Tremblay'), '⏹ Terminer').onclick();
+  await attendre(30);
+  eq('demande une confirmation nommée', m.appels.confirmations[0], ['Terminer le quart de Marc Tremblay ?', 'Son quart sera fermé à l’instant présent, déjà validé. À utiliser si Marc Tremblay a fini sans avoir touché « Je termine ».', 'Terminer', 'Annuler']);
+  eq('… appelle admin_terminer_quart avec le bon quart_id, confirme, RELIT la liste', [m.appels.rpc.find((r) => r.nom === 'admin_terminer_quart').args, m.dernierToast(), m.appels.lectures.filter((t) => t === 'quarts').length - relu], [{ p_quart_id: 'qz-2' }, '⏹ Quart de Marc Tremblay terminé', 2]);
+  m.fin();
+  const non = await mondeQuarts({ confirme: false });
+  await non.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+  boutonQ(ligneEnService(non, 'Marc Tremblay'), '⏹ Terminer').onclick();
+  await attendre(30);
+  vrai('« Annuler » : rien n\'est appelé', non.appels.rpc.every((r) => r.nom !== 'admin_terminer_quart'));
+  non.fin();
+}
+{
+  const essaiT = async (rep) => {
+    const m = await mondeQuarts({ confirme: true, rpc: { admin_terminer_quart: rep } });
+    await m.run(`_adminOnglet='quarts';chargerPanneauAdmin();`); await attendre(30);
+    boutonQ(ligneEnService(m, 'Marc Tremblay'), '⏹ Terminer').onclick();
+    await attendre(30);
+    const t = m.dernierToast();
+    m.fin();
+    return t;
+  };
+  eq('un quart déjà terminé ailleurs entre-temps : message clair', await essaiT({ data: null, error: { message: 'quart_deja_termine' } }), '❌ Ce quart est déjà terminé (la liste va se rafraîchir).');
+  eq('un employé qui n\'est plus admin (perdu son rôle) : message clair', await essaiT({ data: null, error: { message: 'non_autorise' } }), '❌ Réservé à l’administrateur.');
+  eq('une réponse SANS « statut: termine » n\'est jamais prise pour un succès', await essaiT({ data: { autre: true }, error: null }), '❌ Impossible de terminer ce quart');
 }
 
 log('\n=== ANNULER UN TRANSFERT ===');

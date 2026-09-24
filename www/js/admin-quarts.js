@@ -1,33 +1,42 @@
-// js/admin-quarts.js — Panneau administrateur, onglet « Quarts » (étape 19, morceau 5)
+// js/admin-quarts.js — Panneau administrateur, onglet « Quarts » (étape 19, morceau 5 ; étape 20 : « En service actuellement »)
 //
-// Deux listes : les quarts « à valider » (ouverts automatiquement par l'application, fermés automatiquement après un délai,
-// ou dont la fin est contestée par l'employé) et les transferts d'équipage récents (au cas où l'un d'eux serait une erreur).
+// Trois listes : les employés encore EN SERVICE en ce moment (étape 20 — retour de Joé, 23 sept. 2026 : un employé oublié dans
+// un véhicule, jamais coché en descendant, reste ouvert indéfiniment sans apparaître nulle part avant la fermeture automatique
+// à 16 h, bloquant l'export de paie tout ce temps) ; les quarts « à valider » (ouverts automatiquement par l'application,
+// fermés automatiquement après un délai, ou dont la fin est contestée par l'employé) ; les transferts d'équipage récents (au
+// cas où l'un d'eux serait une erreur).
 // La LISTE se lit directement (les règles d'accès de l'étape 8 laissent déjà l'administrateur tout lire) mais toute ÉCRITURE
 // passe par une fonction serveur — JAMAIS une écriture directe sur equipage_periodes/equipage_journal/quarts depuis
 // l'application (principe déjà en place depuis l'étape 9a : voir test-app-equipage-depart.mjs/test-app-equipage-pendant.mjs) :
-// admin_corriger_quart (étape 19, SQL 24) pour changer l'heure d'un quart, admin_annuler_transfert (étape 9a) pour un transfert
-// erroné (deux lignes de equipage_periodes à faire correspondre). L'export de paie (bouton séparé) refuse de fonctionner tant
-// qu'un quart est à valider : c'est pour ça que cet onglet existe.
+// admin_corriger_quart (étape 19, SQL 24) pour changer l'heure d'un quart DÉJÀ FERMÉ, admin_terminer_quart (étape 20, SQL 26)
+// pour fermer À L'INSTANT un quart ENCORE OUVERT (l'admin ne peut pas corriger un quart ouvert : ça, c'est « terminer »),
+// admin_annuler_transfert (étape 9a) pour un transfert erroné (deux lignes de equipage_periodes à faire correspondre).
+// L'export de paie (bouton séparé) refuse de fonctionner tant qu'un quart est ouvert ou à valider : c'est pour ça que cet
+// onglet existe.
+let enServiceAdmin=[];        // TOUS les quarts encore ouverts (fin manquante), même ceux qui ne sont pas (encore) « à valider »
 let quartsAValiderAdmin=[];   // [{id, utilisateur_id, debut, fin, raison_a_valider, note, utilisateurs:{nom}}]
 let transfertsAdmin=[];       // une ligne par transfert (l'ENTRÉE dans le nouveau véhicule) : [{id, transfert_id, debut, utilisateurs:{nom}, passes:{equipes:{nom}}}]
 let _quartIdEnCorrection=null;
 
 async function chargerQuartsAdmin(){
   const body=document.getElementById('admin-body');
-  let quarts=null,transferts=null,error=null;
+  let service=null,quarts=null,transferts=null,error=null;
   try{
-    const[q,t]=await Promise.all([
+    const[s,q,t]=await Promise.all([
+      db.from('quarts').select('id, utilisateur_id, debut, utilisateurs!utilisateur_id(nom)').is('fin',null).order('debut'),
       db.from('quarts').select('id, utilisateur_id, debut, fin, raison_a_valider, note, utilisateurs!utilisateur_id(nom)').eq('a_valider',true).order('debut'),
       db.from('equipage_periodes').select('id, transfert_id, utilisateur_id, debut, utilisateurs!utilisateur_id(nom), passes(equipes(nom))').not('transfert_id','is',null).order('debut',{ascending:false}).limit(20),
     ]);
+    if(s.error) throw s.error;
     if(q.error) throw q.error;
     if(t.error) throw t.error;
-    quarts=q.data;transferts=t.data;
+    service=s.data;quarts=q.data;transferts=t.data;
   }catch(e){error=e;}
   if(error){
     body.innerHTML='<div style="padding:16px;color:#ef4444;font-size:13px;">❌ Impossible de charger les quarts. Vérifie la connexion, puis réessaie.</div>';
     return;
   }
+  enServiceAdmin=Array.isArray(service)?service:[];
   quartsAValiderAdmin=Array.isArray(quarts)?quarts:[];
   transfertsAdmin=dernieresEntreesTransfert(Array.isArray(transferts)?transferts:[]);
   renderQuartsAdmin();
@@ -55,6 +64,46 @@ function texteRaisonAValider(r){
 function renderQuartsAdmin(){
   const body=document.getElementById('admin-body');
   body.innerHTML='';
+
+  const titreS=document.createElement('div');
+  titreS.style='padding:10px 16px 4px;font-size:10px;color:#4ade80;text-transform:uppercase;letter-spacing:.8px;font-weight:700;';
+  titreS.textContent='🟢 En service actuellement ('+enServiceAdmin.length+')';
+  body.appendChild(titreS);
+
+  if(!enServiceAdmin.length){
+    const vide=document.createElement('div');
+    vide.style.cssText='padding:16px;text-align:center;color:#6b7a8d;font-size:13px;';
+    vide.textContent='Personne en service.';
+    body.appendChild(vide);
+  }else{
+    enServiceAdmin.forEach(q=>{
+      const div=document.createElement('div');
+      div.className='emp-item';
+
+      const info=document.createElement('div');
+      info.className='emp-info';
+      const nom=document.createElement('div');
+      nom.className='emp-nom';
+      nom.textContent=(q.utilisateurs&&q.utilisateurs.nom)||'?';
+      const detail=document.createElement('div');
+      detail.className='emp-detail';
+      detail.textContent='Depuis '+dateHeure(q.debut);
+      info.appendChild(nom);info.appendChild(detail);
+      div.appendChild(info);
+
+      const actions=document.createElement('div');
+      actions.className='emp-actions';
+      const btT=document.createElement('button');
+      btT.type='button';
+      btT.className='emp-btn del';
+      btT.textContent='⏹ Terminer';
+      btT.onclick=()=>terminerQuartAdmin(q);
+      actions.appendChild(btT);
+      div.appendChild(actions);
+
+      body.appendChild(div);
+    });
+  }
 
   const titreQ=document.createElement('div');
   titreQ.style='padding:10px 16px 4px;font-size:10px;color:#fb923c;text-transform:uppercase;letter-spacing:.8px;font-weight:700;';
@@ -142,6 +191,7 @@ function messageErreurQuart(error){
   if(estErreurReseau(error)) return '📴 Pas de réseau : rien n’a été changé.';
   const msg=String((error&&error.message)||'');
   if(msg.includes('quart_encore_ouvert')) return '❌ Ce quart est encore ouvert : attends qu’il soit terminé.';
+  if(msg.includes('quart_deja_termine')) return '❌ Ce quart est déjà terminé (la liste va se rafraîchir).';
   if(msg.includes('quart_introuvable')) return '❌ Ce quart n’existe plus (la liste va se rafraîchir).';
   if(msg.includes('non_autorise')) return '❌ Réservé à l’administrateur.';
   if(String(error&&error.code)==='23P01') return '❌ Ce nouvel horaire chevauche un autre quart de cet employé.';
@@ -199,6 +249,27 @@ async function validerQuart(){
   if(!data||data.statut!=='corrige'){toast('❌ Impossible de valider ce quart');return;}
   toast('✔ Quart validé');
   fermerCorrectionQuart();
+  await chargerQuartsAdmin();
+}
+
+// ── « Terminer » un employé encore en service (étape 20) ──
+async function terminerQuartAdmin(q){
+  const nom=(q.utilisateurs&&q.utilisateurs.nom)||'cet employé';
+  if(!(await confirmer('Terminer le quart de '+nom+' ?','Son quart sera fermé à l’instant présent, déjà validé. À utiliser si '+nom+' a fini sans avoir touché « Je termine ».','Terminer','Annuler'))) return;
+  showSync(true);
+  let data=null,error=null;
+  try{
+    const r=await db.rpc('admin_terminer_quart',{p_quart_id:q.id});
+    data=r.data;error=r.error;
+  }catch(e){error=e;signalerEchecReseau(e);}
+  showSync(false);
+  if(error){
+    toast(messageErreurQuart(error));
+    if(String(error.message||'').includes('quart_')) await chargerQuartsAdmin();   // le quart a changé ailleurs : la liste se relit toute seule
+    return;
+  }
+  if(!data||data.statut!=='termine'){toast('❌ Impossible de terminer ce quart');return;}
+  toast('⏹ Quart de '+nom+' terminé');
   await chargerQuartsAdmin();
 }
 

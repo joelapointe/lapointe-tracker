@@ -102,7 +102,7 @@ log('=== JAMAIS DE POSITION INVENTÉE : UNE LECTURE RÉCENTE DU GPS, SINON RIEN 
   eq('une lecture d\'il y a 30 secondes : trop vieille, rien', [await m.run('envoyerPositionDuCamion()'), m.appels.envois.length], ['sans_position', 0]);
   m.position(15);
   eq('une lecture d\'il y a 15 secondes : elle part', [await m.run('envoyerPositionDuCamion()'), envois(m).length], ['envoyee', 1]);
-  eq('les réglages : toutes les 10 secondes, lecture de moins de 20 secondes, un envoi abandonné après 8 secondes', m.run('[POSITION_ENVOI_S, POSITION_ENVOI_FRAICHE_S, POSITION_ENVOI_DELAI_MS]'), [10, 20, 8000]);
+  eq('les réglages : toutes les 3 secondes (effet d\'un vrai GPS, revu le 23 sept.), lecture de moins de 20 secondes, un envoi abandonné après 2,5 secondes', m.run('[POSITION_ENVOI_S, POSITION_ENVOI_FRAICHE_S, POSITION_ENVOI_DELAI_MS]'), [3, 20, 2500]);
   m.fin();
 }
 
@@ -273,7 +273,10 @@ log('=== LES LECTURES DU SERVICE DU TÉLÉPHONE ALIMENTENT L\'ENVOI ===');
   eq('avant toute lecture : rien à envoyer', await m.run('envoyerPositionDuCamion()'), 'sans_position');
   m.bg.ajouts[0].cb(lecture());
   eq('une lecture du service (écran éteint) est gardée avec sa précision', [m.run('lastPosInfo.lat'), m.run('lastPosInfo.lon'), m.run('lastPosInfo.precision')], [46.7, -72.6, 7]);
-  eq('… et la minuterie l\'envoie comme d\'habitude (la même route que l\'application ouverte)', [await m.run('envoyerPositionDuCamion()'), envois(m)[0]?.args], ['envoyee', { p_passe_id: 'p1', p_lat: 46.7, p_lon: -72.6, p_precision: 7 }]);
+  // Retour de Joé après un essai réel (23 sept.) : le point sautait d'un coup au rallumage de l'écran — Android peut mettre en
+  // pause la minuterie JavaScript pendant que l'écran est éteint. CETTE lecture doit donc déclencher l'envoi ELLE-MÊME, tout de
+  // suite, sans dépendre seulement de la minuterie (même route que l'application ouverte).
+  eq('… et CETTE lecture déclenche l\'envoi elle-même, tout de suite', envois(m)[0]?.args, { p_passe_id: 'p1', p_lat: 46.7, p_lon: -72.6, p_precision: 7 });
   m.bg.ajouts[0].cb({ latitude: 'x', longitude: 1 });
   m.bg.ajouts[0].cb(null);
   m.bg.ajouts[0].cb(lecture({ latitude: 47.1, accuracy: null }));

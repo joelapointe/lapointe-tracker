@@ -22,6 +22,7 @@ android/.idea/
 *.keystore
 *.pem
 *service_role*
+keystore.properties
 
 # Fichiers système
 Thumbs.db

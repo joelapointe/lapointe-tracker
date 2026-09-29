@@ -110,7 +110,6 @@ log('=== LES PETITES FONCTIONS : DATES, SAISON, NOM DU FICHIER, FILTRE ===');
   eq('suiviPdfAjuster : un texte qui tient JUSTE ne change pas ; quand la coupure tombe après une espace, l\'espace est retirée avant « … »', [f(`suiviPdfAjuster('Bonjour', ${largeur('Bonjour', 9, false)}, 9, false)`), f(`suiviPdfAjuster('ab cd', ${largeur('ab …', 9, false)}, 9, false)`)], ['Bonjour', 'ab…']);
   eq('suiviPdfAjuster : un texte qui tient ne change pas ; un texte trop long finit par « … » et tient dans la largeur', [f(`suiviPdfAjuster('Bonjour', 500, 9, false)`), f(`suiviPdfAjuster('Bonjour tout le monde', 40, 9, false)`), largeur(f(`suiviPdfAjuster('Bonjour tout le monde', 40, 9, false)`), 9, false) <= 40], ['Bonjour', 'Bonjou…', true]);   // (« Bonjour… » ferait 40,01 points)
   eq('suiviPdfPluriel : 0 et 1 au singulier, 2 et plus au pluriel', [f(`suiviPdfPluriel(0,'client')`), f(`suiviPdfPluriel(1,'client')`), f(`suiviPdfPluriel(2,'client')`)], ['0 client', '1 client', '2 clients']);
-  eq('suiviPdfBase64 : les octets en base64 (comme Buffer)', [f(`suiviPdfBase64(Uint8Array.from([0,1,2,250,251,252,253,254,255]))`) === Buffer.from([0, 1, 2, 250, 251, 252, 253, 254, 255]).toString('base64'), f(`suiviPdfBase64(new Uint8Array(100000).fill(200))`) === Buffer.alloc(100000, 200).toString('base64')], [true, true]);
 }
 
 log('\n=== LA PREMIÈRE PAGE : LE TITRE, LE RÉSUMÉ, L\'EN-TÊTE DU TABLEAU, LES SECTIONS ===');
@@ -392,7 +391,7 @@ function monde(o = {}) {
   };
   if (capacitor !== undefined && capacitor !== null) sandbox.Capacitor = capacitor;
   const ctx = vm.createContext(sandbox);
-  const fichiers = ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/routes.js', 'js/admin.js', 'js/admin-suivi.js', ...(o.sansPdf ? [] : ['js/pdf-simple.js', 'js/suivi-pdf.js'])];
+  const fichiers = ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/routes.js', 'js/admin.js', 'js/admin-suivi.js', 'js/partage-fichier.js', ...(o.sansPdf ? [] : ['js/pdf-simple.js', 'js/suivi-pdf.js'])];
   for (const f of fichiers) vm.runInContext(lire(f), ctx, { filename: f });
   // le vrai « pluginNatif » de tracking.js (l'application le trouve là)
   const tracking = lire('js/tracking.js');
@@ -433,6 +432,7 @@ log('\n=== LE BOUTON « 📄 EXPORTER EN PDF » DANS L\'ÉCRAN ===');
   const html = lire('index.html');
   const scripts = [...html.matchAll(/<script src="js\/([^"]+)"><\/script>/g)].map((x) => x[1]);
   eq('la page charge pdf-simple.js puis suivi-pdf.js, chacun UNE fois, juste après admin-suivi.js et avant demarrage.js', [scripts.filter((s) => s === 'pdf-simple.js').length, scripts.filter((s) => s === 'suivi-pdf.js').length, scripts.indexOf('pdf-simple.js') === scripts.indexOf('admin-suivi.js') + 1, scripts.indexOf('suivi-pdf.js') === scripts.indexOf('pdf-simple.js') + 1, scripts.indexOf('suivi-pdf.js') < scripts.indexOf('demarrage.js')], [1, 1, true, true, true]);
+  eq('… et partage-fichier.js (qui remet le fichier) est chargé avant suivi-pdf.js', scripts.indexOf('partage-fichier.js') > -1 && scripts.indexOf('partage-fichier.js') < scripts.indexOf('suivi-pdf.js'), true);
   eq('« pluginNatif » (tracking.js) est chargé avant qu\'on puisse toucher le bouton (tracking.js avant demarrage.js)', scripts.indexOf('tracking.js') < scripts.indexOf('demarrage.js'), true);
 }
 
@@ -613,8 +613,7 @@ log('\n=== LA SÛRETÉ DU CODE ===');
   vrai('suivi-pdf.js n\'écrit rien dans la base et ne lit rien du réseau (ni db., ni fetch, ni XMLHttpRequest, ni rpc, ni innerHTML)', !/\bdb\b|fetch\(|XMLHttpRequest|\.rpc\(|innerHTML|\.from\(/.test(nu(src)), (nu(src).match(/\bdb\b|fetch\(|XMLHttpRequest|\.rpc\(|innerHTML|\.from\(/) || [])[0]);
   vrai('ni eval, ni Function, ni document.write, ni onclick écrit en texte (ni dans pdf-simple.js)', !/eval\(|new Function|document\.write|onclick\s*=\s*["']|insertAdjacentHTML/.test(nu(src) + nu(pdfSrc)));
   vrai('pdf-simple.js ne touche ni à la page, ni au réseau, ni au stockage (du pur calcul : pas de document, window, localStorage, fetch)', !/\bdocument\b|\bwindow\b|localStorage|fetch\(|Capacitor/.test(nu(pdfSrc)));
-  eq('les seuls plugins nommés : Filesystem et Share (lus par « pluginNatif »)', [...new Set([...src.matchAll(/pluginNatif\('([A-Za-z]+)'\)/g)].map((x) => x[1]))].sort(), ['Filesystem', 'Share']);
-  vrai('le fichier est écrit dans le dossier TEMPORAIRE (CACHE), jamais dans les documents de la personne', /directory:'CACHE'/.test(src) && !/DOCUMENTS|EXTERNAL|Directory\.Data/.test(src));
+  vrai('suivi-pdf.js ne nomme aucun plugin et ne fait aucun téléchargement lui-même : il remet le fichier par partagerFichier (partage-fichier.js), en UN seul endroit', !/pluginNatif\(|Filesystem|\bShare\b|Capacitor|new Blob|createObjectURL/.test(nu(src)) && (src.match(/partagerFichier\(/g) || []).length === 1, (nu(src).match(/pluginNatif\(|Filesystem|\bShare\b|Capacitor|new Blob|createObjectURL/) || [])[0]);
 }
 
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);

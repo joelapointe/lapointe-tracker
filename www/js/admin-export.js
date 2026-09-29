@@ -190,16 +190,13 @@ function csvExportPaie(data){
   });
   return lignes.map(l=>l.map(csvChamp).join(',')).join('\r\n');
 }
-function telechargerExportPaieCsv(){
+// Le bouton « Télécharger (CSV) » : le fichier est remis par partage-fichier.js (sur le téléphone : la feuille de partage d'Android, car un « téléchargement » n'y fait rien ; dans un navigateur : un téléchargement)
+async function telechargerExportPaieCsv(){
   if(!exportPaieAdmin||!_periodeExportAdmin) return;
   const csv='﻿'+csvExportPaie(exportPaieAdmin);   // le BOM : Excel ouvre les accents correctement
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download='paie_'+_periodeExportAdmin.debut+'_au_'+_periodeExportAdmin.fin+'.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const periode=_periodeExportAdmin.debut+'_au_'+_periodeExportAdmin.fin;
+  await partagerFichier(new TextEncoder().encode(csv),{
+    nom:'paie_'+periode+'.csv',typeMime:'text/csv;charset=utf-8',titre:'Export de paie du '+_periodeExportAdmin.debut+' au '+_periodeExportAdmin.fin,invite:'Envoyer le fichier de paie',
+    erreur:'❌ Le fichier de paie n’a pas pu être envoyé à l’application de partage du téléphone.',telecharge:'✔ Fichier de paie téléchargé',
+  });
 }

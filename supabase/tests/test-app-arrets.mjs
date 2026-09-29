@@ -1678,7 +1678,7 @@ log('\n=== LE CODE : L\'ONGLET « EXPORT » (étape 19, morceau 5) ===');
   vrai('la page charge admin-export.js juste après admin-quarts.js, avant liste-arrets.js', page.indexOf('js/admin-quarts.js') < page.indexOf('js/admin-export.js') && page.indexOf('js/admin-export.js') < page.indexOf('js/liste-arrets.js'));
   vrai('le nouvel onglet est enregistré dans ongletsAdmin(), avec repli sûr si le fichier n\'est pas encore chargé', /\{id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:\(typeof chargerExportAdmin==='function'\)\?chargerExportAdmin:null\}/.test(adm));
   vrai('aucune écriture ici (une lecture calculée seulement) : ni db.from(...).insert/update/delete, ni db.functions.invoke', !/\.insert\(|\.update\(|\.delete\(\)|db\.functions\.invoke/.test(admE));
-  vrai('la construction du CSV (csvExportPaie) est séparée du déclenchement du téléchargement (Blob/URL, propre au navigateur, jamais testable ici)', /function csvExportPaie\(/.test(admE) && /function telechargerExportPaieCsv\(/.test(admE) && /new Blob\(/.test(admE));
+  vrai('la construction du CSV (csvExportPaie) est séparée de la REMISE du fichier (partagerFichier : la feuille de partage d\'Android ou un téléchargement, propre au téléphone ; testée dans test-partage-fichier.mjs)', /function csvExportPaie\(/.test(admE) && /function telechargerExportPaieCsv\(/.test(admE) && /partagerFichier\(/.test(admE) && !/new Blob\(/.test(admE));
 }
 
 // ══════════════════════════════════════════════════════════════════════

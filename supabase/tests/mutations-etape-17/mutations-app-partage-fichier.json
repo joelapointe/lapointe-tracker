@@ -1,0 +1,404 @@
+[
+  {
+    "nom": "le base64 saute des octets (paquets de 8193)",
+    "fichier": "js/partage-fichier.js",
+    "de": "i+=8192) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8192));",
+    "vers": "i+=8193) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8192));"
+  },
+  {
+    "nom": "le base64 lit des paquets trop courts (perd des octets)",
+    "fichier": "js/partage-fichier.js",
+    "de": "octets.subarray(i,i+8192));",
+    "vers": "octets.subarray(i,i+8191));"
+  },
+  {
+    "nom": "le base64 lit des paquets trop longs (double des octets)",
+    "fichier": "js/partage-fichier.js",
+    "de": "i+=8192) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8192));",
+    "vers": "i+=8192) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8193));"
+  },
+  {
+    "nom": "le base64 n'est plus encodé",
+    "fichier": "js/partage-fichier.js",
+    "de": "  return btoa(s);",
+    "vers": "  return s;"
+  },
+  {
+    "nom": "le plugin « Filesystem » est cherché sous un autre nom",
+    "fichier": "js/partage-fichier.js",
+    "de": "pluginNatif('Filesystem')",
+    "vers": "pluginNatif('File')"
+  },
+  {
+    "nom": "le plugin « Share » est cherché sous un autre nom",
+    "fichier": "js/partage-fichier.js",
+    "de": "pluginNatif('Share')",
+    "vers": "pluginNatif('Sharing')"
+  },
+  {
+    "nom": "un seul plugin suffit pour prendre le chemin du téléphone",
+    "fichier": "js/partage-fichier.js",
+    "de": "if(fichiers&&partage){",
+    "vers": "if(fichiers||partage){"
+  },
+  {
+    "nom": "le fichier est écrit dans les documents de la personne",
+    "fichier": "js/partage-fichier.js",
+    "de": "directory:'CACHE'",
+    "vers": "directory:'DOCUMENTS'"
+  },
+  {
+    "nom": "le nom du fichier écrit est perdu",
+    "fichier": "js/partage-fichier.js",
+    "de": "writeFile({path:o.nom,data:",
+    "vers": "writeFile({path:'fichier',data:"
+  },
+  {
+    "nom": "le contenu écrit n'est plus le fichier",
+    "fichier": "js/partage-fichier.js",
+    "de": "data:octetsEnBase64(octets),directory",
+    "vers": "data:octetsEnBase64(octets.subarray(0,10)),directory"
+  },
+  {
+    "nom": "un fichier sans chemin rendu est quand même partagé",
+    "fichier": "js/partage-fichier.js",
+    "de": "    if(!ecrit||!ecrit.uri) throw new Error('fichier non écrit');\n",
+    "vers": ""
+  },
+  {
+    "nom": "le partage est ouvert avant la fin de l'écriture",
+    "fichier": "js/partage-fichier.js",
+    "de": "const ecrit=await fichiers.writeFile(",
+    "vers": "const ecrit=fichiers.writeFile("
+  },
+  {
+    "nom": "le partage n'est plus attendu (une erreur ou une annulation se perd)",
+    "fichier": "js/partage-fichier.js",
+    "de": "    await partage.share({",
+    "vers": "    partage.share({"
+  },
+  {
+    "nom": "le partage donne un autre chemin",
+    "fichier": "js/partage-fichier.js",
+    "de": "url:ecrit.uri,dialogTitle",
+    "vers": "url:o.nom,dialogTitle"
+  },
+  {
+    "nom": "le partage oublie son titre",
+    "fichier": "js/partage-fichier.js",
+    "de": "share({title:o.titre,text:o.titre,",
+    "vers": "share({text:o.titre,"
+  },
+  {
+    "nom": "le partage oublie son texte",
+    "fichier": "js/partage-fichier.js",
+    "de": "share({title:o.titre,text:o.titre,",
+    "vers": "share({title:o.titre,"
+  },
+  {
+    "nom": "le partage oublie l'adresse du fichier",
+    "fichier": "js/partage-fichier.js",
+    "de": "share({title:o.titre,text:o.titre,url:ecrit.uri,dialogTitle:o.invite})",
+    "vers": "share({title:o.titre,text:o.titre,dialogTitle:o.invite})"
+  },
+  {
+    "nom": "le titre de la fenêtre de partage change",
+    "fichier": "js/partage-fichier.js",
+    "de": "dialogTitle:o.invite",
+    "vers": "dialogTitle:'Partager'"
+  },
+  {
+    "nom": "la remise ne dit plus « partage »",
+    "fichier": "js/partage-fichier.js",
+    "de": "    return 'partage';",
+    "vers": "    return 'telecharge';"
+  },
+  {
+    "nom": "sur le téléphone sans plugins, un téléchargement est essayé quand même",
+    "fichier": "js/partage-fichier.js",
+    "de": "if(typeof Capacitor!=='undefined'&&typeof Capacitor.isNativePlatform==='function'&&Capacitor.isNativePlatform()) throw",
+    "vers": "if(false) throw"
+  },
+  {
+    "nom": "un Capacitor de navigateur est pris pour le téléphone",
+    "fichier": "js/partage-fichier.js",
+    "de": "&&Capacitor.isNativePlatform()) throw",
+    "vers": ") throw"
+  },
+  {
+    "nom": "sans Capacitor du tout, le test plante",
+    "fichier": "js/partage-fichier.js",
+    "de": "if(typeof Capacitor!=='undefined'&&typeof Capacitor.isNativePlatform",
+    "vers": "if(typeof Capacitor.isNativePlatform"
+  },
+  {
+    "nom": "un Capacitor sans « isNativePlatform » plante",
+    "fichier": "js/partage-fichier.js",
+    "de": "&&typeof Capacitor.isNativePlatform==='function'&&Capacitor.isNativePlatform()) throw",
+    "vers": "&&Capacitor.isNativePlatform()) throw"
+  },
+  {
+    "nom": "le téléchargement se fait sans type",
+    "fichier": "js/partage-fichier.js",
+    "de": "new Blob([octets],{type:o.typeMime})",
+    "vers": "new Blob([octets])"
+  },
+  {
+    "nom": "le téléchargement a toujours le type PDF",
+    "fichier": "js/partage-fichier.js",
+    "de": "new Blob([octets],{type:o.typeMime})",
+    "vers": "new Blob([octets],{type:'application/pdf'})"
+  },
+  {
+    "nom": "le téléchargement ne contient plus les octets",
+    "fichier": "js/partage-fichier.js",
+    "de": "new Blob([octets],",
+    "vers": "new Blob([],"
+  },
+  {
+    "nom": "le lien de téléchargement perd le nom du fichier",
+    "fichier": "js/partage-fichier.js",
+    "de": "a.href=url;a.download=o.nom;",
+    "vers": "a.href=url;"
+  },
+  {
+    "nom": "le lien de téléchargement perd son adresse",
+    "fichier": "js/partage-fichier.js",
+    "de": "a.href=url;a.download=o.nom;",
+    "vers": "a.download=o.nom;"
+  },
+  {
+    "nom": "le lien de téléchargement n'est pas mis dans la page",
+    "fichier": "js/partage-fichier.js",
+    "de": "  document.body.appendChild(a);\n  a.click();",
+    "vers": "  a.click();"
+  },
+  {
+    "nom": "le lien de téléchargement n'est pas cliqué",
+    "fichier": "js/partage-fichier.js",
+    "de": "  a.click();\n  a.remove();",
+    "vers": "  a.remove();"
+  },
+  {
+    "nom": "le lien de téléchargement reste dans la page",
+    "fichier": "js/partage-fichier.js",
+    "de": "  a.click();\n  a.remove();",
+    "vers": "  a.click();"
+  },
+  {
+    "nom": "l'adresse du fichier n'est jamais libérée",
+    "fichier": "js/partage-fichier.js",
+    "de": "  setTimeout(()=>URL.revokeObjectURL(url),60000);\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'adresse du fichier est libérée tout de suite",
+    "fichier": "js/partage-fichier.js",
+    "de": "setTimeout(()=>URL.revokeObjectURL(url),60000);",
+    "vers": "setTimeout(()=>URL.revokeObjectURL(url),0);"
+  },
+  {
+    "nom": "une autre adresse est libérée",
+    "fichier": "js/partage-fichier.js",
+    "de": "URL.revokeObjectURL(url),60000",
+    "vers": "URL.revokeObjectURL(a.href+'x'),60000"
+  },
+  {
+    "nom": "la remise du téléchargement ne dit plus « telecharge »",
+    "fichier": "js/partage-fichier.js",
+    "de": "  return 'telecharge';\n}",
+    "vers": "  return 'partage';\n}"
+  },
+  {
+    "nom": "un 2e appel pendant le partage n'est plus ignoré",
+    "fichier": "js/partage-fichier.js",
+    "de": "  if(_partageOccupe) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "le partage n'est jamais marqué « en cours »",
+    "fichier": "js/partage-fichier.js",
+    "de": "  _partageOccupe=true;\n  try{",
+    "vers": "  try{"
+  },
+  {
+    "nom": "le verrou n'est pas retiré après le partage",
+    "fichier": "js/partage-fichier.js",
+    "de": "  }finally{\n    _partageOccupe=false;\n  }",
+    "vers": "  }finally{\n  }"
+  },
+  {
+    "nom": "la remise n'est plus attendue",
+    "fichier": "js/partage-fichier.js",
+    "de": "    const r=await remettreFichier(octets,o);",
+    "vers": "    const r=remettreFichier(octets,o);"
+  },
+  {
+    "nom": "« téléchargé » n'est plus dit",
+    "fichier": "js/partage-fichier.js",
+    "de": "    if(r==='telecharge') toast(o.telecharge);",
+    "vers": ""
+  },
+  {
+    "nom": "« téléchargé » est dit aussi après un partage",
+    "fichier": "js/partage-fichier.js",
+    "de": "    if(r==='telecharge') toast(o.telecharge);",
+    "vers": "    toast(o.telecharge);"
+  },
+  {
+    "nom": "« téléchargé » dit le message d'erreur",
+    "fichier": "js/partage-fichier.js",
+    "de": "toast(o.telecharge);",
+    "vers": "toast(o.erreur);"
+  },
+  {
+    "nom": "l'annulation du partage n'est plus reconnue (« cancel »)",
+    "fichier": "js/partage-fichier.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/abort|dismiss/i"
+  },
+  {
+    "nom": "l'annulation du partage n'est plus reconnue (« abort »)",
+    "fichier": "js/partage-fichier.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/cancel|dismiss/i"
+  },
+  {
+    "nom": "l'annulation du partage n'est plus reconnue (« dismiss »)",
+    "fichier": "js/partage-fichier.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/cancel|abort/i"
+  },
+  {
+    "nom": "l'annulation ne tient plus compte des majuscules",
+    "fichier": "js/partage-fichier.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/cancel|abort|dismiss/"
+  },
+  {
+    "nom": "un refus en texte (sans message) plante",
+    "fichier": "js/partage-fichier.js",
+    "de": "String((e&&e.message)||e)",
+    "vers": "String(e.message)"
+  },
+  {
+    "nom": "toute erreur est prise pour une annulation",
+    "fichier": "js/partage-fichier.js",
+    "de": "    if(/cancel|abort|dismiss/i.test(String((e&&e.message)||e))) return;\n",
+    "vers": "    return;\n"
+  },
+  {
+    "nom": "une annulation est signalée comme une erreur",
+    "fichier": "js/partage-fichier.js",
+    "de": "    if(/cancel|abort|dismiss/i.test(String((e&&e.message)||e))) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'erreur dit un autre message que celui demandé",
+    "fichier": "js/partage-fichier.js",
+    "de": "    toast(o.erreur);",
+    "vers": "    toast('❌ Erreur.');"
+  },
+  {
+    "nom": "l'erreur ne dit rien",
+    "fichier": "js/partage-fichier.js",
+    "de": "    toast(o.erreur);",
+    "vers": ""
+  },
+  {
+    "nom": "l'export de paie s'envoie même sans export généré",
+    "fichier": "js/admin-export.js",
+    "de": "  if(!exportPaieAdmin||!_periodeExportAdmin) return;\n  const csv=",
+    "vers": "  const csv="
+  },
+  {
+    "nom": "l'export de paie s'envoie sans période (ou sans export)",
+    "fichier": "js/admin-export.js",
+    "de": "if(!exportPaieAdmin||!_periodeExportAdmin) return;",
+    "vers": "if(!exportPaieAdmin&&!_periodeExportAdmin) return;"
+  },
+  {
+    "nom": "le nom du fichier de paie oublie la fin de la période",
+    "fichier": "js/admin-export.js",
+    "de": "const periode=_periodeExportAdmin.debut+'_au_'+_periodeExportAdmin.fin;",
+    "vers": "const periode=_periodeExportAdmin.debut;"
+  },
+  {
+    "nom": "le nom du fichier de paie n'est plus « .csv »",
+    "fichier": "js/admin-export.js",
+    "de": "nom:'paie_'+periode+'.csv'",
+    "vers": "nom:'paie_'+periode+'.txt'"
+  },
+  {
+    "nom": "le fichier de paie n'est plus de type CSV",
+    "fichier": "js/admin-export.js",
+    "de": "typeMime:'text/csv;charset=utf-8'",
+    "vers": "typeMime:'text/plain'"
+  },
+  {
+    "nom": "le titre du partage de la paie oublie la fin de la période",
+    "fichier": "js/admin-export.js",
+    "de": "titre:'Export de paie du '+_periodeExportAdmin.debut+' au '+_periodeExportAdmin.fin",
+    "vers": "titre:'Export de paie du '+_periodeExportAdmin.debut"
+  },
+  {
+    "nom": "le titre de la fenêtre de partage de la paie change",
+    "fichier": "js/admin-export.js",
+    "de": "invite:'Envoyer le fichier de paie'",
+    "vers": "invite:'Partager'"
+  },
+  {
+    "nom": "le message d'erreur de la paie change",
+    "fichier": "js/admin-export.js",
+    "de": "erreur:'❌ Le fichier de paie n’a pas pu être envoyé à l’application de partage du téléphone.'",
+    "vers": "erreur:'❌ Erreur.'"
+  },
+  {
+    "nom": "le message « téléchargé » de la paie change",
+    "fichier": "js/admin-export.js",
+    "de": "telecharge:'✔ Fichier de paie téléchargé'",
+    "vers": "telecharge:'✔ OK'"
+  },
+  {
+    "nom": "le fichier de paie perd son BOM (Excel lirait mal les accents)",
+    "fichier": "js/admin-export.js",
+    "de": "const csv='﻿'+csvExportPaie(exportPaieAdmin);",
+    "vers": "const csv=''+csvExportPaie(exportPaieAdmin);"
+  },
+  {
+    "nom": "le fichier de paie n'est plus encodé en UTF-8",
+    "fichier": "js/admin-export.js",
+    "de": "new TextEncoder().encode(csv)",
+    "vers": "Uint8Array.from(Array.from(csv, (c) => c.charCodeAt(0) & 255))"
+  },
+  {
+    "nom": "le fichier de paie n'est plus attendu",
+    "fichier": "js/admin-export.js",
+    "de": "  await partagerFichier(new TextEncoder()",
+    "vers": "  partagerFichier(new TextEncoder()"
+  },
+  {
+    "nom": "le fichier de paie envoie un autre contenu",
+    "fichier": "js/admin-export.js",
+    "de": "new TextEncoder().encode(csv)",
+    "vers": "new TextEncoder().encode(csvExportPaie(exportPaieAdmin))"
+  },
+  {
+    "nom": "la page ne charge plus partage-fichier.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/partage-fichier.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "la page charge partage-fichier.js après admin.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/partage-fichier.js\"></script>\n<script src=\"js/admin.js\"></script>",
+    "vers": "<script src=\"js/admin.js\"></script>\n<script src=\"js/partage-fichier.js\"></script>"
+  },
+  {
+    "nom": "la page charge partage-fichier.js deux fois",
+    "fichier": "index.html",
+    "de": "<script src=\"js/partage-fichier.js\"></script>\n",
+    "vers": "<script src=\"js/partage-fichier.js\"></script>\n<script src=\"js/partage-fichier.js\"></script>\n"
+  }
+]

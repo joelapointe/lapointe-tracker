@@ -4,9 +4,8 @@
 // de clients (« LOUISEVILLE — 3 clients »), un client par ligne : « # | Client : Adresse | Dates des passages », les dates écrites en toutes lettres (« 20 avr., 12 mai »). Ajouts : la colonne
 // « Passages » (le nombre de dates), et, si le service a un RYTHME, la colonne « État » (À jour / À faire / En retard, en jours). Le PDF montre EXACTEMENT ce que l'écran montre : le filtre
 // (« À faire », « Aucun passage ») et la recherche s'appliquent, et la 1re page le dit. Il se fabrique sur le téléphone, sans réseau (pdf-simple.js).
-// Remise du fichier : sur le téléphone (APK Capacitor), le plugin « Filesystem » l'écrit dans le dossier temporaire de l'application, puis le plugin « Share » ouvre la feuille de partage d'Android
-// (imprimer, courriel, Drive, WhatsApp…). Dans un navigateur (essais sur ordinateur) : téléchargement d'un fichier. Ce que les tests ne peuvent PAS prouver : la feuille de partage réelle d'Android
-// (essai sur le téléphone de Joé).
+// Remise du fichier : partage-fichier.js (sur le téléphone, la feuille de partage d'Android : imprimer, courriel, Drive, WhatsApp… ; dans un navigateur, un téléchargement). Ce que les tests ne peuvent
+// PAS prouver : la feuille de partage réelle d'Android (essai sur le téléphone de Joé).
 const SUIVI_PDF_L=792,SUIVI_PDF_H=612,SUIVI_PDF_MARGE=36;
 const SUIVI_PDF_LARGEUR_UTILE=SUIVI_PDF_L-2*SUIVI_PDF_MARGE;   // 720
 const SUIVI_PDF_HAUT_SUITE=52;      // le haut du tableau sur les pages suivantes (la 1re page a son grand titre)
@@ -16,8 +15,6 @@ const SUIVI_PDF_HAUT_ENTETE=17,SUIVI_PDF_HAUT_SECTION=19;
 const SUIVI_PDF_LIGNES_MAX=40;      // garde-fou : une case ne dépasse jamais 40 lignes (elle tient toujours sur une page)
 const SUIVI_PDF_MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const SUIVI_PDF_COULEUR_ETAT={aucun:'#b91c1c',retard:'#b91c1c',afaire:'#b45309',ok:'#15803d'};
-
-let _suiviPdfOccupe=false;   // une exportation est en cours (pas deux feuilles de partage à la fois)
 
 // « 1er janvier 2026 », « 29 septembre 2026 »
 function suiviPdfDateLongue(jour){
@@ -185,56 +182,17 @@ function suiviPdfDonnees(){
   };
 }
 
-// ── La remise du fichier ─────────────────────────────
-// Les octets en base64 (par petits paquets : une seule grande liste d'arguments ferait planter les longs fichiers)
-function suiviPdfBase64(octets){
-  let s='';
-  for(let i=0;i<octets.length;i+=8192) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8192));
-  return btoa(s);
-}
-// Sur le téléphone : écrit le fichier dans le dossier temporaire puis ouvre la feuille de partage. Dans un navigateur : le télécharge. Renvoie 'partage' ou 'telecharge'.
-async function suiviPdfRemettre(octets,nom,titre){
-  const fichiers=pluginNatif('Filesystem'),partage=pluginNatif('Share');
-  if(fichiers&&partage){
-    const ecrit=await fichiers.writeFile({path:nom,data:suiviPdfBase64(octets),directory:'CACHE'});
-    if(!ecrit||!ecrit.uri) throw new Error('fichier non écrit');
-    await partage.share({title:titre,text:titre,url:ecrit.uri,dialogTitle:'Envoyer ou imprimer le suivi'});
-    return 'partage';
-  }
-  // l'application du téléphone SANS ses deux plugins (une vieille version) : un « téléchargement » n'y marcherait pas : on le dit
-  if(typeof Capacitor!=='undefined'&&typeof Capacitor.isNativePlatform==='function'&&Capacitor.isNativePlatform()) throw new Error('plugins de partage absents');
-  const blob=new Blob([octets],{type:'application/pdf'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download=nom;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
-  return 'telecharge';
-}
-
-// Le bouton « 📄 Exporter en PDF » de l'onglet Suivi
+// ── Le bouton « 📄 Exporter en PDF » de l'onglet Suivi ─────────────────────
+// Fabrique le PDF de la liste montrée, puis le remet (partage-fichier.js : la feuille de partage d'Android, ou un téléchargement dans un navigateur)
 async function suiviExporterPdf(){
-  if(_suiviPdfOccupe) return;
   if(!suiviDonnees||!suiviService){toast('Rien à exporter.');return;}
-  _suiviPdfOccupe=true;
-  try{
-    const donnees=suiviPdfDonnees();
-    if(!donnees.sections.length){toast('Rien à exporter : aucun client dans la liste.');return;}
-    let octets;
-    try{octets=suiviPdfConstruire(donnees);}
-    catch(e){toast('❌ Le PDF n’a pas pu être préparé.');return;}
-    const nom=suiviPdfNomFichier(donnees.service,donnees.aujourdhui);
-    try{
-      const r=await suiviPdfRemettre(octets,nom,'Suivi des passages - '+donnees.service);
-      if(r==='telecharge') toast('✔ PDF téléchargé');
-    }catch(e){
-      // fermer la feuille de partage sans rien choisir n'est pas une erreur
-      if(/cancel|abort|dismiss/i.test(String((e&&e.message)||e))) return;
-      toast('❌ Le PDF n’a pas pu être envoyé à l’application de partage du téléphone.');
-    }
-  }finally{
-    _suiviPdfOccupe=false;
-  }
+  const donnees=suiviPdfDonnees();
+  if(!donnees.sections.length){toast('Rien à exporter : aucun client dans la liste.');return;}
+  let octets;
+  try{octets=suiviPdfConstruire(donnees);}
+  catch(e){toast('❌ Le PDF n’a pas pu être préparé.');return;}
+  await partagerFichier(octets,{
+    nom:suiviPdfNomFichier(donnees.service,donnees.aujourdhui),typeMime:'application/pdf',titre:'Suivi des passages - '+donnees.service,invite:'Envoyer ou imprimer le suivi',
+    erreur:'❌ Le PDF n’a pas pu être envoyé à l’application de partage du téléphone.',telecharge:'✔ PDF téléchargé',
+  });
 }

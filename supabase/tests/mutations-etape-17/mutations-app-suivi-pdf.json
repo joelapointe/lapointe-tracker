@@ -1,0 +1,1208 @@
+[
+  {
+    "nom": "le haut des pages suivantes passe de 52 à 40",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_HAUT_SUITE=52;",
+    "vers": "const SUIVI_PDF_HAUT_SUITE=40;"
+  },
+  {
+    "nom": "le bas du tableau passe de 568 à 580 (les lignes mordent sur le pied de page)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_BAS=568;",
+    "vers": "const SUIVI_PDF_BAS=580;"
+  },
+  {
+    "nom": "le bas du tableau passe de 568 à 540",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_BAS=568;",
+    "vers": "const SUIVI_PDF_BAS=540;"
+  },
+  {
+    "nom": "la taille du texte passe de 9 à 10",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_TAILLE=9,SUIVI_PDF_INTERLIGNE=11.5;",
+    "vers": "const SUIVI_PDF_TAILLE=10,SUIVI_PDF_INTERLIGNE=11.5;"
+  },
+  {
+    "nom": "l'interligne passe de 11,5 à 12",
+    "fichier": "js/suivi-pdf.js",
+    "de": "SUIVI_PDF_INTERLIGNE=11.5;",
+    "vers": "SUIVI_PDF_INTERLIGNE=12;"
+  },
+  {
+    "nom": "la hauteur de l'en-tête du tableau passe de 17 à 18",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_HAUT_ENTETE=17,",
+    "vers": "const SUIVI_PDF_HAUT_ENTETE=18,"
+  },
+  {
+    "nom": "la hauteur d'une bande de section passe de 19 à 20",
+    "fichier": "js/suivi-pdf.js",
+    "de": "SUIVI_PDF_HAUT_SECTION=19;",
+    "vers": "SUIVI_PDF_HAUT_SECTION=20;"
+  },
+  {
+    "nom": "une case peut avoir 41 lignes",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_LIGNES_MAX=40;",
+    "vers": "const SUIVI_PDF_LIGNES_MAX=41;"
+  },
+  {
+    "nom": "la largeur utile est calculée avec une seule marge",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const SUIVI_PDF_LARGEUR_UTILE=SUIVI_PDF_L-2*SUIVI_PDF_MARGE;",
+    "vers": "const SUIVI_PDF_LARGEUR_UTILE=SUIVI_PDF_L-SUIVI_PDF_MARGE;"
+  },
+  {
+    "nom": "« août » perd son accent",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'août'",
+    "vers": "'aout'"
+  },
+  {
+    "nom": "« février » perd son accent",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'février'",
+    "vers": "'fevrier'"
+  },
+  {
+    "nom": "« décembre » devient « decembre »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'décembre'",
+    "vers": "'decembre'"
+  },
+  {
+    "nom": "la couleur de l'état « à faire » devient noire",
+    "fichier": "js/suivi-pdf.js",
+    "de": "afaire:'#b45309'",
+    "vers": "afaire:'#000000'"
+  },
+  {
+    "nom": "la couleur de l'état « à jour » devient rouge",
+    "fichier": "js/suivi-pdf.js",
+    "de": "ok:'#15803d'",
+    "vers": "ok:'#b91c1c'"
+  },
+  {
+    "nom": "la couleur de l'état « en retard » devient verte",
+    "fichier": "js/suivi-pdf.js",
+    "de": "retard:'#b91c1c'",
+    "vers": "retard:'#15803d'"
+  },
+  {
+    "nom": "la couleur de l'état « aucun passage » devient verte",
+    "fichier": "js/suivi-pdf.js",
+    "de": "aucun:'#b91c1c',retard",
+    "vers": "aucun:'#15803d',retard"
+  },
+  {
+    "nom": "« 1er » n'est plus écrit pour le premier du mois",
+    "fichier": "js/suivi-pdf.js",
+    "de": "(j===1?'1er':String(j))",
+    "vers": "String(j)"
+  },
+  {
+    "nom": "le mois est décalé d'un cran",
+    "fichier": "js/suivi-pdf.js",
+    "de": "SUIVI_PDF_MOIS[Number(m[2])-1]",
+    "vers": "SUIVI_PDF_MOIS[Number(m[2])]"
+  },
+  {
+    "nom": "l'année n'est plus écrite",
+    "fichier": "js/suivi-pdf.js",
+    "de": "+' '+SUIVI_PDF_MOIS[Number(m[2])-1]+' '+m[1];",
+    "vers": "+' '+SUIVI_PDF_MOIS[Number(m[2])-1];"
+  },
+  {
+    "nom": "une date illisible plante au lieu de rendre un texte vide",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  if(!m) return '';\n  const j=Number(m[3]);",
+    "vers": "  const j=Number(m[3]);"
+  },
+  {
+    "nom": "la saison : une même année s'écrit « 2026-2026 »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "return (a&&a<b)?'Saison '+a+'-'+b:'Saison '+b;",
+    "vers": "return (a&&a<=b)?'Saison '+a+'-'+b:'Saison '+b;"
+  },
+  {
+    "nom": "la saison : une date de départ absente donne « 0-2026 »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "return (a&&a<b)?",
+    "vers": "return (a<b)?"
+  },
+  {
+    "nom": "la saison : une date de départ future donne « 2027-2026 »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "return (a&&a<b)?",
+    "vers": "return (a&&a!==b)?"
+  },
+  {
+    "nom": "le nom du fichier garde les accents",
+    "fichier": "js/suivi-pdf.js",
+    "de": ".normalize('NFD').replace(/\\p{M}/gu,'').replace(/[^A-Za-z0-9]+/g,'-')",
+    "vers": ".replace(/[^A-Za-z0-9]+/g,'-')"
+  },
+  {
+    "nom": "le nom du fichier garde des tirets au début et à la fin",
+    "fichier": "js/suivi-pdf.js",
+    "de": ".replace(/^-+|-+$/g,'');",
+    "vers": ";"
+  },
+  {
+    "nom": "le nom du fichier a toujours un trait bas, même sans service",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Suivi-des-passages'+(s?'_'+s:'')+'_'+aujourdhui",
+    "vers": "'Suivi-des-passages_'+s+'_'+aujourdhui"
+  },
+  {
+    "nom": "le nom du fichier oublie la date",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Suivi-des-passages'+(s?'_'+s:'')+'_'+aujourdhui+'.pdf'",
+    "vers": "'Suivi-des-passages'+(s?'_'+s:'')+'.pdf'"
+  },
+  {
+    "nom": "le nom du fichier n'est plus « .pdf »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "+'_'+aujourdhui+'.pdf';",
+    "vers": "+'_'+aujourdhui+'.bin';"
+  },
+  {
+    "nom": "le filtre « à faire » dit « sans passage » même avec un rythme",
+    "fichier": "js/suivi-pdf.js",
+    "de": "morceaux.push(rythme?'clients à faire (sans passage, à faire ou en retard : rythme de '+rythme+' jours)':'clients sans passage');",
+    "vers": "morceaux.push('clients sans passage');"
+  },
+  {
+    "nom": "le filtre « à faire » sans rythme parle d'un rythme",
+    "fichier": "js/suivi-pdf.js",
+    "de": "morceaux.push(rythme?'clients à faire (sans passage, à faire ou en retard : rythme de '+rythme+' jours)':'clients sans passage');",
+    "vers": "morceaux.push('clients à faire (sans passage, à faire ou en retard : rythme de '+rythme+' jours)');"
+  },
+  {
+    "nom": "le filtre « aucun passage » n'est plus dit",
+    "fichier": "js/suivi-pdf.js",
+    "de": "else if(filtre==='aucun') morceaux.push('clients sans passage');",
+    "vers": ""
+  },
+  {
+    "nom": "la recherche n'est plus nettoyée (espaces gardés)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const r=String(recherche||'').trim();",
+    "vers": "const r=String(recherche||'');"
+  },
+  {
+    "nom": "la recherche n'est plus dite",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  if(r) morceaux.push('recherche « '+r+' »');\n",
+    "vers": ""
+  },
+  {
+    "nom": "le filtre et la recherche sont collés par une virgule",
+    "fichier": "js/suivi-pdf.js",
+    "de": "return morceaux.join(' ; ');",
+    "vers": "return morceaux.join(', ');"
+  },
+  {
+    "nom": "les dates sont coupées sans virgule",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const piece=d+(i<dates.length-1?',':'');",
+    "vers": "const piece=d;"
+  },
+  {
+    "nom": "la dernière date d'une case porte aussi une virgule",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const piece=d+(i<dates.length-1?',':'');",
+    "vers": "const piece=d+',';"
+  },
+  {
+    "nom": "deux dates qui tiennent juste sont séparées (< au lieu de ≤)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "pdfLargeur(essai,taille,false)<=largeur){courante=essai;return;}",
+    "vers": "pdfLargeur(essai,taille,false)<largeur){courante=essai;return;}"
+  },
+  {
+    "nom": "une date trop large donne une ligne vide avant elle",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(!courante||pdfLargeur(essai,taille,false)<=largeur)",
+    "vers": "if(pdfLargeur(essai,taille,false)<=largeur)"
+  },
+  {
+    "nom": "la dernière ligne de dates est perdue",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  if(courante) lignes.push(courante);\n  return lignes;\n}\n// Au plus",
+    "vers": "  return lignes;\n}\n// Au plus"
+  },
+  {
+    "nom": "40 lignes exactement sont déjà limitées (< au lieu de ≤)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(lignes.length<=SUIVI_PDF_LIGNES_MAX) return lignes;",
+    "vers": "if(lignes.length<SUIVI_PDF_LIGNES_MAX) return lignes;"
+  },
+  {
+    "nom": "la limite garde une ligne de trop",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const c=lignes.slice(0,SUIVI_PDF_LIGNES_MAX);",
+    "vers": "const c=lignes.slice(0,SUIVI_PDF_LIGNES_MAX+1);"
+  },
+  {
+    "nom": "la limite ne raccourcit plus la dernière ligne pour faire de la place à « … »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  while(derniere&&pdfLargeur(derniere+'…',taille,gras)>largeur) derniere=derniere.slice(0,-1);\n  c[c.length-1]",
+    "vers": "  c[c.length-1]"
+  },
+  {
+    "nom": "la limite laisse la virgule avant « … »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "derniere.replace(/[ ,]+$/,'')+'…'",
+    "vers": "derniere+'…'"
+  },
+  {
+    "nom": "la limite n'ajoute plus « … »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "derniere.replace(/[ ,]+$/,'')+'…';",
+    "vers": "derniere.replace(/[ ,]+$/,'');"
+  },
+  {
+    "nom": "un seul client s'écrit « 1 clients »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "(n>1?'s':'')",
+    "vers": "'s'"
+  },
+  {
+    "nom": "zéro client s'écrit « 0 clients »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "(n>1?'s':'')",
+    "vers": "(n>0?'s':'')"
+  },
+  {
+    "nom": "le texte ajusté qui tient est quand même raccourci (≤ devient <)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(pdfLargeur(t,taille,gras)<=largeur) return t;",
+    "vers": "if(pdfLargeur(t,taille,gras)<largeur) return t;"
+  },
+  {
+    "nom": "le texte ajusté ne laisse pas la place de « … »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "while(t&&pdfLargeur(t+'…',taille,gras)>largeur) t=t.slice(0,-1);\n  return t.replace",
+    "vers": "while(t&&pdfLargeur(t,taille,gras)>largeur) t=t.slice(0,-1);\n  return t.replace"
+  },
+  {
+    "nom": "le texte ajusté finit par un espace avant « … »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "return t.replace(/ +$/,'')+'…';\n}\n\n// Fabrique",
+    "vers": "return t+'…';\n}\n\n// Fabrique"
+  },
+  {
+    "nom": "le titre du PDF (informations du fichier) oublie le service",
+    "fichier": "js/suivi-pdf.js",
+    "de": "titre:'Suivi des passages - '+o.service,auteur",
+    "vers": "titre:'Suivi des passages',auteur"
+  },
+  {
+    "nom": "l'auteur du fichier change",
+    "fichier": "js/suivi-pdf.js",
+    "de": "auteur:'Entretien Lapointe',date:o.maintenant",
+    "vers": "auteur:'Lapointe',date:o.maintenant"
+  },
+  {
+    "nom": "la date du fichier n'est plus donnée",
+    "fichier": "js/suivi-pdf.js",
+    "de": "auteur:'Entretien Lapointe',date:o.maintenant",
+    "vers": "auteur:'Entretien Lapointe'"
+  },
+  {
+    "nom": "le PDF est en portrait",
+    "fichier": "js/suivi-pdf.js",
+    "de": "largeur:SUIVI_PDF_L,hauteur:SUIVI_PDF_H",
+    "vers": "largeur:SUIVI_PDF_H,hauteur:SUIVI_PDF_L"
+  },
+  {
+    "nom": "la colonne « État » est toujours là",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const avecEtat=!!o.rythme;",
+    "vers": "const avecEtat=true;"
+  },
+  {
+    "nom": "la colonne « État » n'est jamais là",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const avecEtat=!!o.rythme;",
+    "vers": "const avecEtat=false;"
+  },
+  {
+    "nom": "la colonne du client (sans rythme) est plus large de 10",
+    "fichier": "js/suivi-pdf.js",
+    "de": ":{n:{x:36,l:30},client:{x:66,l:300},dates:{x:366,l:334},nb:{x:700,l:56}};",
+    "vers": ":{n:{x:36,l:30},client:{x:66,l:310},dates:{x:366,l:334},nb:{x:700,l:56}};"
+  },
+  {
+    "nom": "la colonne des dates (sans rythme) est plus large de 10",
+    "fichier": "js/suivi-pdf.js",
+    "de": "dates:{x:366,l:334},nb:{x:700,l:56}};",
+    "vers": "dates:{x:366,l:344},nb:{x:700,l:56}};"
+  },
+  {
+    "nom": "la colonne des dates (avec rythme) est décalée de 10",
+    "fichier": "js/suivi-pdf.js",
+    "de": "dates:{x:336,l:284},etat:{x:620,l:80}",
+    "vers": "dates:{x:346,l:284},etat:{x:620,l:80}"
+  },
+  {
+    "nom": "la colonne de l'état est plus étroite de 30 (le texte passe sur 2 lignes)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "etat:{x:620,l:80},nb:{x:700,l:56}}",
+    "vers": "etat:{x:620,l:50},nb:{x:700,l:56}}"
+  },
+  {
+    "nom": "la colonne des passages est décalée de 10",
+    "fichier": "js/suivi-pdf.js",
+    "de": "nb:{x:700,l:56}}\n    :{n",
+    "vers": "nb:{x:710,l:56}}\n    :{n"
+  },
+  {
+    "nom": "le nombre de clients compte les sections au lieu des lignes",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const clients=o.sections.reduce((s,x)=>s+x.lignes.length,0);",
+    "vers": "const clients=o.sections.length;"
+  },
+  {
+    "nom": "le nombre de passages compte les lignes au lieu des dates",
+    "fichier": "js/suivi-pdf.js",
+    "de": "x.lignes.reduce((t,l)=>t+l.total,0),0);",
+    "vers": "x.lignes.reduce((t,l)=>t+1,0),0);"
+  },
+  {
+    "nom": "l'en-tête du tableau est plus foncé",
+    "fichier": "js/suivi-pdf.js",
+    "de": "{remplissage:'#f0f0f0'}",
+    "vers": "{remplissage:'#c0c0c0'}"
+  },
+  {
+    "nom": "les textes de l'en-tête sont 1 point trop bas",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    const b=y+12;\n    page.texte(col.n.x",
+    "vers": "    const b=y+13;\n    page.texte(col.n.x"
+  },
+  {
+    "nom": "le « # » de l'en-tête n'est plus à droite de sa colonne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.texte(col.n.x+col.n.l-6,b,'#',{taille:T,gras:true,align:'right'});",
+    "vers": "page.texte(col.n.x+6,b,'#',{taille:T,gras:true});"
+  },
+  {
+    "nom": "« Client : Adresse » devient « Client »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Client : Adresse',{taille:T,gras:true}",
+    "vers": "'Client',{taille:T,gras:true}"
+  },
+  {
+    "nom": "« Dates des passages » devient « Dates »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Dates des passages',{taille:T,gras:true}",
+    "vers": "'Dates',{taille:T,gras:true}"
+  },
+  {
+    "nom": "« Passages » devient « Nb »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Passages',{taille:T,gras:true,align:'right'}",
+    "vers": "'Nb',{taille:T,gras:true,align:'right'}"
+  },
+  {
+    "nom": "« État » disparaît de l'en-tête",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    if(avecEtat) page.texte(col.etat.x+6,b,'État',{taille:T,gras:true});\n",
+    "vers": ""
+  },
+  {
+    "nom": "le trait sous l'en-tête est plus fin",
+    "fichier": "js/suivi-pdf.js",
+    "de": "M+SUIVI_PDF_LARGEUR_UTILE,y+SUIVI_PDF_HAUT_ENTETE,{epaisseur:1,couleur:'#333333'}",
+    "vers": "M+SUIVI_PDF_LARGEUR_UTILE,y+SUIVI_PDF_HAUT_ENTETE,{epaisseur:0.4,couleur:'#333333'}"
+  },
+  {
+    "nom": "le trait sous l'en-tête est trop bas",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.trait(M,y+SUIVI_PDF_HAUT_ENTETE,M+SUIVI_PDF_LARGEUR_UTILE,y+SUIVI_PDF_HAUT_ENTETE,",
+    "vers": "page.trait(M,y+SUIVI_PDF_HAUT_ENTETE+2,M+SUIVI_PDF_LARGEUR_UTILE,y+SUIVI_PDF_HAUT_ENTETE+2,"
+  },
+  {
+    "nom": "l'en-tête ne fait plus avancer y",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    y+=SUIVI_PDF_HAUT_ENTETE;\n  };",
+    "vers": "  };"
+  },
+  {
+    "nom": "les pages ne sont plus gardées (pas de pied de page)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    page=doc.page();\n    pages.push(page);",
+    "vers": "    page=doc.page();"
+  },
+  {
+    "nom": "le grand titre change",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'SUIVI DES PASSAGES PAR CLIENT',{taille:16,gras:true}",
+    "vers": "'SUIVI DES PASSAGES',{taille:16,gras:true}"
+  },
+  {
+    "nom": "le grand titre est trop petit",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'SUIVI DES PASSAGES PAR CLIENT',{taille:16,gras:true}",
+    "vers": "'SUIVI DES PASSAGES PAR CLIENT',{taille:14,gras:true}"
+  },
+  {
+    "nom": "le sous-titre oublie la saison",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Entretien Lapointe - '+o.saison+' - '+o.service,",
+    "vers": "'Entretien Lapointe - '+o.service,"
+  },
+  {
+    "nom": "le sous-titre oublie le service",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Entretien Lapointe - '+o.saison+' - '+o.service,",
+    "vers": "'Entretien Lapointe - '+o.saison,"
+  },
+  {
+    "nom": "le résumé oublie « Imprimé le »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "+' · Imprimé le '+suiviPdfDateLongue(o.aujourdhui),",
+    "vers": "+'',"
+  },
+  {
+    "nom": "le résumé donne la date d'aujourd'hui à la place de la date de départ",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Passages depuis le '+suiviPdfDateLongue(o.depuis)",
+    "vers": "'Passages depuis le '+suiviPdfDateLongue(o.aujourdhui)"
+  },
+  {
+    "nom": "le résumé oublie le nombre de passages",
+    "fichier": "js/suivi-pdf.js",
+    "de": "+' · '+suiviPdfPluriel(passages,'passage')",
+    "vers": ""
+  },
+  {
+    "nom": "la ligne « Liste : » n'est plus écrite",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(o.filtre){\n        page.texte(M,96,",
+    "vers": "      if(false){\n        page.texte(M,96,"
+  },
+  {
+    "nom": "la ligne « Liste : » n'est plus en gras",
+    "fichier": "js/suivi-pdf.js",
+    "de": "suiviPdfAjuster('Liste : '+o.filtre,SUIVI_PDF_LARGEUR_UTILE,T,true),{taille:T,gras:true,couleur:'#444444'}",
+    "vers": "suiviPdfAjuster('Liste : '+o.filtre,SUIVI_PDF_LARGEUR_UTILE,T,false),{taille:T,gras:false,couleur:'#444444'}"
+  },
+  {
+    "nom": "la ligne « Liste : » ne décale plus le tableau",
+    "fichier": "js/suivi-pdf.js",
+    "de": "        y=105;\n",
+    "vers": ""
+  },
+  {
+    "nom": "le tableau de la 1re page commence 5 points trop bas",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      y=92;\n",
+    "vers": "      y=97;\n"
+  },
+  {
+    "nom": "le titre des pages suivantes oublie « (suite) »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'SUIVI DES PASSAGES PAR CLIENT - '+o.service+' (suite)'",
+    "vers": "'SUIVI DES PASSAGES PAR CLIENT - '+o.service"
+  },
+  {
+    "nom": "le titre des pages suivantes est écrit sur toutes les pages (aussi la 1re)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    if(pages.length===1){\n      page.texte(M,50,",
+    "vers": "    if(false){\n      page.texte(M,50,"
+  },
+  {
+    "nom": "le nom de la section n'est plus en majuscules",
+    "fichier": "js/suivi-pdf.js",
+    "de": "String(nom).toLocaleUpperCase('fr')",
+    "vers": "String(nom)"
+  },
+  {
+    "nom": "« (suite) » n'est plus écrit sur une section qui continue",
+    "fichier": "js/suivi-pdf.js",
+    "de": "+(suite?' (suite)':''),{taille:10,gras:true}",
+    "vers": "+'',{taille:10,gras:true}"
+  },
+  {
+    "nom": "le nombre de clients de la bande est à gauche",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.texte(M+SUIVI_PDF_LARGEUR_UTILE-6,y+13,suiviPdfPluriel(n,'client'),{taille:T,align:'right',couleur:'#555555'});",
+    "vers": "page.texte(M+SUIVI_PDF_LARGEUR_UTILE-6,y+13,suiviPdfPluriel(n,'client'),{taille:T,couleur:'#555555'});"
+  },
+  {
+    "nom": "la bande d'une section est plus foncée",
+    "fichier": "js/suivi-pdf.js",
+    "de": "{remplissage:'#e5e5e5'}",
+    "vers": "{remplissage:'#999999'}"
+  },
+  {
+    "nom": "la bande d'une section ne fait plus avancer y",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    y+=SUIVI_PDF_HAUT_SECTION;\n  };",
+    "vers": "  };"
+  },
+  {
+    "nom": "le titre de la bande est 2 points trop bas",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.texte(M+6,y+13,String(nom)",
+    "vers": "page.texte(M+6,y+15,String(nom)"
+  },
+  {
+    "nom": "un « neutre » écrit son état (un rythme absent pour cette ligne)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(avecEtat&&l.etat&&l.etat!=='neutre'){",
+    "vers": "if(avecEtat&&l.etat){"
+  },
+  {
+    "nom": "l'état « aucun passage » écrit aussi des jours",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const texte=(l.etat==='aucun')?SUIVI_TEXTE_ETAT.aucun:SUIVI_TEXTE_ETAT[l.etat]+' · '+l.jours+' j';",
+    "vers": "const texte=SUIVI_TEXTE_ETAT[l.etat]+' · '+l.jours+' j';"
+  },
+  {
+    "nom": "l'état écrit les jours sans « j »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "SUIVI_TEXTE_ETAT[l.etat]+' · '+l.jours+' j';",
+    "vers": "SUIVI_TEXTE_ETAT[l.etat]+' · '+l.jours;"
+  },
+  {
+    "nom": "le nom et l'adresse ne sont plus coupés dans leur colonne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const client=suiviPdfLimiter(pdfDecouper(l.libelle,col.client.l-12,T,false),col.client.l-12,T,false);",
+    "vers": "const client=[l.libelle];"
+  },
+  {
+    "nom": "les dates ne sont plus coupées dans leur colonne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "suiviPdfLimiter(suiviPdfDatesEnLignes(l.dates,col.dates.l-12,T),col.dates.l-12,T,false)",
+    "vers": "[l.dates.join(', ')]"
+  },
+  {
+    "nom": "sans passage : le texte n'est plus « Aucun passage »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "(avecEtat?['']:['Aucun passage'])",
+    "vers": "(avecEtat?['']:[''])"
+  },
+  {
+    "nom": "avec un rythme, la case des dates sans passage répète « Aucun passage »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "(avecEtat?['']:['Aucun passage'])",
+    "vers": "['Aucun passage']"
+  },
+  {
+    "nom": "une ligne ne prend plus la place de sa case la plus haute",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const n=Math.max(client.length,dates.length,etat.length,1);",
+    "vers": "const n=Math.max(client.length,1);"
+  },
+  {
+    "nom": "la hauteur d'une ligne oublie le bas (5 points)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "h:3+T+(n-1)*SUIVI_PDF_INTERLIGNE+5}",
+    "vers": "h:3+T+(n-1)*SUIVI_PDF_INTERLIGNE}"
+  },
+  {
+    "nom": "la ligne de base d'une ligne est 2 points trop bas",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    const b=y+3+T;\n    page.texte(col.n.x+col.n.l-6,b,String(r.l.numero)",
+    "vers": "    const b=y+5+T;\n    page.texte(col.n.x+col.n.l-6,b,String(r.l.numero)"
+  },
+  {
+    "nom": "le numéro n'est plus à droite de sa colonne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.texte(col.n.x+col.n.l-6,b,String(r.l.numero),{taille:T,align:'right'});",
+    "vers": "page.texte(col.n.x+6,b,String(r.l.numero),{taille:T});"
+  },
+  {
+    "nom": "les lignes du client sont toutes écrites à la même hauteur",
+    "fichier": "js/suivi-pdf.js",
+    "de": "r.client.forEach((t,i)=>page.texte(col.client.x+6,b+i*SUIVI_PDF_INTERLIGNE,t,{taille:T}));",
+    "vers": "r.client.forEach((t,i)=>page.texte(col.client.x+6,b,t,{taille:T}));"
+  },
+  {
+    "nom": "les lignes de dates sont toutes écrites à la même hauteur",
+    "fichier": "js/suivi-pdf.js",
+    "de": "r.dates.forEach((t,i)=>page.texte(col.dates.x+6,b+i*SUIVI_PDF_INTERLIGNE,t,",
+    "vers": "r.dates.forEach((t,i)=>page.texte(col.dates.x+6,b,t,"
+  },
+  {
+    "nom": "« Aucun passage » n'est plus en gris",
+    "fichier": "js/suivi-pdf.js",
+    "de": "couleur:r.l.dates.length?'#000000':'#888888'",
+    "vers": "couleur:'#000000'"
+  },
+  {
+    "nom": "les dates sont en gris",
+    "fichier": "js/suivi-pdf.js",
+    "de": "couleur:r.l.dates.length?'#000000':'#888888'",
+    "vers": "couleur:'#888888'"
+  },
+  {
+    "nom": "l'état n'est plus en gras",
+    "fichier": "js/suivi-pdf.js",
+    "de": "{taille:8,gras:true,couleur:SUIVI_PDF_COULEUR_ETAT[r.l.etat]||'#000000'}",
+    "vers": "{taille:8,gras:false,couleur:SUIVI_PDF_COULEUR_ETAT[r.l.etat]||'#000000'}"
+  },
+  {
+    "nom": "l'état est en taille 9",
+    "fichier": "js/suivi-pdf.js",
+    "de": "{taille:8,gras:true,couleur:SUIVI_PDF_COULEUR_ETAT",
+    "vers": "{taille:9,gras:true,couleur:SUIVI_PDF_COULEUR_ETAT"
+  },
+  {
+    "nom": "les lignes de l'état sont toutes écrites à la même hauteur",
+    "fichier": "js/suivi-pdf.js",
+    "de": "r.etat.forEach((t,i)=>page.texte(col.etat.x+6,b+i*SUIVI_PDF_INTERLIGNE,t,",
+    "vers": "r.etat.forEach((t,i)=>page.texte(col.etat.x+6,b,t,"
+  },
+  {
+    "nom": "le nombre de passages n'est plus à droite de sa colonne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.texte(col.nb.x+col.nb.l-6,b,String(r.l.total),{taille:T,align:'right'});",
+    "vers": "page.texte(col.nb.x+6,b,String(r.l.total),{taille:T});"
+  },
+  {
+    "nom": "le nombre de passages est écrit à la place du numéro",
+    "fichier": "js/suivi-pdf.js",
+    "de": "String(r.l.total),{taille:T,align:'right'}",
+    "vers": "String(r.l.numero),{taille:T,align:'right'}"
+  },
+  {
+    "nom": "le trait sous une ligne est plus épais",
+    "fichier": "js/suivi-pdf.js",
+    "de": "{epaisseur:0.4,couleur:'#cccccc'}",
+    "vers": "{epaisseur:1,couleur:'#cccccc'}"
+  },
+  {
+    "nom": "le trait sous une ligne est mal placé",
+    "fichier": "js/suivi-pdf.js",
+    "de": "page.trait(M,y+r.h,M+SUIVI_PDF_LARGEUR_UTILE,y+r.h,",
+    "vers": "page.trait(M,y+r.h-2,M+SUIVI_PDF_LARGEUR_UTILE,y+r.h-2,"
+  },
+  {
+    "nom": "une ligne ne fait plus avancer y",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    y+=r.h;\n  };",
+    "vers": "  };"
+  },
+  {
+    "nom": "les sections ne sont plus toutes écrites (la dernière saute)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  o.sections.forEach(s=>{\n    s.lignes.forEach",
+    "vers": "  o.sections.slice(0,-1).forEach(s=>{\n    s.lignes.forEach"
+  },
+  {
+    "nom": "la limite de page ignore la bande de la 1re ligne d'une section",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(y+(k===0?SUIVI_PDF_HAUT_SECTION:0)+r.h>SUIVI_PDF_BAS){",
+    "vers": "if(y+r.h>SUIVI_PDF_BAS){"
+  },
+  {
+    "nom": "la limite de page ne tient pas compte de la hauteur de la ligne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(y+(k===0?SUIVI_PDF_HAUT_SECTION:0)+r.h>SUIVI_PDF_BAS){",
+    "vers": "if(y+(k===0?SUIVI_PDF_HAUT_SECTION:0)>SUIVI_PDF_BAS){"
+  },
+  {
+    "nom": "une nouvelle page ne réécrit plus la bande « (suite) »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "        if(k>0) bande(s.nom,s.lignes.length,true);",
+    "vers": ""
+  },
+  {
+    "nom": "la bande « (suite) » est écrite même pour une nouvelle section",
+    "fichier": "js/suivi-pdf.js",
+    "de": "        if(k>0) bande(s.nom,s.lignes.length,true);",
+    "vers": "        bande(s.nom,s.lignes.length,true);"
+  },
+  {
+    "nom": "la bande d'une section n'est plus écrite",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(k===0) bande(s.nom,s.lignes.length,false);",
+    "vers": ""
+  },
+  {
+    "nom": "la bande est écrite avant CHAQUE ligne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(k===0) bande(s.nom,s.lignes.length,false);",
+    "vers": "      bande(s.nom,s.lignes.length,false);"
+  },
+  {
+    "nom": "le pied de page est trop haut",
+    "fichier": "js/suivi-pdf.js",
+    "de": "p.texte(M,SUIVI_PDF_H-22,suiviPdfAjuster('Entretien",
+    "vers": "p.texte(M,SUIVI_PDF_H-40,suiviPdfAjuster('Entretien"
+  },
+  {
+    "nom": "le numéro de page n'est plus à droite",
+    "fichier": "js/suivi-pdf.js",
+    "de": "{taille:8,couleur:'#888888',align:'right'}",
+    "vers": "{taille:8,couleur:'#888888'}"
+  },
+  {
+    "nom": "le numéro de page compte à partir de 0",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Page '+(i+1)+' / '+pages.length",
+    "vers": "'Page '+i+' / '+pages.length"
+  },
+  {
+    "nom": "le total de pages est faux",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Page '+(i+1)+' / '+pages.length",
+    "vers": "'Page '+(i+1)+' / '+(pages.length+1)"
+  },
+  {
+    "nom": "le pied de page ne dit plus le service",
+    "fichier": "js/suivi-pdf.js",
+    "de": "'Entretien Lapointe - Suivi des passages - '+o.service,SUIVI_PDF_LARGEUR_UTILE-80",
+    "vers": "'Entretien Lapointe - Suivi des passages',SUIVI_PDF_LARGEUR_UTILE-80"
+  },
+  {
+    "nom": "le PDF ignore le filtre et la recherche de l'écran",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const lignes=suiviFiltrer(suiviLignes(),suiviFiltre,suiviRecherche);",
+    "vers": "const lignes=suiviLignes();"
+  },
+  {
+    "nom": "le PDF ignore la recherche de l'écran",
+    "fichier": "js/suivi-pdf.js",
+    "de": "suiviFiltrer(suiviLignes(),suiviFiltre,suiviRecherche);\n  const aujourdhui",
+    "vers": "suiviFiltrer(suiviLignes(),suiviFiltre,'');\n  const aujourdhui"
+  },
+  {
+    "nom": "le PDF ignore le filtre de l'écran",
+    "fichier": "js/suivi-pdf.js",
+    "de": "suiviFiltrer(suiviLignes(),suiviFiltre,suiviRecherche);\n  const aujourdhui",
+    "vers": "suiviFiltrer(suiviLignes(),'tous',suiviRecherche);\n  const aujourdhui"
+  },
+  {
+    "nom": "la saison est calculée avec la date d'aujourd'hui des deux côtés",
+    "fichier": "js/suivi-pdf.js",
+    "de": "saison:suiviPdfSaison(suiviDonnees.depuis,aujourdhui)",
+    "vers": "saison:suiviPdfSaison(aujourdhui,aujourdhui)"
+  },
+  {
+    "nom": "la date de départ écrite est celle d'aujourd'hui",
+    "fichier": "js/suivi-pdf.js",
+    "de": "depuis:suiviDonnees.depuis,aujourdhui,rythme",
+    "vers": "depuis:aujourdhui,aujourdhui,rythme"
+  },
+  {
+    "nom": "le rythme du service est ignoré",
+    "fichier": "js/suivi-pdf.js",
+    "de": "aujourdhui,rythme,maintenant:new Date(),",
+    "vers": "aujourdhui,rythme:null,maintenant:new Date(),"
+  },
+  {
+    "nom": "la date de l'impression est fixe (pas le moment de l'export)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "maintenant:new Date(),",
+    "vers": "maintenant:new Date(0),"
+  },
+  {
+    "nom": "le texte du filtre n'est plus transmis",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    filtre:suiviPdfTexteFiltre(suiviFiltre,suiviRecherche,rythme),",
+    "vers": "    filtre:'',"
+  },
+  {
+    "nom": "les sections ne suivent plus l'écran (pas de regroupement par route)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "sections:suiviGrouper(lignes).map(s=>({nom:s.nom,lignes:s.lignes.map(",
+    "vers": "sections:[{nom:'Tous',lignes:lignes}].map(s=>({nom:s.nom,lignes:s.lignes.map("
+  },
+  {
+    "nom": "la numérotation ne repart plus de 1 dans chaque section",
+    "fichier": "js/suivi-pdf.js",
+    "de": "numero:i+1,libelle:suiviLibelle(l)",
+    "vers": "numero:i,libelle:suiviLibelle(l)"
+  },
+  {
+    "nom": "le libellé du client est l'adresse seule",
+    "fichier": "js/suivi-pdf.js",
+    "de": "libelle:suiviLibelle(l),",
+    "vers": "libelle:l.adresse,"
+  },
+  {
+    "nom": "les dates sont écrites avec la date longue",
+    "fichier": "js/suivi-pdf.js",
+    "de": "dates:l.dates.map(d=>suiviDateCourte(d.jour,annee))",
+    "vers": "dates:l.dates.map(d=>d.jour)"
+  },
+  {
+    "nom": "les dates ne portent jamais leur année",
+    "fichier": "js/suivi-pdf.js",
+    "de": "suiviDateCourte(d.jour,annee)",
+    "vers": "suiviDateCourte(d.jour,Number(d.jour.slice(0,4)))"
+  },
+  {
+    "nom": "le total des passages est perdu",
+    "fichier": "js/suivi-pdf.js",
+    "de": ",total:l.total,etat:l.etat,jours:l.jours}))})),",
+    "vers": ",total:0,etat:l.etat,jours:l.jours}))})),"
+  },
+  {
+    "nom": "l'état des clients est perdu",
+    "fichier": "js/suivi-pdf.js",
+    "de": ",total:l.total,etat:l.etat,jours:l.jours}))})),",
+    "vers": ",total:l.total,etat:'neutre',jours:l.jours}))})),"
+  },
+  {
+    "nom": "les jours depuis le dernier passage sont perdus",
+    "fichier": "js/suivi-pdf.js",
+    "de": ",total:l.total,etat:l.etat,jours:l.jours}))})),",
+    "vers": ",total:l.total,etat:l.etat,jours:0}))})),"
+  },
+  {
+    "nom": "le base64 saute des octets (paquets de 8193)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "i+=8192) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8192));",
+    "vers": "i+=8193) s+=String.fromCharCode.apply(null,octets.subarray(i,i+8192));"
+  },
+  {
+    "nom": "le base64 lit des paquets trop courts (perd des octets)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "octets.subarray(i,i+8192));",
+    "vers": "octets.subarray(i,i+8191));"
+  },
+  {
+    "nom": "le base64 n'est plus encodé",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  return btoa(s);",
+    "vers": "  return s;"
+  },
+  {
+    "nom": "le plugin « Filesystem » est cherché sous un autre nom",
+    "fichier": "js/suivi-pdf.js",
+    "de": "pluginNatif('Filesystem')",
+    "vers": "pluginNatif('File')"
+  },
+  {
+    "nom": "le plugin « Share » est cherché sous un autre nom",
+    "fichier": "js/suivi-pdf.js",
+    "de": "pluginNatif('Share')",
+    "vers": "pluginNatif('Sharing')"
+  },
+  {
+    "nom": "un seul plugin suffit pour prendre le chemin du téléphone",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(fichiers&&partage){",
+    "vers": "if(fichiers||partage){"
+  },
+  {
+    "nom": "le fichier est écrit dans les documents de la personne",
+    "fichier": "js/suivi-pdf.js",
+    "de": "directory:'CACHE'",
+    "vers": "directory:'DOCUMENTS'"
+  },
+  {
+    "nom": "le nom du fichier écrit est perdu",
+    "fichier": "js/suivi-pdf.js",
+    "de": "writeFile({path:nom,data:",
+    "vers": "writeFile({path:'suivi.pdf',data:"
+  },
+  {
+    "nom": "le contenu écrit n'est plus le PDF",
+    "fichier": "js/suivi-pdf.js",
+    "de": "data:suiviPdfBase64(octets),directory",
+    "vers": "data:suiviPdfBase64(octets.subarray(0,10)),directory"
+  },
+  {
+    "nom": "un fichier sans chemin rendu est quand même partagé",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    if(!ecrit||!ecrit.uri) throw new Error('fichier non écrit');\n",
+    "vers": ""
+  },
+  {
+    "nom": "le partage est ouvert avant l'écriture (pas d'attente)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "const ecrit=await fichiers.writeFile(",
+    "vers": "const ecrit=fichiers.writeFile("
+  },
+  {
+    "nom": "le partage n'est plus attendu",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    await partage.share({",
+    "vers": "    partage.share({"
+  },
+  {
+    "nom": "le partage donne un autre chemin",
+    "fichier": "js/suivi-pdf.js",
+    "de": "url:ecrit.uri,dialogTitle",
+    "vers": "url:nom,dialogTitle"
+  },
+  {
+    "nom": "le partage oublie son titre",
+    "fichier": "js/suivi-pdf.js",
+    "de": "share({title:titre,text:titre,",
+    "vers": "share({text:titre,"
+  },
+  {
+    "nom": "le partage oublie son texte",
+    "fichier": "js/suivi-pdf.js",
+    "de": "share({title:titre,text:titre,",
+    "vers": "share({title:titre,"
+  },
+  {
+    "nom": "le titre de la fenêtre de partage change",
+    "fichier": "js/suivi-pdf.js",
+    "de": "dialogTitle:'Envoyer ou imprimer le suivi'",
+    "vers": "dialogTitle:'Partager'"
+  },
+  {
+    "nom": "la remise ne dit plus « partage »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    return 'partage';",
+    "vers": "    return 'telecharge';"
+  },
+  {
+    "nom": "sur le téléphone sans plugins, un téléchargement est essayé quand même",
+    "fichier": "js/suivi-pdf.js",
+    "de": "if(typeof Capacitor!=='undefined'&&typeof Capacitor.isNativePlatform==='function'&&Capacitor.isNativePlatform()) throw",
+    "vers": "if(false) throw"
+  },
+  {
+    "nom": "un Capacitor de navigateur est pris pour le téléphone",
+    "fichier": "js/suivi-pdf.js",
+    "de": "&&Capacitor.isNativePlatform()) throw",
+    "vers": ") throw"
+  },
+  {
+    "nom": "le téléchargement se fait sans type PDF",
+    "fichier": "js/suivi-pdf.js",
+    "de": "new Blob([octets],{type:'application/pdf'})",
+    "vers": "new Blob([octets])"
+  },
+  {
+    "nom": "le lien de téléchargement perd le nom du fichier",
+    "fichier": "js/suivi-pdf.js",
+    "de": "a.href=url;a.download=nom;",
+    "vers": "a.href=url;"
+  },
+  {
+    "nom": "le lien de téléchargement perd son adresse",
+    "fichier": "js/suivi-pdf.js",
+    "de": "a.href=url;a.download=nom;",
+    "vers": "a.download=nom;"
+  },
+  {
+    "nom": "le lien de téléchargement n'est pas mis dans la page",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  document.body.appendChild(a);\n  a.click();",
+    "vers": "  a.click();"
+  },
+  {
+    "nom": "le lien de téléchargement n'est pas cliqué",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  a.click();\n  a.remove();",
+    "vers": "  a.remove();"
+  },
+  {
+    "nom": "le lien de téléchargement reste dans la page",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  a.click();\n  a.remove();",
+    "vers": "  a.click();"
+  },
+  {
+    "nom": "l'adresse du fichier n'est jamais libérée",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  setTimeout(()=>URL.revokeObjectURL(url),60000);\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'adresse du fichier est libérée tout de suite",
+    "fichier": "js/suivi-pdf.js",
+    "de": "setTimeout(()=>URL.revokeObjectURL(url),60000);",
+    "vers": "setTimeout(()=>URL.revokeObjectURL(url),0);"
+  },
+  {
+    "nom": "une autre adresse est libérée",
+    "fichier": "js/suivi-pdf.js",
+    "de": "URL.revokeObjectURL(url),60000",
+    "vers": "URL.revokeObjectURL(a.href+'x'),60000"
+  },
+  {
+    "nom": "la remise du téléchargement ne dit plus « telecharge »",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  return 'telecharge';\n}",
+    "vers": "  return 'partage';\n}"
+  },
+  {
+    "nom": "un 2e toucher pendant l'export n'est plus ignoré",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  if(_suiviPdfOccupe) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'export reste bloqué après une erreur (le verrou n'est pas retiré)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  }finally{\n    _suiviPdfOccupe=false;\n  }",
+    "vers": "  }finally{\n  }"
+  },
+  {
+    "nom": "l'export n'est jamais bloqué pendant l'attente",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  _suiviPdfOccupe=true;\n  try{",
+    "vers": "  try{"
+  },
+  {
+    "nom": "« Rien à exporter. » n'est plus dit (sans données)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "  if(!suiviDonnees||!suiviService){toast('Rien à exporter.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "« Rien à exporter » n'est plus dit (liste vide)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    if(!donnees.sections.length){toast('Rien à exporter : aucun client dans la liste.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "une liste vide est quand même exportée",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    if(!donnees.sections.length){toast('Rien à exporter : aucun client dans la liste.');return;}\n",
+    "vers": "    if(false){toast('Rien à exporter : aucun client dans la liste.');return;}\n"
+  },
+  {
+    "nom": "un PDF qui plante à la fabrication n'est plus signalé",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    catch(e){toast('❌ Le PDF n’a pas pu être préparé.');return;}",
+    "vers": "    catch(e){return;}"
+  },
+  {
+    "nom": "un PDF qui plante à la fabrication est quand même partagé",
+    "fichier": "js/suivi-pdf.js",
+    "de": "    catch(e){toast('❌ Le PDF n’a pas pu être préparé.');return;}",
+    "vers": "    catch(e){toast('❌ Le PDF n’a pas pu être préparé.');}"
+  },
+  {
+    "nom": "le nom du fichier est calculé avec un autre service",
+    "fichier": "js/suivi-pdf.js",
+    "de": "suiviPdfNomFichier(donnees.service,donnees.aujourdhui)",
+    "vers": "suiviPdfNomFichier('',donnees.aujourdhui)"
+  },
+  {
+    "nom": "le titre du partage oublie le service",
+    "fichier": "js/suivi-pdf.js",
+    "de": "await suiviPdfRemettre(octets,nom,'Suivi des passages - '+donnees.service)",
+    "vers": "await suiviPdfRemettre(octets,nom,'Suivi des passages')"
+  },
+  {
+    "nom": "« ✔ PDF téléchargé » n'est plus dit",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(r==='telecharge') toast('✔ PDF téléchargé');",
+    "vers": ""
+  },
+  {
+    "nom": "« ✔ PDF téléchargé » est dit aussi après un partage",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(r==='telecharge') toast('✔ PDF téléchargé');",
+    "vers": "      toast('✔ PDF téléchargé');"
+  },
+  {
+    "nom": "l'annulation du partage n'est plus reconnue (« cancel »)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/abort|dismiss/i"
+  },
+  {
+    "nom": "l'annulation du partage n'est plus reconnue (« abort »)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/cancel|dismiss/i"
+  },
+  {
+    "nom": "l'annulation du partage n'est plus reconnue (« dismiss »)",
+    "fichier": "js/suivi-pdf.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/cancel|abort/i"
+  },
+  {
+    "nom": "l'annulation ne tient plus compte des majuscules",
+    "fichier": "js/suivi-pdf.js",
+    "de": "/cancel|abort|dismiss/i",
+    "vers": "/cancel|abort|dismiss/"
+  },
+  {
+    "nom": "un refus en texte (sans message) plante",
+    "fichier": "js/suivi-pdf.js",
+    "de": "String((e&&e.message)||e)",
+    "vers": "String(e.message)"
+  },
+  {
+    "nom": "toute erreur est prise pour une annulation",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(/cancel|abort|dismiss/i.test(String((e&&e.message)||e))) return;\n",
+    "vers": "      return;\n"
+  },
+  {
+    "nom": "une annulation est signalée comme une erreur",
+    "fichier": "js/suivi-pdf.js",
+    "de": "      if(/cancel|abort|dismiss/i.test(String((e&&e.message)||e))) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "le message d'erreur du partage change",
+    "fichier": "js/suivi-pdf.js",
+    "de": "toast('❌ Le PDF n’a pas pu être envoyé à l’application de partage du téléphone.');",
+    "vers": "toast('❌ Erreur.');"
+  },
+  {
+    "nom": "le bouton PDF de l'écran ne fait plus rien",
+    "fichier": "js/admin-suivi.js",
+    "de": "bPdf.onclick=()=>suiviExporterPdf();",
+    "vers": "bPdf.onclick=()=>{};"
+  },
+  {
+    "nom": "le bouton PDF est affiché même sans suivi-pdf.js",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(typeof suiviExporterPdf==='function'){",
+    "vers": "  if(true){"
+  },
+  {
+    "nom": "le bouton PDF n'est jamais affiché",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(typeof suiviExporterPdf==='function'){",
+    "vers": "  if(false){"
+  },
+  {
+    "nom": "le bouton PDF change de nom",
+    "fichier": "js/admin-suivi.js",
+    "de": "'📄 Exporter en PDF'",
+    "vers": "'PDF'"
+  },
+  {
+    "nom": "le bouton PDF n'est plus un vrai bouton (pas de type)",
+    "fichier": "js/admin-suivi.js",
+    "de": "    bPdf.type='button';\n",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton PDF est ajouté après « Actualiser »",
+    "fichier": "js/admin-suivi.js",
+    "de": "    actions.appendChild(bPdf);\n  }\n  const bMaj=suiviEl('button','lf-btn','↻ Actualiser');\n  bMaj.type='button';\n  bMaj.onclick=()=>suiviOuvrir();\n  actions.appendChild(bMaj);",
+    "vers": "  }\n  const bMaj=suiviEl('button','lf-btn','↻ Actualiser');\n  bMaj.type='button';\n  bMaj.onclick=()=>suiviOuvrir();\n  actions.appendChild(bMaj);\n  actions.appendChild(bPdf);"
+  },
+  {
+    "nom": "la page ne charge plus suivi-pdf.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/suivi-pdf.js\"></script>",
+    "vers": ""
+  },
+  {
+    "nom": "la page ne charge plus pdf-simple.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/pdf-simple.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "la page charge suivi-pdf.js avant pdf-simple.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/pdf-simple.js\"></script>\n<script src=\"js/suivi-pdf.js\"></script>",
+    "vers": "<script src=\"js/suivi-pdf.js\"></script>\n<script src=\"js/pdf-simple.js\"></script>"
+  }
+]

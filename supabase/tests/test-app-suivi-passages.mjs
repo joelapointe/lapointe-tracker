@@ -862,6 +862,11 @@ log('\n=== LE CÂBLAGE : LA PAGE, LA FEUILLE DE STYLE, LA SÛRETÉ DU CODE ===')
   vrai('une date à la main est en pointillés bleus (elle se distingue d\'un « Complété »)', /border-style:dashed/.test(derniere('.su-date.manuel')?.corps ?? '') && /border-color:#60a5fa/.test(derniere('.su-date.manuel')?.corps ?? ''));
   vrai('la puce allumée prend la couleur d\'accent, comme les onglets du panneau', /background:var\(--accent\)/.test(derniere('.su-puce.on')?.corps ?? ''));
   vrai('les puces défilent de côté quand il y en a beaucoup (services)', /overflow-x:auto/.test(derniere('.su-puces')?.corps ?? ''));
+  const actions = derniere('.su-actions .lf-btn')?.corps ?? '';
+  vrai('les boutons du bas (« Exporter en PDF », « Actualiser ») ont le fond sombre de l\'application, pas le gris clair du navigateur', /background:#161c24/.test(actions), actions);
+  vrai('… avec le texte clair et une fine bordure', /color:var\(--text\)/.test(actions) && /border:1pxsolidvar\(--border\)/.test(actions) && /width:100%/.test(actions), actions);
+  const principal = derniere('.su-actions .lf-btn.nouveau')?.corps ?? '';
+  vrai('… et le bouton principal (« ＋ Une date pour plusieurs clients ») garde le vert de l\'application', /background:#c8e63c/.test(principal) && /color:#111/.test(principal), principal);
 
   const src = lire('js/admin-suivi.js');
   const admin = lire('js/admin.js');

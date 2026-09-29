@@ -1,0 +1,698 @@
+[
+  {
+    "nom": "largeur de « ! » en Helvetica : 278 devient 279",
+    "fichier": "js/pdf-simple.js",
+    "de": "  278,278,355,556,556,889,667,191,333,",
+    "vers": "  278,279,355,556,556,889,667,191,333,"
+  },
+  {
+    "nom": "largeur de « i » en Helvetica : 222 devient 223",
+    "fichier": "js/pdf-simple.js",
+    "de": "  333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,",
+    "vers": "  333,556,556,500,556,556,278,556,556,223,222,500,222,833,556,556,"
+  },
+  {
+    "nom": "largeur de « m » en Helvetica-Bold : 889 devient 888",
+    "fichier": "js/pdf-simple.js",
+    "de": "  333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,",
+    "vers": "  333,556,611,556,611,556,333,611,611,278,278,556,278,888,611,611,"
+  },
+  {
+    "nom": "largeur de « æ » en Helvetica : 889 devient 890",
+    "fichier": "js/pdf-simple.js",
+    "de": "  556,556,556,556,556,556,889,500,556,556,556,556,278,278,278,278,",
+    "vers": "  556,556,556,556,556,556,890,500,556,556,556,556,278,278,278,278,"
+  },
+  {
+    "nom": "largeur de « Œ » en Helvetica-Bold : la ligne 128 à 143 perd un chiffre",
+    "fichier": "js/pdf-simple.js",
+    "de": "  556,0,278,556,500,1000,556,556,333,1000,667,333,1000,0,611,0,",
+    "vers": "  556,0,278,556,500,1000,556,556,333,1000,667,333,999,0,611,0,"
+  },
+  {
+    "nom": "largeur de « « » en Helvetica-Bold : 556 devient 555",
+    "fichier": "js/pdf-simple.js",
+    "de": "  278,333,556,556,556,556,280,556,333,737,370,556,584,0,737,552,",
+    "vers": "  278,333,556,556,556,556,280,556,333,737,370,555,584,0,737,552,"
+  },
+  {
+    "nom": "la correction de ¯ (175) est retirée",
+    "fichier": "js/pdf-simple.js",
+    "de": "PDF_LARGEURS_REGULIER[175-32]=333;PDF_LARGEURS_GRAS[175-32]=333;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la correction de ± (177) est retirée",
+    "fichier": "js/pdf-simple.js",
+    "de": "PDF_LARGEURS_REGULIER[177-32]=584;PDF_LARGEURS_GRAS[177-32]=584;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la correction de µ en gras (181) : 611 devient 556",
+    "fichier": "js/pdf-simple.js",
+    "de": "PDF_LARGEURS_REGULIER[181-32]=556;PDF_LARGEURS_GRAS[181-32]=611;",
+    "vers": "PDF_LARGEURS_REGULIER[181-32]=556;PDF_LARGEURS_GRAS[181-32]=556;"
+  },
+  {
+    "nom": "la correction de · (183) est retirée",
+    "fichier": "js/pdf-simple.js",
+    "de": "PDF_LARGEURS_REGULIER[183-32]=278;PDF_LARGEURS_GRAS[183-32]=278;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la correction de ÷ en gras (247) : 584 devient 585",
+    "fichier": "js/pdf-simple.js",
+    "de": "PDF_LARGEURS_REGULIER[247-32]=584;PDF_LARGEURS_GRAS[247-32]=584;",
+    "vers": "PDF_LARGEURS_REGULIER[247-32]=584;PDF_LARGEURS_GRAS[247-32]=585;"
+  },
+  {
+    "nom": "l'espace (32) n'est plus écrit (33 au lieu de 32)",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(cp>=32&&cp<=126) return cp;",
+    "vers": "if(cp>=33&&cp<=126) return cp;"
+  },
+  {
+    "nom": "le tilde (126) n'est plus écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(cp>=32&&cp<=126) return cp;",
+    "vers": "if(cp>=32&&cp<=125) return cp;"
+  },
+  {
+    "nom": "le trait d'union conditionnel (0xAD) est écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(cp>=0xA0&&cp<=0xFF&&cp!==0xAD) return cp;",
+    "vers": "if(cp>=0xA0&&cp<=0xFF) return cp;"
+  },
+  {
+    "nom": "l'espace insécable (0xA0) n'est plus écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(cp>=0xA0&&cp<=0xFF&&cp!==0xAD) return cp;",
+    "vers": "if(cp>=0xA1&&cp<=0xFF&&cp!==0xAD) return cp;"
+  },
+  {
+    "nom": "ÿ (0xFF) n'est plus écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(cp>=0xA0&&cp<=0xFF&&cp!==0xAD) return cp;",
+    "vers": "if(cp>=0xA0&&cp<=0xFE&&cp!==0xAD) return cp;"
+  },
+  {
+    "nom": "les signes du bloc 0x80–0x9F (€ ’ œ …) ne sont plus reconnus",
+    "fichier": "js/pdf-simple.js",
+    "de": "  if(PDF_CP1252_SPECIAUX[cp]) return PDF_CP1252_SPECIAUX[cp];\n",
+    "vers": ""
+  },
+  {
+    "nom": "« ™ » prend le code de « š »",
+    "fichier": "js/pdf-simple.js",
+    "de": "0x2122:0x99",
+    "vers": "0x2122:0x9A"
+  },
+  {
+    "nom": "« ’ » prend le code de « ‘ »",
+    "fichier": "js/pdf-simple.js",
+    "de": "0x2019:0x92",
+    "vers": "0x2019:0x91"
+  },
+  {
+    "nom": "« Ÿ » prend le code de « ž »",
+    "fichier": "js/pdf-simple.js",
+    "de": "0x0178:0x9F",
+    "vers": "0x0178:0x9E"
+  },
+  {
+    "nom": "« € » prend le code de « ‚ »",
+    "fichier": "js/pdf-simple.js",
+    "de": "0x20AC:0x80",
+    "vers": "0x20AC:0x82"
+  },
+  {
+    "nom": "un caractère inconnu devient un espace au lieu de « ? »",
+    "fichier": "js/pdf-simple.js",
+    "de": "  return 63;\n}\n// Un texte prêt",
+    "vers": "  return 32;\n}\n// Un texte prêt"
+  },
+  {
+    "nom": "un texte commence par un espace (le tout premier espace est gardé)",
+    "fichier": "js/pdf-simple.js",
+    "de": "  let espace=true;   // (rien au début du texte)",
+    "vers": "  let espace=false;   // (rien au début du texte)"
+  },
+  {
+    "nom": "le trait d'union conditionnel n'est plus retiré",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(cp===0xAD||(cp>=0x200B",
+    "vers": "if((cp>=0x200B"
+  },
+  {
+    "nom": "U+200B (largeur nulle) n'est plus retiré (borne basse)",
+    "fichier": "js/pdf-simple.js",
+    "de": "(cp>=0x200B&&cp<=0x200F)",
+    "vers": "(cp>=0x200C&&cp<=0x200F)"
+  },
+  {
+    "nom": "U+200F (marque de direction) n'est plus retiré (borne haute)",
+    "fichier": "js/pdf-simple.js",
+    "de": "(cp>=0x200B&&cp<=0x200F)",
+    "vers": "(cp>=0x200B&&cp<=0x200E)"
+  },
+  {
+    "nom": "U+FEFF n'est plus retiré",
+    "fichier": "js/pdf-simple.js",
+    "de": "||cp===0xFEFF",
+    "vers": ""
+  },
+  {
+    "nom": "les accents seuls (marques combinantes) ne sont plus retirés",
+    "fichier": "js/pdf-simple.js",
+    "de": "||/^\\p{M}$/u.test(ch)",
+    "vers": ""
+  },
+  {
+    "nom": "les espaces multiples ne sont plus réduits à un",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(/^\\s$/.test(ch)){if(!espace) sortie+=' ';espace=true;continue;}",
+    "vers": "if(/^\\s$/.test(ch)){sortie+=' ';espace=true;continue;}"
+  },
+  {
+    "nom": "les espaces ne sont plus reconnus comme « espace en cours »",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(/^\\s$/.test(ch)){if(!espace) sortie+=' ';espace=true;continue;}",
+    "vers": "if(/^\\s$/.test(ch)){if(!espace) sortie+=' ';continue;}"
+  },
+  {
+    "nom": "un caractère normal ne remet plus « espace » à faux (les espaces suivants sont perdus)",
+    "fichier": "js/pdf-simple.js",
+    "de": "    espace=false;\n    if(pdfOctetDe(cp)!==63",
+    "vers": "    if(pdfOctetDe(cp)!==63"
+  },
+  {
+    "nom": "les caractères écrits sont pris pour absents (l'inverse)",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(pdfOctetDe(cp)!==63||cp===63){sortie+=ch;continue;}",
+    "vers": "if(pdfOctetDe(cp)===63||cp===63){sortie+=ch;continue;}"
+  },
+  {
+    "nom": "un caractère absent n'essaie plus sa lettre de base (Ā ne devient plus A)",
+    "fichier": "js/pdf-simple.js",
+    "de": "const base=ch.normalize('NFD').codePointAt(0);",
+    "vers": "const base=ch.codePointAt(0);"
+  },
+  {
+    "nom": "un espace de fin est gardé",
+    "fichier": "js/pdf-simple.js",
+    "de": "  return sortie.replace(/ $/,'');",
+    "vers": "  return sortie;"
+  },
+  {
+    "nom": "le texte n'est plus recomposé (e + accent reste décomposé)",
+    "fichier": "js/pdf-simple.js",
+    "de": ".normalize('NFC')){",
+    "vers": "){"
+  },
+  {
+    "nom": "la largeur est divisée par 100 au lieu de 1000",
+    "fichier": "js/pdf-simple.js",
+    "de": "return somme*taille/1000;",
+    "vers": "return somme*taille/100;"
+  },
+  {
+    "nom": "la largeur ignore la taille",
+    "fichier": "js/pdf-simple.js",
+    "de": "return somme*taille/1000;",
+    "vers": "return somme/1000;"
+  },
+  {
+    "nom": "le gras utilise la table normale et l'inverse",
+    "fichier": "js/pdf-simple.js",
+    "de": "const t=gras?PDF_LARGEURS_GRAS:PDF_LARGEURS_REGULIER;",
+    "vers": "const t=gras?PDF_LARGEURS_REGULIER:PDF_LARGEURS_GRAS;"
+  },
+  {
+    "nom": "la largeur mesure le texte non nettoyé (espaces multiples comptés)",
+    "fichier": "js/pdf-simple.js",
+    "de": "for(const ch of pdfNettoyer(texte)) somme+=",
+    "vers": "for(const ch of String(texte)) somme+="
+  },
+  {
+    "nom": "un texte vide se coupe en AUCUNE ligne (au lieu d'une ligne vide)",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(!propre) return [''];",
+    "vers": "if(!propre) return [];"
+  },
+  {
+    "nom": "une ligne qui tient juste est coupée (< au lieu de ≤)",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(largeur(essai)<=largeurMax){courante=essai;continue;}",
+    "vers": "if(largeur(essai)<largeurMax){courante=essai;continue;}"
+  },
+  {
+    "nom": "un morceau de long mot qui tient juste est coupé (< au lieu de ≤)",
+    "fichier": "js/pdf-simple.js",
+    "de": "largeur(reste.slice(0,n+1).join(''))<=largeurMax) n++;",
+    "vers": "largeur(reste.slice(0,n+1).join(''))<largeurMax) n++;"
+  },
+  {
+    "nom": "le dernier morceau d'un long mot est poussé ET remis en cours (ligne vide en fin)",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(reste.length) lignes.push(morceau); else courante=morceau;",
+    "vers": "lignes.push(morceau);"
+  },
+  {
+    "nom": "la dernière ligne est perdue",
+    "fichier": "js/pdf-simple.js",
+    "de": "  lignes.push(courante);\n  return lignes;\n}\n\n// ── L'écriture",
+    "vers": "  return lignes;\n}\n\n// ── L'écriture"
+  },
+  {
+    "nom": "un mot trop long n'est plus coupé (il déborde)",
+    "fichier": "js/pdf-simple.js",
+    "de": "    if(largeur(mot)<=largeurMax){courante=mot;continue;}\n    let reste=Array.from(mot);",
+    "vers": "    {courante=mot;continue;}\n    let reste=Array.from(mot);"
+  },
+  {
+    "nom": "un morceau de long mot peut dépasser d'une lettre",
+    "fichier": "js/pdf-simple.js",
+    "de": "while(n<reste.length&&largeur(reste.slice(0,n+1).join(''))<=largeurMax) n++;",
+    "vers": "while(n<reste.length&&largeur(reste.slice(0,n+2).join(''))<=largeurMax) n++;"
+  },
+  {
+    "nom": "un nombre garde une seule décimale",
+    "fichier": "js/pdf-simple.js",
+    "de": "return (Math.round(n*100)/100).toFixed(2).replace",
+    "vers": "return (Math.round(n*10)/10).toFixed(2).replace"
+  },
+  {
+    "nom": "un nombre entier garde son point (« 100. »)",
+    "fichier": "js/pdf-simple.js",
+    "de": ".replace(/\\.?0+$/,'');",
+    "vers": ".replace(/0+$/,'');"
+  },
+  {
+    "nom": "un nombre illisible s'écrit « NaN »",
+    "fichier": "js/pdf-simple.js",
+    "de": "  if(!isFinite(n)) return '0';\n",
+    "vers": ""
+  },
+  {
+    "nom": "un nombre est arrondi au lieu d'être gardé à deux décimales",
+    "fichier": "js/pdf-simple.js",
+    "de": "(Math.round(n*100)/100).toFixed(2)",
+    "vers": "Math.round(n).toFixed(2)"
+  },
+  {
+    "nom": "les couleurs en majuscules ne sont plus lues",
+    "fichier": "js/pdf-simple.js",
+    "de": "/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c||'')",
+    "vers": "/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/.exec(c||'')"
+  },
+  {
+    "nom": "une couleur illisible ne prend plus la couleur par défaut",
+    "fichier": "js/pdf-simple.js",
+    "de": "||/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(defaut);",
+    "vers": ";"
+  },
+  {
+    "nom": "une couleur est divisée par 256 au lieu de 255",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(parseInt(h,16)/255)",
+    "vers": "pdfNombre(parseInt(h,16)/256)"
+  },
+  {
+    "nom": "le titre est écrit sans l'ordre des octets (FEFF)",
+    "fichier": "js/pdf-simple.js",
+    "de": "let h='FEFF';",
+    "vers": "let h='';"
+  },
+  {
+    "nom": "le titre écrit ses lettres sur 3 chiffres",
+    "fichier": "js/pdf-simple.js",
+    "de": "toString(16).toUpperCase().padStart(4,'0')",
+    "vers": "toString(16).toUpperCase().padStart(3,'0')"
+  },
+  {
+    "nom": "le titre est écrit en minuscules",
+    "fichier": "js/pdf-simple.js",
+    "de": "toString(16).toUpperCase().padStart(4,'0')",
+    "vers": "toString(16).padStart(4,'0')"
+  },
+  {
+    "nom": "le mois de la date est décalé",
+    "fichier": "js/pdf-simple.js",
+    "de": "p(d.getMonth()+1)",
+    "vers": "p(d.getMonth())"
+  },
+  {
+    "nom": "les minutes et les secondes sont échangées",
+    "fichier": "js/pdf-simple.js",
+    "de": "p(d.getMinutes())+p(d.getSeconds())",
+    "vers": "p(d.getSeconds())+p(d.getMinutes())"
+  },
+  {
+    "nom": "le jour de la date est mal lu",
+    "fichier": "js/pdf-simple.js",
+    "de": "p(d.getDate())",
+    "vers": "p(d.getDay())"
+  },
+  {
+    "nom": "l'heure de la date est perdue",
+    "fichier": "js/pdf-simple.js",
+    "de": "+p(d.getHours())",
+    "vers": "+'00'"
+  },
+  {
+    "nom": "l'information « Producer » disparaît",
+    "fichier": "js/pdf-simple.js",
+    "de": "let info='<< /Producer (Lapointe Tracker)';",
+    "vers": "let info='<<';"
+  },
+  {
+    "nom": "le titre n'est plus écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(o.titre) info+=",
+    "vers": "if(false) info+="
+  },
+  {
+    "nom": "l'auteur n'est plus écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(o.auteur) info+=",
+    "vers": "if(false) info+="
+  },
+  {
+    "nom": "la date n'est plus écrite",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(o.date instanceof Date&&!isNaN(o.date.getTime())) info+=",
+    "vers": "if(false) info+="
+  },
+  {
+    "nom": "une date illisible fait planter l'écriture (plus de contrôle)",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(o.date instanceof Date&&!isNaN(o.date.getTime()))",
+    "vers": "if(o.date instanceof Date)"
+  },
+  {
+    "nom": "la taille par défaut du texte est 9 au lieu de 10",
+    "fichier": "js/pdf-simple.js",
+    "de": "const taille=Number(o.taille)>0?Number(o.taille):10;",
+    "vers": "const taille=Number(o.taille)>0?Number(o.taille):9;"
+  },
+  {
+    "nom": "une taille négative est acceptée",
+    "fichier": "js/pdf-simple.js",
+    "de": "const taille=Number(o.taille)>0?Number(o.taille):10;",
+    "vers": "const taille=Number(o.taille)?Number(o.taille):10;"
+  },
+  {
+    "nom": "un texte vide est quand même écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "      const propre=pdfNettoyer(texte);\n      if(!propre) return;\n",
+    "vers": "      const propre=pdfNettoyer(texte);\n"
+  },
+  {
+    "nom": "l'alignement à droite ne compte plus la largeur",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(o.align==='right') px-=l; else",
+    "vers": "if(o.align==='right') px-=0; else"
+  },
+  {
+    "nom": "l'alignement au centre retire toute la largeur",
+    "fichier": "js/pdf-simple.js",
+    "de": "px-=l/2;",
+    "vers": "px-=l;"
+  },
+  {
+    "nom": "l'alignement à droite retire la moitié de la largeur",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(o.align==='right') px-=l;",
+    "vers": "if(o.align==='right') px-=l/2;"
+  },
+  {
+    "nom": "le gras utilise la police normale et l'inverse",
+    "fichier": "js/pdf-simple.js",
+    "de": "(o.gras?'F2':'F1')",
+    "vers": "(o.gras?'F1':'F2')"
+  },
+  {
+    "nom": "la couleur du texte par défaut devient gris foncé",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfCouleur(o.couleur,'#000000')+' rg\\n'",
+    "vers": "pdfCouleur(o.couleur,'#333333')+' rg\\n'"
+  },
+  {
+    "nom": "le texte n'est plus retourné (y de haut en bas)",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(hauteur-(Number(y)||0))+' Td",
+    "vers": "pdfNombre(Number(y)||0)+' Td"
+  },
+  {
+    "nom": "une position y illisible s'écrit « NaN »",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(hauteur-(Number(y)||0))+' Td",
+    "vers": "pdfNombre(hauteur-Number(y))+' Td"
+  },
+  {
+    "nom": "la parenthèse fermante n'est plus protégée",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(b===40||b===41||b===92) octets.push(92);",
+    "vers": "if(b===40||b===92) octets.push(92);"
+  },
+  {
+    "nom": "la parenthèse ouvrante n'est plus protégée",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(b===40||b===41||b===92) octets.push(92);",
+    "vers": "if(b===41||b===92) octets.push(92);"
+  },
+  {
+    "nom": "la barre oblique inverse n'est plus protégée",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(b===40||b===41||b===92) octets.push(92);",
+    "vers": "if(b===40||b===41) octets.push(92);"
+  },
+  {
+    "nom": "la protection écrit une mauvaise barre",
+    "fichier": "js/pdf-simple.js",
+    "de": "octets.push(92);\n        octets.push(b);",
+    "vers": "octets.push(47);\n        octets.push(b);"
+  },
+  {
+    "nom": "l'épaisseur par défaut d'un trait est 1",
+    "fichier": "js/pdf-simple.js",
+    "de": "const e=Number(o.epaisseur)>0?Number(o.epaisseur):0.5;",
+    "vers": "const e=Number(o.epaisseur)>0?Number(o.epaisseur):1;"
+  },
+  {
+    "nom": "une épaisseur négative est acceptée",
+    "fichier": "js/pdf-simple.js",
+    "de": "const e=Number(o.epaisseur)>0?Number(o.epaisseur):0.5;",
+    "vers": "const e=Number(o.epaisseur)?Number(o.epaisseur):0.5;"
+  },
+  {
+    "nom": "le trait n'est plus retourné au départ",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(x1)+' '+pdfNombre(hauteur-y1)+' m",
+    "vers": "pdfNombre(x1)+' '+pdfNombre(y1)+' m"
+  },
+  {
+    "nom": "le trait n'est plus retourné à l'arrivée",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(x2)+' '+pdfNombre(hauteur-y2)+' l",
+    "vers": "pdfNombre(x2)+' '+pdfNombre(y2)+' l"
+  },
+  {
+    "nom": "un rectangle sans remplissage ni contour est écrit quand même",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(!o.remplissage&&!o.contour) return;",
+    "vers": ""
+  },
+  {
+    "nom": "un rectangle rempli seul n'est plus écrit",
+    "fichier": "js/pdf-simple.js",
+    "de": "if(!o.remplissage&&!o.contour) return;",
+    "vers": "if(!o.remplissage||!o.contour) return;"
+  },
+  {
+    "nom": "un rectangle rempli et contourné n'est que rempli",
+    "fichier": "js/pdf-simple.js",
+    "de": "(o.remplissage&&o.contour?'B':(o.remplissage?'f':'S'))",
+    "vers": "(o.remplissage?'f':'S')"
+  },
+  {
+    "nom": "un rectangle contourné seul est rempli",
+    "fichier": "js/pdf-simple.js",
+    "de": "(o.remplissage&&o.contour?'B':(o.remplissage?'f':'S'))",
+    "vers": "(o.remplissage&&o.contour?'B':'f')"
+  },
+  {
+    "nom": "le rectangle n'est plus retourné",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(hauteur-y-h)+' '+pdfNombre(l)",
+    "vers": "pdfNombre(hauteur-y)+' '+pdfNombre(l)"
+  },
+  {
+    "nom": "la couleur de remplissage par défaut est noire",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfCouleur(o.remplissage,'#ffffff')",
+    "vers": "pdfCouleur(o.remplissage,'#000000')"
+  },
+  {
+    "nom": "l'épaisseur du contour d'un rectangle par défaut est 1",
+    "fichier": "js/pdf-simple.js",
+    "de": "pdfNombre(Number(o.epaisseur)>0?Number(o.epaisseur):0.5)",
+    "vers": "pdfNombre(Number(o.epaisseur)>0?Number(o.epaisseur):1)"
+  },
+  {
+    "nom": "la largeur de page par défaut est 612",
+    "fichier": "js/pdf-simple.js",
+    "de": "Number(o.largeur)>0?Number(o.largeur):792;",
+    "vers": "Number(o.largeur)>0?Number(o.largeur):612;"
+  },
+  {
+    "nom": "la hauteur de page par défaut est 792",
+    "fichier": "js/pdf-simple.js",
+    "de": "Number(o.hauteur)>0?Number(o.hauteur):612;",
+    "vers": "Number(o.hauteur)>0?Number(o.hauteur):792;"
+  },
+  {
+    "nom": "une largeur négative est acceptée",
+    "fichier": "js/pdf-simple.js",
+    "de": "const largeur=Number(o.largeur)>0?Number(o.largeur):792;",
+    "vers": "const largeur=Number(o.largeur)?Number(o.largeur):792;"
+  },
+  {
+    "nom": "un document sans page reste sans page (fichier invalide)",
+    "fichier": "js/pdf-simple.js",
+    "de": "      if(!pages.length) doc.page();\n",
+    "vers": ""
+  },
+  {
+    "nom": "la version du PDF passe à 1.3",
+    "fichier": "js/pdf-simple.js",
+    "de": "'%PDF-1.4\\n%'",
+    "vers": "'%PDF-1.3\\n%'"
+  },
+  {
+    "nom": "le commentaire binaire ne contient plus d'octets élevés",
+    "fichier": "js/pdf-simple.js",
+    "de": "Uint8Array.from([0xE2,0xE3,0xCF,0xD3,10])",
+    "vers": "Uint8Array.from([0x41,0x42,0x43,0x44,10])"
+  },
+  {
+    "nom": "la liste des pages annonce un mauvais nombre de pages",
+    "fichier": "js/pdf-simple.js",
+    "de": "'<< /Type /Pages /Count '+pages.length+' /Kids",
+    "vers": "'<< /Type /Pages /Count '+(pages.length+1)+' /Kids"
+  },
+  {
+    "nom": "la liste des pages désigne de mauvais objets",
+    "fichier": "js/pdf-simple.js",
+    "de": "(6+2*i)+' 0 R'",
+    "vers": "(5+2*i)+' 0 R'"
+  },
+  {
+    "nom": "la police normale n'est plus Helvetica",
+    "fichier": "js/pdf-simple.js",
+    "de": "/BaseFont /Helvetica /Encoding /WinAnsiEncoding",
+    "vers": "/BaseFont /Courier /Encoding /WinAnsiEncoding"
+  },
+  {
+    "nom": "la police grasse n'est plus Helvetica-Bold",
+    "fichier": "js/pdf-simple.js",
+    "de": "/BaseFont /Helvetica-Bold /Encoding",
+    "vers": "/BaseFont /Helvetica /Encoding"
+  },
+  {
+    "nom": "les polices ne déclarent plus leur table de caractères (WinAnsiEncoding)",
+    "fichier": "js/pdf-simple.js",
+    "de": "/BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "vers": "/BaseFont /Helvetica >>"
+  },
+  {
+    "nom": "la page pointe sur son mauvais contenu",
+    "fichier": "js/pdf-simple.js",
+    "de": "/Contents '+(n+1)+' 0 R",
+    "vers": "/Contents '+(n+2)+' 0 R"
+  },
+  {
+    "nom": "la page oublie sa hauteur dans MediaBox",
+    "fichier": "js/pdf-simple.js",
+    "de": "' '+pdfNombre(hauteur)+'] /Resources",
+    "vers": "' '+pdfNombre(largeur)+'] /Resources"
+  },
+  {
+    "nom": "la longueur d'un contenu est fausse (+1)",
+    "fichier": "js/pdf-simple.js",
+    "de": "<< /Length '+contenu.length+' >>",
+    "vers": "<< /Length '+(contenu.length+1)+' >>"
+  },
+  {
+    "nom": "la fin d'un contenu perd « endstream »",
+    "fichier": "js/pdf-simple.js",
+    "de": "ajouter(pdfAscii('\\nendstream\\nendobj\\n'));",
+    "vers": "ajouter(pdfAscii('\\nendobj\\n'));"
+  },
+  {
+    "nom": "le décalage d'un contenu est celui du suivant (position lue trop tôt)",
+    "fichier": "js/pdf-simple.js",
+    "de": "        decalages[n+1]=position;\n",
+    "vers": "        decalages[n+1]=position+1;\n"
+  },
+  {
+    "nom": "une entrée de la table des positions n'a plus 10 chiffres",
+    "fichier": "js/pdf-simple.js",
+    "de": "String(decalages[n]).padStart(10,'0')",
+    "vers": "String(decalages[n]).padStart(9,'0')"
+  },
+  {
+    "nom": "une entrée de la table des positions perd son espace final",
+    "fichier": "js/pdf-simple.js",
+    "de": "+' 00000 n \\n';",
+    "vers": "+' 00000 n\\n';"
+  },
+  {
+    "nom": "la 1re entrée de la table des positions est fausse",
+    "fichier": "js/pdf-simple.js",
+    "de": "0000000000 65535 f \\n",
+    "vers": "0000000001 65535 f \\n"
+  },
+  {
+    "nom": "le nombre d'objets est faux (+1)",
+    "fichier": "js/pdf-simple.js",
+    "de": "const nbObjets=5+2*pages.length;",
+    "vers": "const nbObjets=6+2*pages.length;"
+  },
+  {
+    "nom": "« startxref » pointe sur la fin du fichier",
+    "fichier": "js/pdf-simple.js",
+    "de": "const debutXref=position;",
+    "vers": "const debutXref=position+5;"
+  },
+  {
+    "nom": "la « trailer » oublie les informations",
+    "fichier": "js/pdf-simple.js",
+    "de": "/Root 1 0 R /Info 5 0 R >>",
+    "vers": "/Root 1 0 R >>"
+  },
+  {
+    "nom": "l'objet des informations a le mauvais numéro (le catalogue perd sa place)",
+    "fichier": "js/pdf-simple.js",
+    "de": "objet(1,'<< /Type /Catalog /Pages 2 0 R >>');",
+    "vers": "objet(1,'<< /Type /Catalog /Pages 3 0 R >>');"
+  },
+  {
+    "nom": "le fichier ne se termine plus par « %%EOF »",
+    "fichier": "js/pdf-simple.js",
+    "de": "startxref\\n'+debutXref+'\\n%%EOF\\n'",
+    "vers": "startxref\\n'+debutXref+'\\n'"
+  },
+  {
+    "nom": "nbPages compte toujours zéro",
+    "fichier": "js/pdf-simple.js",
+    "de": "nbPages(){return pages.length;},",
+    "vers": "nbPages(){return 0;},"
+  },
+  {
+    "nom": "une nouvelle page n'est pas gardée dans le document",
+    "fichier": "js/pdf-simple.js",
+    "de": "page(){const p=pdfPage(largeur,hauteur);pages.push(p);return p;},",
+    "vers": "page(){const p=pdfPage(largeur,hauteur);return p;},"
+  }
+]

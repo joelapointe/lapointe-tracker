@@ -313,6 +313,12 @@ function renderSuiviListe(){
   bLot.type='button';
   bLot.onclick=()=>suiviDialogueLot();
   actions.appendChild(bLot);
+  if(typeof suiviExporterPdf==='function'){   // (suivi-pdf.js : l'export en PDF de la liste montrée)
+    const bPdf=suiviEl('button','lf-btn','📄 Exporter en PDF');
+    bPdf.type='button';
+    bPdf.onclick=()=>suiviExporterPdf();
+    actions.appendChild(bPdf);
+  }
   const bMaj=suiviEl('button','lf-btn','↻ Actualiser');
   bMaj.type='button';
   bMaj.onclick=()=>suiviOuvrir();

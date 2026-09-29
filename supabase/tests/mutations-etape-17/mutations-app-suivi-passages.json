@@ -1294,5 +1294,29 @@
     "fichier": "css/style.css",
     "de": ".su-case{display:flex;",
     "vers": ".su-caseX{display:flex;"
+  },
+  {
+    "nom": "les boutons du bas redeviennent gris clair (fond du navigateur)",
+    "fichier": "css/style.css",
+    "de": ".su-actions .lf-btn{width:100%;background:#161c24;border:1px solid var(--border);color:var(--text);}",
+    "vers": ".su-actions .lf-btn{width:100%;}"
+  },
+  {
+    "nom": "les boutons du bas n'ont plus de bordure",
+    "fichier": "css/style.css",
+    "de": "background:#161c24;border:1px solid var(--border);color:var(--text);}",
+    "vers": "background:#161c24;color:var(--text);}"
+  },
+  {
+    "nom": "les boutons du bas ont un texte sombre",
+    "fichier": "css/style.css",
+    "de": "background:#161c24;border:1px solid var(--border);color:var(--text);}",
+    "vers": "background:#161c24;border:1px solid var(--border);color:#000000;}"
+  },
+  {
+    "nom": "le bouton principal du bas perd son vert",
+    "fichier": "css/style.css",
+    "de": ".su-actions .lf-btn.nouveau{background:#c8e63c;border-color:#c8e63c;color:#111;}",
+    "vers": ".su-actions .lf-btn.nouveau{border-color:#c8e63c;color:#111;}"
   }
 ]

@@ -139,6 +139,7 @@ function openCard(i){
   activeIdx=i;
   majCarte();
   document.getElementById('stop-card').classList.add('open');
+  if(typeof suspendreSuiviCarte==='function') suspendreSuiviCarte();   // la carte va vers le client : le suivi se met en pause le temps de la fiche (il reprend à sa fermeture, suivi-carte.js)
   map.flyTo([s.lat,s.lon],17,{duration:.7});
 }
 
@@ -159,7 +160,11 @@ function majCarte(){
   b.disabled=!e.actif;
 }
 
-function closeCard(){document.getElementById('stop-card').classList.remove('open');activeIdx=null;}
+function closeCard(){
+  document.getElementById('stop-card').classList.remove('open');
+  activeIdx=null;
+  if(typeof reprendreSuiviCarte==='function') reprendreSuiviCarte();   // le suivi mis en pause par la fiche reprend (sauf si on a déplacé la carte entre-temps, suivi-carte.js)
+}
 
 // « Complété » : seul le chauffeur de la passe peut le faire (le serveur le vérifie aussi).
 // Sur un arrêt déjà fait, le même bouton devient « ↩ Annuler » pendant 10 minutes (étape 14c).

@@ -351,6 +351,9 @@
 .camion span{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#c8e63c;}
 .camion em{font-style:normal;font-size:11px;color:#9aa8ba;}
 .camion.perime{opacity:.5;border-color:#6b7a8d;}
+/* « 📌 Suivre ce camion » : le bouton de la bulle du camion, pour l'administrateur (suivi-carte.js) ; 40 px de haut, facile à toucher */
+.camion-suivre{display:block;width:100%;min-height:40px;margin-top:8px;padding:8px 10px;background:#1a1f26;border:1px solid #c8e63c;border-radius:8px;color:#c8e63c;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
+.camion-suivre:active{transform:scale(.97);}
 
 /* Étape 14a : bandeau de passe (sous la barre du haut) et écran « Débuter la passe » */
 #passe-bandeau{position:absolute;top:calc(74px + var(--sa-top));left:12px;right:68px;z-index:850;display:none;pointer-events:none;}

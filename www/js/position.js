@@ -36,6 +36,9 @@ function noterPosition(lat,lon,precision,quand){
   const t=(typeof quand==='number'&&quand>0&&Math.abs(Date.now()-quand)<10*60000)?quand:Date.now();
   lastPos=[lat,lon];
   lastPosInfo={lat,lon,precision:(typeof precision==='number'&&precision>=0)?precision:null,le:t};
+  // Le point vert de la carte (et la carte, si elle le suit) glisse jusqu'à cette lecture, d'où qu'elle vienne : suivi de la carte, service de position du téléphone
+  // pendant ma passe (une par seconde), lecture fraîche du punch (suivi-carte.js). Sans ce fichier (les tests de ce fichier seul), rien ne se passe.
+  if(typeof majPointVert==='function') majPointVert(lat,lon,lastPosInfo.precision,t);
 }
 // La dernière lecture connue, si elle a moins de maxS secondes
 function positionConnue(maxS){

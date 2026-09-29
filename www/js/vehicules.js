@@ -129,9 +129,10 @@ function positionPerimee(pos){
 // plafonnée pour ne jamais ramper après un long silence (zone morte, camion arrêté puis reparti loin).
 const GLISSEMENT_PAS_MS=150;
 const GLISSEMENT_DUREE_MAX_MS=15000;
+// (Sert aussi au point VERT de la carte — suivi-carte.js : majPointVert —, d'où l'heure de lecture : du texte venant du serveur (maj_le) ou un nombre de millisecondes (lecture du GPS).)
 function deplacerMarqueurCamion(m,lat,lon,majLe){
   if(m._animCamion){clearInterval(m._animCamion);m._animCamion=null;}
-  const majLeMs=Date.parse(majLe);
+  const majLeMs=(typeof majLe==='number')?majLe:Date.parse(majLe);
   const duree=(m._posActuelle&&m._majLeMs&&majLeMs)?Math.min(GLISSEMENT_DUREE_MAX_MS,Math.max(0,majLeMs-m._majLeMs)):0;
   if(majLeMs) m._majLeMs=majLeMs;
   if(!m._posActuelle||!duree){
@@ -167,7 +168,11 @@ function htmlCamion(c,perime){
     '<br>'+esc(t.faits)+'/'+esc(t.total)+' ('+esc(t.pourcentage)+' %)'+
     '<br>Chauffeur : '+(chauffeur.length?chauffeur.join(', '):'—')+
     '<br>À bord : '+(abord.length?abord.join(', '):'personne d’autre')+
-    '<br><small>'+(perime?'⚠ ':'')+'position '+esc(ilYa(c.position.maj_le))+'</small>';
+    '<br><small>'+(perime?'⚠ ':'')+'position '+esc(ilYa(c.position.maj_le))+'</small>'+
+    // L'administrateur peut faire suivre ce camion par la carte (suivi-carte.js) ; un même toucher l'arrête. (L'identifiant de la passe passe par data-passe : du TEXTE, jamais du code.)
+    ((typeof peutSuivreCamion==='function'&&peutSuivreCamion())
+      ?'<br><button type="button" class="camion-suivre" data-passe="'+esc(c.passeId)+'" onclick="basculerSuiviCamion(this.dataset.passe)">'+(suiviCamionActif(c.passeId)?'⏹ Ne plus suivre ce camion':'📌 Suivre ce camion')+'</button>'
+      :'');
 }
 
 // Dessine, déplace ou retire les camions. Un même camion garde le même marqueur (il se déplace, la bulle ouverte reste ouverte).
@@ -181,18 +186,22 @@ function majVehicules(){
     if(m){
       deplacerMarqueurCamion(m,c.position.lat,c.position.lon,c.position.maj_le);
       m.setIcon(iconeCamion(c,perime));
-      m.setPopupContent(htmlCamion(c,perime));
+      const bulle=htmlCamion(c,perime);
+      if(m._bulleHtml!==bulle){m._bulleHtml=bulle;m.setPopupContent(bulle);}   // une bulle ouverte n'est redessinée que si son texte change : un toucher sur son bouton (« Suivre ce camion ») n'est pas perdu
     } else {
       m=L.marker([c.position.lat,c.position.lon],{icon:iconeCamion(c,perime),zIndexOffset:500}).addTo(map);
       m._posActuelle=[c.position.lat,c.position.lon];
       m._majLeMs=Date.parse(c.position.maj_le)||null;
-      m.bindPopup(htmlCamion(c,perime));
+      m._bulleHtml=htmlCamion(c,perime);
+      m.bindPopup(m._bulleHtml);
       marqueursVehicules[c.passeId]=m;
+      if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce camion pour le suivre (suivi-carte.js)
     }
   });
   Object.keys(marqueursVehicules).forEach(id=>{
     if(!vus[id]){
       if(marqueursVehicules[id]._animCamion) clearInterval(marqueursVehicules[id]._animCamion);
+      if(typeof suiviCamionRetire==='function') suiviCamionRetire(id);   // suivre un camion qui disparaît n'a plus de sens (suivi-carte.js)
       map.removeLayer(marqueursVehicules[id]); delete marqueursVehicules[id];   // passe terminée, ou camion d'une autre route
     }
   });

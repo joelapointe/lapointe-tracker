@@ -68,7 +68,7 @@
 <div id="controls">
   <button class="ctrl on"  id="btn-sat" onclick="setLayer('sat')">🛰</button>
   <button class="ctrl"     id="btn-map" onclick="setLayer('map')">🗺</button>
-  <button class="ctrl" onclick="centerUser()" style="margin-top:8px">◎</button>
+  <button class="ctrl" id="btn-suivi" type="button" onclick="centerUser()" aria-label="Suivre ma position : la carte garde mon point au centre" aria-pressed="false" style="margin-top:8px">◎</button>
   <button class="ctrl on" id="btn-trace" type="button" onclick="basculerTrace()" aria-label="Afficher ou cacher le tracé du parcours" aria-pressed="true">🛣</button>
 </div>
 
@@ -400,6 +400,7 @@
 <script src="js/carte.js"></script>
 <script src="js/tours.js"></script>
 <script src="js/vehicules.js"></script>
+<script src="js/suivi-carte.js"></script>
 <script src="js/equipage.js"></script>
 <script src="js/equipage-panneau.js"></script>
 <script src="js/quart.js"></script>

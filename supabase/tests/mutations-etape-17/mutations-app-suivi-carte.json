@@ -1,0 +1,530 @@
+[
+  {
+    "nom": "pendant un zoom (pincement), le suivi déplace quand même la carte",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(_zoomDepuis&&Date.now()-_zoomDepuis<SUIVI_ZOOM_EXPIRE_MS) return;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un zoom dont la fin n'arrive jamais bloque le suivi pour toujours",
+    "fichier": "js/suivi-carte.js",
+    "de": "const SUIVI_ZOOM_EXPIRE_MS=5000;",
+    "vers": "const SUIVI_ZOOM_EXPIRE_MS=1e12;"
+  },
+  {
+    "nom": "le suivi démarre au zoom 12 au lieu de 16",
+    "fichier": "js/suivi-carte.js",
+    "de": "const SUIVI_ZOOM_MIN=16;",
+    "vers": "const SUIVI_ZOOM_MIN=12;"
+  },
+  {
+    "nom": "la carte se recentre AVEC animation (elle se bat avec le glissement)",
+    "fichier": "js/suivi-carte.js",
+    "de": "map.panTo(suiviCarte.marqueur.getLatLng(),{animate:false});",
+    "vers": "map.panTo(suiviCarte.marqueur.getLatLng());"
+  },
+  {
+    "nom": "déplacer la carte à la main n'éteint plus le suivi",
+    "fichier": "js/suivi-carte.js",
+    "de": "function _suiviMainSurLaCarte(){arreterSuiviCarte();}",
+    "vers": "function _suiviMainSurLaCarte(){}"
+  },
+  {
+    "nom": "la main sur la carte est écoutée sur le mauvais événement",
+    "fichier": "js/suivi-carte.js",
+    "de": "map.on('dragstart',_suiviMainSurLaCarte);",
+    "vers": "map.on('drag',_suiviMainSurLaCarte);"
+  },
+  {
+    "nom": "la fin d'un zoom n'est plus écoutée : la carte ne se recentre pas",
+    "fichier": "js/suivi-carte.js",
+    "de": "map.on('zoomend',_suiviZoomFini);",
+    "vers": ";"
+  },
+  {
+    "nom": "le début d'un zoom n'est plus écouté : le suivi se bat avec les doigts",
+    "fichier": "js/suivi-carte.js",
+    "de": "map.on('zoomstart',_suiviZoomDebut);",
+    "vers": ";"
+  },
+  {
+    "nom": "la fin d'un zoom ne lève pas la pause (la carte ne se recentre pas)",
+    "fichier": "js/suivi-carte.js",
+    "de": "function _suiviZoomFini(){_zoomDepuis=0;_suiviRecentrer();}",
+    "vers": "function _suiviZoomFini(){_suiviRecentrer();}"
+  },
+  {
+    "nom": "la carte ne suit plus le point : aucun écouteur « move » posé",
+    "fichier": "js/suivi-carte.js",
+    "de": "  m.on('move',_suiviRecentrer);\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'écouteur du point n'est jamais retiré (la carte le suit après l'arrêt)",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(m&&typeof m.off==='function') m.off('move',_suiviRecentrer);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "le suivi ne garde pas le marqueur qu'il suit",
+    "fichier": "js/suivi-carte.js",
+    "de": "  suiviCarte.marqueur=m;\n  if(!m) return;",
+    "vers": "  if(!m) return;"
+  },
+  {
+    "nom": "la carte se centre avec animation au départ du suivi",
+    "fichier": "js/suivi-carte.js",
+    "de": "  map.setView(m.getLatLng(),zoom,{animate:false});",
+    "vers": "  map.setView(m.getLatLng(),zoom);"
+  },
+  {
+    "nom": "le zoom d'avant la fiche est oublié à la reprise",
+    "fichier": "js/suivi-carte.js",
+    "de": "const zoom=(typeof suiviCarte.zoomDepart==='number')?suiviCarte.zoomDepart:Math.max(map.getZoom(),SUIVI_ZOOM_MIN);",
+    "vers": "const zoom=Math.max(map.getZoom(),SUIVI_ZOOM_MIN);"
+  },
+  {
+    "nom": "un zoom éloigné est remonté de force à 16 au départ",
+    "fichier": "js/suivi-carte.js",
+    "de": "Math.max(map.getZoom(),SUIVI_ZOOM_MIN);",
+    "vers": "SUIVI_ZOOM_MIN;"
+  },
+  {
+    "nom": "un suivi qui démarre garde une pause d'avant",
+    "fichier": "js/suivi-carte.js",
+    "de": "  _suiviSuspendu=null;\n  _suiviAttacher();\n  majBoutonSuivi();",
+    "vers": "  _suiviAttacher();\n  majBoutonSuivi();"
+  },
+  {
+    "nom": "déplacer la carte pendant la fiche n'annule pas la reprise",
+    "fichier": "js/suivi-carte.js",
+    "de": "  suiviCarte=null;\n  _suiviSuspendu=null;   // (déplacer la carte pendant qu'une fiche est ouverte : le suivi ne reprendra pas à la fermeture)",
+    "vers": "  suiviCarte=null;"
+  },
+  {
+    "nom": "le bouton ◎ ne s'allume jamais",
+    "fichier": "js/suivi-carte.js",
+    "de": "b.classList[actif?'add':'remove']('on');",
+    "vers": "b.classList.remove('on');"
+  },
+  {
+    "nom": "aria-pressed reste toujours « false »",
+    "fichier": "js/suivi-carte.js",
+    "de": "b.setAttribute('aria-pressed',actif?'true':'false');",
+    "vers": "b.setAttribute('aria-pressed','false');"
+  },
+  {
+    "nom": "le bouton ◎ n'est pas mis à jour quand le suivi s'arrête",
+    "fichier": "js/suivi-carte.js",
+    "de": "  _suiviSuspendu=null;   // (déplacer la carte pendant qu'une fiche est ouverte : le suivi ne reprendra pas à la fermeture)\n  majBoutonSuivi();\n}",
+    "vers": "  _suiviSuspendu=null;   // (déplacer la carte pendant qu'une fiche est ouverte : le suivi ne reprendra pas à la fermeture)\n}"
+  },
+  {
+    "nom": "la fiche ouverte ne détache pas le point (il continue de piloter la carte)",
+    "fichier": "js/suivi-carte.js",
+    "de": "  _suiviDetacher();\n  suiviCarte=null;\n  majBoutonSuivi();\n}\nfunction reprendreSuiviCarte(){",
+    "vers": "  suiviCarte=null;\n  majBoutonSuivi();\n}\nfunction reprendreSuiviCarte(){"
+  },
+  {
+    "nom": "la fiche ouverte n'enregistre pas le zoom d'avant",
+    "fichier": "js/suivi-carte.js",
+    "de": ",zoom:map?map.getZoom():null};",
+    "vers": ",zoom:null};"
+  },
+  {
+    "nom": "le suivi en pause perd son caractère « tout seul »",
+    "fichier": "js/suivi-carte.js",
+    "de": "demarrerSuiviCarte(c,{auto:c.auto,zoom:c.zoom});",
+    "vers": "demarrerSuiviCarte(c,{zoom:c.zoom});"
+  },
+  {
+    "nom": "la reprise après la fiche ne rend pas le zoom d'avant",
+    "fichier": "js/suivi-carte.js",
+    "de": "demarrerSuiviCarte(c,{auto:c.auto,zoom:c.zoom});",
+    "vers": "demarrerSuiviCarte(c,{auto:c.auto});"
+  },
+  {
+    "nom": "la fiche rouverte : « reprendre » ne vérifie plus qu'un suivi était en pause",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(!_suiviSuspendu) return;\n  const c=_suiviSuspendu;",
+    "vers": "  const c=_suiviSuspendu;"
+  },
+  {
+    "nom": "la fiche ouverte : « suspendre » ne vérifie plus qu'un suivi existe",
+    "fichier": "js/suivi-carte.js",
+    "de": "function suspendreSuiviCarte(){\n  if(!suiviCarte) return;",
+    "vers": "function suspendreSuiviCarte(){\n  ;"
+  },
+  {
+    "nom": "un chauffeur suit le camion (pas son propre point)",
+    "fichier": "js/suivi-carte.js",
+    "de": "const bord=(typeof monBord==='function')?monBord():null;\n  if(bord&&marqueurSuivi",
+    "vers": "const bord=(typeof monBord==='function')?(monBord()||maPasse()):null;\n  if(bord&&marqueurSuivi"
+  },
+  {
+    "nom": "un passager touche ◎ : il suit toujours son point vert, jamais le camion",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(bord&&marqueurSuivi({type:'camion',passeId:bord.passe.passe_id})) return {type:'camion',passeId:bord.passe.passe_id};",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un passager suit son camion même s'il n'est pas dessiné",
+    "fichier": "js/suivi-carte.js",
+    "de": "if(bord&&marqueurSuivi({type:'camion',passeId:bord.passe.passe_id})) return",
+    "vers": "if(bord) return"
+  },
+  {
+    "nom": "◎ ne s'éteint plus au deuxième toucher",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(suiviCarte){arreterSuiviCarte();return false;}",
+    "vers": "  ;"
+  },
+  {
+    "nom": "◎ sans position allume quand même le suivi",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(cible.type==='moi'&&!lastPos){toast('📍 Position du téléphone pas encore trouvée');return false;}",
+    "vers": "  ;"
+  },
+  {
+    "nom": "◎ sans position ne dit rien",
+    "fichier": "js/suivi-carte.js",
+    "de": "toast('📍 Position du téléphone pas encore trouvée');return false;",
+    "vers": "return false;"
+  },
+  {
+    "nom": "◎ allume un suivi « tout seul » (qui s'éteindrait à la fin de la passe)",
+    "fichier": "js/suivi-carte.js",
+    "de": "return demarrerSuiviCarte(cible,{auto:false});",
+    "vers": "return demarrerSuiviCarte(cible,{auto:true});"
+  },
+  {
+    "nom": "le suivi tout seul ignore qui est connecté",
+    "fichier": "js/suivi-carte.js",
+    "de": "const m=(currentUser&&typeof maPasse==='function')?maPasse():null;",
+    "vers": "const m=(typeof maPasse==='function')?maPasse():null;"
+  },
+  {
+    "nom": "le suivi tout seul ne concerne pas les passagers",
+    "fichier": "js/suivi-carte.js",
+    "de": "const bord=(currentUser&&!m&&typeof monBord==='function')?monBord():null;",
+    "vers": "const bord=null;"
+  },
+  {
+    "nom": "le suivi tout seul est relancé à CHAQUE redessin",
+    "fichier": "js/suivi-carte.js",
+    "de": "    if(_passeSuivieAuto===passeId) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la passe suivie n'est jamais retenue (relance à chaque redessin)",
+    "fichier": "js/suivi-carte.js",
+    "de": "    _passeSuivieAuto=passeId;\n    demarrerSuiviCarte(",
+    "vers": "    demarrerSuiviCarte("
+  },
+  {
+    "nom": "le suivi tout seul n'est pas marqué « tout seul »",
+    "fichier": "js/suivi-carte.js",
+    "de": "demarrerSuiviCarte(m?{type:'moi'}:{type:'camion',passeId},{auto:true});",
+    "vers": "demarrerSuiviCarte(m?{type:'moi'}:{type:'camion',passeId},{auto:false});"
+  },
+  {
+    "nom": "chauffeur et passager sont inversés (le chauffeur suit le camion)",
+    "fichier": "js/suivi-carte.js",
+    "de": "demarrerSuiviCarte(m?{type:'moi'}:{type:'camion',passeId},{auto:true});",
+    "vers": "demarrerSuiviCarte(m?{type:'camion',passeId}:{type:'moi'},{auto:true});"
+  },
+  {
+    "nom": "une passe finie n'est pas oubliée (elle ne peut plus être suivie de nouveau)",
+    "fichier": "js/suivi-carte.js",
+    "de": "  _passeSuivieAuto=null;   // ma passe est finie (ou je ne suis plus à bord)\n",
+    "vers": ""
+  },
+  {
+    "nom": "la fin de la passe éteint aussi un suivi allumé à la main",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(suiviCarte&&suiviCarte.auto) arreterSuiviCarte();\n  else if(",
+    "vers": "  if(suiviCarte) arreterSuiviCarte();\n  else if("
+  },
+  {
+    "nom": "la fin de la passe n'éteint jamais le suivi",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(suiviCarte&&suiviCarte.auto) arreterSuiviCarte();\n  else if(",
+    "vers": "  if(false) arreterSuiviCarte();\n  else if("
+  },
+  {
+    "nom": "la fin de la passe pendant une fiche : le suivi reprendrait à la fermeture",
+    "fichier": "js/suivi-carte.js",
+    "de": "  else if(_suiviSuspendu&&_suiviSuspendu.auto) _suiviSuspendu=null;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "un camion qui apparaît fait recentrer un suivi déjà attaché",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(!suiviCarte||suiviCarte.marqueur) return;\n  _suiviAttacher();",
+    "vers": "  if(!suiviCarte) return;\n  _suiviAttacher();"
+  },
+  {
+    "nom": "un point ou un camion qui apparaît n'est jamais suivi (le suivi qui attendait reste en attente)",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(!suiviCarte||suiviCarte.marqueur) return;\n  _suiviAttacher();",
+    "vers": "  return;\n  _suiviAttacher();"
+  },
+  {
+    "nom": "le camion suivi disparaît mais on le suit encore",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(suiviCarte&&suiviCarte.type==='camion'&&suiviCarte.passeId===passeId) arreterSuiviCarte();",
+    "vers": "  if(false) arreterSuiviCarte();"
+  },
+  {
+    "nom": "n'importe quel camion qui disparaît arrête le suivi",
+    "fichier": "js/suivi-carte.js",
+    "de": "suiviCarte.type==='camion'&&suiviCarte.passeId===passeId) arreterSuiviCarte();",
+    "vers": "suiviCarte.type==='camion') arreterSuiviCarte();"
+  },
+  {
+    "nom": "le camion suivi disparaît pendant une fiche : le suivi reprendrait à la fermeture",
+    "fichier": "js/suivi-carte.js",
+    "de": "  else if(_suiviSuspendu&&_suiviSuspendu.type==='camion'&&_suiviSuspendu.passeId===passeId) _suiviSuspendu=null;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "tout employé connecté peut suivre un camion",
+    "fichier": "js/suivi-carte.js",
+    "de": "function peutSuivreCamion(){return !!currentUser&&currentUser.role==='admin';}",
+    "vers": "function peutSuivreCamion(){return !!currentUser;}"
+  },
+  {
+    "nom": "personne ne peut suivre un camion (pas même l'administrateur)",
+    "fichier": "js/suivi-carte.js",
+    "de": "function peutSuivreCamion(){return !!currentUser&&currentUser.role==='admin';}",
+    "vers": "function peutSuivreCamion(){return false;}"
+  },
+  {
+    "nom": "le bouton de la bulle ne dit jamais « Ne plus suivre ce camion »",
+    "fichier": "js/suivi-carte.js",
+    "de": "function suiviCamionActif(passeId){return !!suiviCarte&&suiviCarte.type==='camion'&&suiviCarte.passeId===passeId;}",
+    "vers": "function suiviCamionActif(passeId){return false;}"
+  },
+  {
+    "nom": "un employé qui appelle basculerSuiviCamion suit quand même",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(!peutSuivreCamion()) return;\n  if(suiviCamionActif(passeId)) arreterSuiviCarte();",
+    "vers": "  if(suiviCamionActif(passeId)) arreterSuiviCarte();"
+  },
+  {
+    "nom": "le deuxième toucher sur « Suivre ce camion » ne l'arrête pas",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(suiviCamionActif(passeId)) arreterSuiviCarte();\n  else demarrerSuiviCarte({type:'camion',passeId},{auto:false});",
+    "vers": "  demarrerSuiviCarte({type:'camion',passeId},{auto:false});"
+  },
+  {
+    "nom": "la bulle du camion n'est pas mise à jour après le toucher",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(typeof majVehicules==='function') setTimeout(majVehicules,0);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la bulle du camion est remplacée PENDANT le toucher (Leaflet la ferme)",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(typeof majVehicules==='function') setTimeout(majVehicules,0);",
+    "vers": "  if(typeof majVehicules==='function') majVehicules();"
+  },
+  {
+    "nom": "le suivi d'un camion choisi par l'administrateur s'éteindrait tout seul",
+    "fichier": "js/suivi-carte.js",
+    "de": "else demarrerSuiviCarte({type:'camion',passeId},{auto:false});",
+    "vers": "else demarrerSuiviCarte({type:'camion',passeId},{auto:true});"
+  },
+  {
+    "nom": "une lecture identique à la précédente est acceptée (elle coupe le glissement)",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(m._majLeMs&&quandMs<=m._majLeMs) return;",
+    "vers": "  if(m._majLeMs&&quandMs<m._majLeMs) return;"
+  },
+  {
+    "nom": "n'importe quelle lecture est acceptée, même plus vieille",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(m._majLeMs&&quandMs<=m._majLeMs) return;",
+    "vers": "  ;"
+  },
+  {
+    "nom": "le point vert saute d'un coup au lieu de glisser",
+    "fichier": "js/suivi-carte.js",
+    "de": "  deplacerMarqueurCamion(m,lat,lon,quandMs);",
+    "vers": "  m.setLatLng([lat,lon]);"
+  },
+  {
+    "nom": "le cercle de précision garde son ancien rayon",
+    "fichier": "js/suivi-carte.js",
+    "de": "  if(window._uCk&&typeof precision==='number') window._uCk.setRadius(precision);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "l'heure d'une lecture du GPS (un nombre) n'est plus comprise : plus de glissement",
+    "fichier": "js/vehicules.js",
+    "de": "const majLeMs=(typeof majLe==='number')?majLe:Date.parse(majLe);",
+    "vers": "const majLeMs=Date.parse(majLe);"
+  },
+  {
+    "nom": "tout le monde voit « Suivre ce camion » dans la bulle",
+    "fichier": "js/vehicules.js",
+    "de": "((typeof peutSuivreCamion==='function'&&peutSuivreCamion())",
+    "vers": "((true)"
+  },
+  {
+    "nom": "l'identifiant de la passe n'est plus protégé dans la bulle",
+    "fichier": "js/vehicules.js",
+    "de": "data-passe=\"'+esc(c.passeId)+'\"",
+    "vers": "data-passe=\"'+c.passeId+'\""
+  },
+  {
+    "nom": "l'identifiant de la passe est mis DANS le code du bouton",
+    "fichier": "js/vehicules.js",
+    "de": "onclick=\"basculerSuiviCamion(this.dataset.passe)\"",
+    "vers": "onclick=\"basculerSuiviCamion(\\''+esc(c.passeId)+'\\')\""
+  },
+  {
+    "nom": "un camion qui est dessiné ne prévient pas le suivi",
+    "fichier": "js/vehicules.js",
+    "de": "      if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce camion pour le suivre (suivi-carte.js)",
+    "vers": "      ;"
+  },
+  {
+    "nom": "un camion qui est retiré ne prévient pas le suivi",
+    "fichier": "js/vehicules.js",
+    "de": "      if(typeof suiviCamionRetire==='function') suiviCamionRetire(id);   // suivre un camion qui disparaît n'a plus de sens (suivi-carte.js)",
+    "vers": "      ;"
+  },
+  {
+    "nom": "la bulle d'un camion est redessinée à chaque relecture (un toucher sur son bouton peut être perdu)",
+    "fichier": "js/vehicules.js",
+    "de": "if(m._bulleHtml!==bulle){m._bulleHtml=bulle;m.setPopupContent(bulle);}",
+    "vers": "m.setPopupContent(bulle);"
+  },
+  {
+    "nom": "la bulle d'un camion ne se met plus à jour quand son texte change",
+    "fichier": "js/vehicules.js",
+    "de": "if(m._bulleHtml!==bulle){m._bulleHtml=bulle;m.setPopupContent(bulle);}",
+    "vers": "if(false){m.setPopupContent(bulle);}"
+  },
+  {
+    "nom": "« Placer sur la carte » n'arrête plus le suivi (la carte bouge pendant qu'on touche les 4 coins)",
+    "fichier": "js/placement.js",
+    "de": "  if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // on touche 4 points sur la carte : elle ne doit pas bouger toute seule pendant ce temps (suivi-carte.js)\n",
+    "vers": ""
+  },
+  {
+    "nom": "◎ redevient un recentrage unique (plus d'allumage du suivi)",
+    "fichier": "js/carte.js",
+    "de": "window.centerUser=function(){basculerSuiviCarte();};",
+    "vers": "window.centerUser=function(){if(lastPos) map.flyTo(lastPos,16,{duration:.8});};"
+  },
+  {
+    "nom": "le cercle de précision ne suit plus le point vert",
+    "fichier": "js/carte.js",
+    "de": "        window._uMk.on('move',e=>window._uCk.setLatLng(e.latlng));",
+    "vers": "        ;"
+  },
+  {
+    "nom": "le premier glissement du point vert saute (heure de départ oubliée)",
+    "fichier": "js/carte.js",
+    "de": "        window._uMk._majLeMs=lastPosInfo?lastPosInfo.le:Date.now();",
+    "vers": "        window._uMk._majLeMs=0;"
+  },
+  {
+    "nom": "le premier glissement du point vert saute (position de départ oubliée)",
+    "fichier": "js/carte.js",
+    "de": "        window._uMk._posActuelle=[lat,lon];",
+    "vers": "        ;"
+  },
+  {
+    "nom": "le suivi qui attendait le point vert n'est pas prévenu quand il est dessiné",
+    "fichier": "js/carte.js",
+    "de": "        if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce point pour le suivre",
+    "vers": "        ;"
+  },
+  {
+    "nom": "la carte ne se centre plus sur la toute première lecture",
+    "fichier": "js/carte.js",
+    "de": "        map.setView([lat,lon],15);",
+    "vers": "        ;"
+  },
+  {
+    "nom": "la première lecture centre la carte au mauvais zoom",
+    "fichier": "js/carte.js",
+    "de": "        map.setView([lat,lon],15);",
+    "vers": "        map.setView([lat,lon],12);"
+  },
+  {
+    "nom": "une lecture du suivi de la carte déplace le point d'un coup (coupe le glissement)",
+    "fichier": "js/carte.js",
+    "de": "        if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce point pour le suivre\n      }",
+    "vers": "        if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce point pour le suivre\n      } else { window._uMk.setLatLng([lat,lon]); }"
+  },
+  {
+    "nom": "les lectures du GPS ne font plus glisser le point vert",
+    "fichier": "js/position.js",
+    "de": "  if(typeof majPointVert==='function') majPointVert(lat,lon,lastPosInfo.precision,t);",
+    "vers": "  ;"
+  },
+  {
+    "nom": "la précision de la lecture n'est pas transmise au point vert",
+    "fichier": "js/position.js",
+    "de": "majPointVert(lat,lon,lastPosInfo.precision,t);",
+    "vers": "majPointVert(lat,lon,null,t);"
+  },
+  {
+    "nom": "ouvrir la fiche d'un client ne met plus le suivi en pause",
+    "fichier": "js/arrets.js",
+    "de": "  if(typeof suspendreSuiviCarte==='function') suspendreSuiviCarte();   // la carte va vers le client : le suivi se met en pause le temps de la fiche (il reprend à sa fermeture, suivi-carte.js)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "fermer la fiche ne reprend plus le suivi",
+    "fichier": "js/arrets.js",
+    "de": "  if(typeof reprendreSuiviCarte==='function') reprendreSuiviCarte();   // le suivi mis en pause par la fiche reprend (sauf si on a déplacé la carte entre-temps, suivi-carte.js)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "ajouter un arrêt n'arrête plus le suivi avant que la carte s'envole",
+    "fichier": "js/liste-arrets.js",
+    "de": "    if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)",
+    "vers": "    ;"
+  },
+  {
+    "nom": "le bandeau de la passe ne met plus le suivi au diapason de ma passe",
+    "fichier": "js/passe.js",
+    "de": "  if(typeof majSuiviSelonPasse==='function') majSuiviSelonPasse();   // la carte se met à suivre au début de MA passe (chauffeur ou passager), et arrête à sa fin (suivi-carte.js)",
+    "vers": "  ;"
+  },
+  {
+    "nom": "le bouton ◎ perd son identifiant (le suivi ne peut plus l'allumer)",
+    "fichier": "index.html",
+    "de": "id=\"btn-suivi\" ",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton ◎ n'a plus aria-pressed",
+    "fichier": "index.html",
+    "de": " aria-pressed=\"false\" style=\"margin-top:8px\">◎",
+    "vers": " style=\"margin-top:8px\">◎"
+  },
+  {
+    "nom": "la page ne charge plus suivi-carte.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/suivi-carte.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton ◎ n'est plus relié à centerUser()",
+    "fichier": "index.html",
+    "de": "onclick=\"centerUser()\" aria-label=\"Suivre ma position",
+    "vers": "onclick=\"autreChose()\" aria-label=\"Suivre ma position"
+  },
+  {
+    "nom": "le bouton de la bulle du camion est trop petit pour un doigt",
+    "fichier": "css/style.css",
+    "de": ".camion-suivre{display:block;width:100%;min-height:40px;",
+    "vers": ".camion-suivre{display:block;width:100%;min-height:16px;"
+  }
+]

@@ -621,6 +621,7 @@ function basculerBandeauPasse(){
 function majBandeauPasse(){
   const b=document.getElementById('passe-bandeau');
   if(!b) return;
+  if(typeof majSuiviSelonPasse==='function') majSuiviSelonPasse();   // la carte se met à suivre au début de MA passe (chauffeur ou passager), et arrête à sa fin (suivi-carte.js)
   if(!currentUser){
     b.innerHTML='';
     b.classList.remove('show');

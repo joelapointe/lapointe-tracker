@@ -52,19 +52,23 @@ function initApp(){
       dotEl.className='on';
       lblEl.textContent=`±${Math.round(accuracy)}m`;
       const icon=L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:#4ade80;border:3px solid #fff;box-shadow:0 0 8px #4ade80"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
+      // Le point vert est DESSINÉ ici, à la première lecture ; ensuite il GLISSE jusqu'à chaque lecture — de n'importe quelle source, y compris le service de position du
+      // téléphone pendant ma passe, une par seconde — par majPointVert (suivi-carte.js), appelée par noterPosition (position.js). Le cercle de précision le suit.
       if(!window._uMk){
         window._uMk=L.marker([lat,lon],{icon,zIndexOffset:1000}).addTo(map);
+        window._uMk._posActuelle=[lat,lon];
+        window._uMk._majLeMs=lastPosInfo?lastPosInfo.le:Date.now();
         window._uCk=L.circle([lat,lon],{radius:accuracy,color:'#4ade80',fillColor:'#4ade80',fillOpacity:.08,weight:1}).addTo(map);
+        window._uMk.on('move',e=>window._uCk.setLatLng(e.latlng));
         map.setView([lat,lon],15);
-      } else {
-        window._uMk.setLatLng([lat,lon]);
-        window._uCk.setLatLng([lat,lon]).setRadius(accuracy);
+        if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce point pour le suivre
       }
       geocodeReverse(lat,lon,addrEl);
     },()=>{dotEl.className='err';lblEl.textContent='Erreur';});
   };
 
-  window.centerUser=function(){if(lastPos) map.flyTo(lastPos,16,{duration:.8});};
+  // ◎ : allume le suivi de la carte (elle garde mon point au centre), ou l'éteint s'il est allumé (suivi-carte.js). Avant : un recentrage unique.
+  window.centerUser=function(){basculerSuiviCarte();};
 
   // Temps réel
   // Les arrêts qui changent : on relit tout. Les passes et les arrêts complétés qui changent (sur n'importe quel téléphone) :

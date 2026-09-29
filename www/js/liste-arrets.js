@@ -133,6 +133,7 @@ window._zonePoints=null;window._zoneLat=null;window._zoneLon=null;
     const saved=await dbSave(ns);
     if(!saved)return;
     stops.push(saved);renderAll();
+    if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)
     map.flyTo([saved.lat,saved.lon],17,{duration:.8});
     toast('📍 Stop ajouté !');
     setTimeout(closeModal,500);

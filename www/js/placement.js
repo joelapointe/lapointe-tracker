@@ -7,6 +7,7 @@ let polygonTemp=null;
 let marqueurPoints=[];
 
 function activerPlacement(){
+  if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // on touche 4 points sur la carte : elle ne doit pas bouger toute seule pendant ce temps (suivi-carte.js)
   modeplace=true;
   pointsPlacement=[];
   marqueurPoints=[];

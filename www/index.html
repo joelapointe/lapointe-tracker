@@ -256,6 +256,13 @@
 </div>
 
 <!-- Demande 2 : le choix de l'icône d'un type de service (admin-types-service.js) — « Par défaut », puis la banque d'icônes (icones-taches.js) -->
+<!-- SUIVI DES PASSAGES (admin-suivi.js) : une seule feuille qui monte du bas (ajouter une date, une date pour plusieurs clients, le détail d'un client) -->
+<div id="suivi-feuille-overlay" onclick="suiviBgFeuille(event)">
+  <div id="suivi-feuille" role="dialog" aria-modal="true" aria-labelledby="suivi-feuille-titre">
+    <h2 id="suivi-feuille-titre">Suivi</h2>
+    <div id="suivi-feuille-corps"></div>
+  </div>
+</div>
 <div id="icone-tache-overlay" onclick="bgClickIconeTache(event)">
   <div id="icone-tache-modal">
     <h2 id="it-titre">Icône</h2>
@@ -443,6 +450,7 @@
 <script src="js/admin-export.js"></script>
 <script src="js/admin-historique.js"></script>
 <script src="js/admin-routes.js"></script>
+<script src="js/admin-suivi.js"></script>
 <script src="js/liste-arrets.js"></script>
 <script src="js/ordre.js"></script>
 <script src="js/parcours.js"></script>

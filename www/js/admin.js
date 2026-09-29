@@ -17,6 +17,7 @@ function ongletsAdmin(){
     {id:'export',icone:'💰',label:'Export',titre:'Export de paie',charger:(typeof chargerExportAdmin==='function')?chargerExportAdmin:null},
     {id:'historique',icone:'📜',label:'Historique',titre:'Historique des passes',charger:(typeof chargerHistoriqueAdmin==='function')?chargerHistoriqueAdmin:null},
     {id:'routes',icone:'🗺️',label:'Routes',titre:'Routes et clients',charger:(typeof chargerRoutesAdmin==='function')?chargerRoutesAdmin:null},
+    {id:'suivi',icone:'📋',label:'Suivi',titre:'Suivi des passages',charger:(typeof chargerSuiviAdmin==='function')?chargerSuiviAdmin:null},
   ];
 }
 let _adminOnglet='problemes';

@@ -301,7 +301,7 @@ log('\n=== LE CHAUFFEUR TERMINE LE QUART D\'UN PASSAGER ===');
   const rr = await retirer(s.chauffeur, uuid(), s.passe, nina, 10);
   eq('Nina descend du camion (plus de 2 minutes après son entrée : un vrai retrait, pas une annulation)', rr.statut, 'retire');
   const r = await equipier(s.chauffeur, s.passe, nina, at(9.5));   // 30 secondes plus tard
-  eq('30 secondes après : son quart se termine à l\'heure où elle est DESCENDUE (pas à l\'heure de la réponse)', [r.statut, ms(r.fin) === ms(mr)], ['termine', true]);
+  eq('30 secondes après : son quart se termine à l\'heure où elle est DESCENDUE (pas à l\'heure de la réponse)', [r.statut, Math.abs(ms(r.fin) - ms(mr)) < 5000], ['termine', true]);   // (à quelques millisecondes près : « retirer » calcule sa propre heure ; la réponse, elle, est 30 s plus tard)
   await retirer(s.chauffeur, uuid(), s.passe, omar, 30);
   eq('descendu il y a 30 min, question à 21 min (9 min après) : encore accepté (limite 10 minutes)', (await equipier(s.chauffeur, s.passe, omar, at(21))).statut, 'termine');
   await retirer(s.chauffeur, uuid(), s.passe, paul, 30);

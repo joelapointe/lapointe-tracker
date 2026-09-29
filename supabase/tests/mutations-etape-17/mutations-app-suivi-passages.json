@@ -1,0 +1,1298 @@
+[
+  {
+    "nom": "le mois du jour local est décalé d'un cran",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviPad(d.getMonth()+1)",
+    "vers": "suiviPad(d.getMonth())"
+  },
+  {
+    "nom": "le jour du mois est décalé d'un jour",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviPad(d.getDate())",
+    "vers": "suiviPad(d.getDate()+1)"
+  },
+  {
+    "nom": "une heure illisible n'est plus refusée (NaN-NaN-NaN)",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(isNaN(d.getTime())) return null;\n",
+    "vers": ""
+  },
+  {
+    "nom": "« août » perd son accent",
+    "fichier": "js/admin-suivi.js",
+    "de": "'août'",
+    "vers": "'aout'"
+  },
+  {
+    "nom": "« févr. » devient « fév. »",
+    "fichier": "js/admin-suivi.js",
+    "de": "'févr.'",
+    "vers": "'fév.'"
+  },
+  {
+    "nom": "le premier du mois n'est plus « 1er »",
+    "fichier": "js/admin-suivi.js",
+    "de": "(j===1?'1er':String(j))",
+    "vers": "String(j)"
+  },
+  {
+    "nom": "l'année n'est jamais écrite",
+    "fichier": "js/admin-suivi.js",
+    "de": "(Number(m[1])!==annee?' '+m[1]:'')",
+    "vers": "''"
+  },
+  {
+    "nom": "l'année est toujours écrite",
+    "fichier": "js/admin-suivi.js",
+    "de": "(Number(m[1])!==annee?' '+m[1]:'')",
+    "vers": "' '+m[1]"
+  },
+  {
+    "nom": "les jours entre deux dates : divisé par 86 400 au lieu de 86 400 000",
+    "fichier": "js/admin-suivi.js",
+    "de": "/86400000)",
+    "vers": "/86400)"
+  },
+  {
+    "nom": "les jours entre deux dates : le mois de la fin est décalé",
+    "fichier": "js/admin-suivi.js",
+    "de": "Date.UTC(pb[0],pb[1]-1,pb[2])",
+    "vers": "Date.UTC(pb[0],pb[1],pb[2])"
+  },
+  {
+    "nom": "les jours entre deux dates : le sens est inversé (négatif)",
+    "fichier": "js/admin-suivi.js",
+    "de": "(Date.UTC(pb[0],pb[1]-1,pb[2])-Date.UTC(pa[0],pa[1]-1,pa[2]))",
+    "vers": "(Date.UTC(pa[0],pa[1]-1,pa[2])-Date.UTC(pb[0],pb[1]-1,pb[2]))"
+  },
+  {
+    "nom": "la clé d'adresse garde les accents",
+    "fichier": "js/admin-suivi.js",
+    "de": ".replace(/\\p{M}/gu,'')",
+    "vers": ""
+  },
+  {
+    "nom": "la clé d'adresse garde les majuscules",
+    "fichier": "js/admin-suivi.js",
+    "de": ".toLowerCase().replace(/[^a-z0-9]+/g,' ')",
+    "vers": ".replace(/[^a-zA-Z0-9]+/g,' ')"
+  },
+  {
+    "nom": "la clé d'adresse ne regroupe plus les signes (une virgule + une espace = deux espaces)",
+    "fichier": "js/admin-suivi.js",
+    "de": ".replace(/[^a-z0-9]+/g,' ')",
+    "vers": ".replace(/[^a-z0-9]/g,' ')"
+  },
+  {
+    "nom": "l'état « aucun passage » n'est plus reconnu",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!total) return 'aucun';",
+    "vers": "  if(total<0) return 'aucun';"
+  },
+  {
+    "nom": "sans rythme, un client est « à jour » au lieu de « neutre »",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!rythme) return 'neutre';",
+    "vers": "  if(!rythme) return 'ok';"
+  },
+  {
+    "nom": "le jour même du rythme est encore « à jour » (< devient ≤)",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(jours<rythme) return 'ok';",
+    "vers": "  if(jours<=rythme) return 'ok';"
+  },
+  {
+    "nom": "« en retard » commence un jour trop tard (≥ devient >)",
+    "fichier": "js/admin-suivi.js",
+    "de": "jours>=rythme*1.5?'retard':'afaire'",
+    "vers": "jours>rythme*1.5?'retard':'afaire'"
+  },
+  {
+    "nom": "« en retard » commence à 2 fois le rythme au lieu de 1,5",
+    "fichier": "js/admin-suivi.js",
+    "de": "jours>=rythme*1.5?'retard':'afaire'",
+    "vers": "jours>=rythme*2?'retard':'afaire'"
+  },
+  {
+    "nom": "« à faire » n'inclut plus « en retard »",
+    "fichier": "js/admin-suivi.js",
+    "de": "const SUIVI_A_FAIRE=['aucun','afaire','retard'];",
+    "vers": "const SUIVI_A_FAIRE=['aucun','afaire'];"
+  },
+  {
+    "nom": "« à faire » n'inclut plus « aucun passage »",
+    "fichier": "js/admin-suivi.js",
+    "de": "const SUIVI_A_FAIRE=['aucun','afaire','retard'];",
+    "vers": "const SUIVI_A_FAIRE=['afaire','retard'];"
+  },
+  {
+    "nom": "un arrêt archivé compte comme un client",
+    "fichier": "js/admin-suivi.js",
+    "de": "s&&s.actif!==false&&s.service===o.service",
+    "vers": "s&&s.service===o.service"
+  },
+  {
+    "nom": "tous les services sont mélangés dans la liste",
+    "fichier": "js/admin-suivi.js",
+    "de": "s&&s.actif!==false&&s.service===o.service",
+    "vers": "s&&s.actif!==false"
+  },
+  {
+    "nom": "une adresse n'est plus regroupée sans tenir compte des majuscules et accents",
+    "fichier": "js/admin-suivi.js",
+    "de": "const cle=suiviCle(s.adresse)||('id:'+s.id);",
+    "vers": "const cle=s.adresse||('id:'+s.id);"
+  },
+  {
+    "nom": "deux arrêts sans adresse sont fusionnés",
+    "fichier": "js/admin-suivi.js",
+    "de": "const cle=suiviCle(s.adresse)||('id:'+s.id);",
+    "vers": "const cle=suiviCle(s.adresse);"
+  },
+  {
+    "nom": "tous les arrêts sont fusionnés en un seul client",
+    "fichier": "js/admin-suivi.js",
+    "de": "const cle=suiviCle(s.adresse)||('id:'+s.id);",
+    "vers": "const cle='x';"
+  },
+  {
+    "nom": "les « Complété » d'avant la date de départ sont comptés",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(j&&j>=o.depuis) fiche(c.stop_id).app.add(j);",
+    "vers": "if(j) fiche(c.stop_id).app.add(j);"
+  },
+  {
+    "nom": "la date de départ n'est plus incluse (> au lieu de ≥)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(j&&j>=o.depuis) fiche(c.stop_id).app.add(j);",
+    "vers": "if(j&&j>o.depuis) fiche(c.stop_id).app.add(j);"
+  },
+  {
+    "nom": "les dates à la main d'avant la date de départ sont comptées",
+    "fichier": "js/admin-suivi.js",
+    "de": "/^\\d{4}-\\d{2}-\\d{2}$/.test(j)&&j>=o.depuis) fiche(m.stop_id)",
+    "vers": "/^\\d{4}-\\d{2}-\\d{2}$/.test(j)) fiche(m.stop_id)"
+  },
+  {
+    "nom": "la date de départ n'est plus incluse pour les dates à la main (> au lieu de ≥)",
+    "fichier": "js/admin-suivi.js",
+    "de": "/^\\d{4}-\\d{2}-\\d{2}$/.test(j)&&j>=o.depuis) fiche(m.stop_id)",
+    "vers": "/^\\d{4}-\\d{2}-\\d{2}$/.test(j)&&j>o.depuis) fiche(m.stop_id)"
+  },
+  {
+    "nom": "les dates à la main sont fusionnées sans regarder la forme du jour (une date illisible passe)",
+    "fichier": "js/admin-suivi.js",
+    "de": "/^\\d{4}-\\d{2}-\\d{2}$/.test(j)&&j>=o.depuis) fiche(m.stop_id)",
+    "vers": "j>=o.depuis) fiche(m.stop_id)"
+  },
+  {
+    "nom": "la référence d'une adresse devient la plus RÉCENTE (tri inversé)",
+    "fichier": "js/admin-suivi.js",
+    "de": "String(a.created_at||'').localeCompare(String(b.created_at||''))||",
+    "vers": "String(b.created_at||'').localeCompare(String(a.created_at||''))||"
+  },
+  {
+    "nom": "à égalité de création, la place dans la route ne départage plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "||(Number(a.ordre)||0)-(Number(b.ordre)||0)||String(a.id).localeCompare(String(b.id)));",
+    "vers": "||String(a.id).localeCompare(String(b.id)));"
+  },
+  {
+    "nom": "à égalité de création et de place, l'identifiant ne départage plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "||(Number(a.ordre)||0)-(Number(b.ordre)||0)||String(a.id).localeCompare(String(b.id)));",
+    "vers": "||(Number(a.ordre)||0)-(Number(b.ordre)||0));"
+  },
+  {
+    "nom": "la référence est le DERNIER arrêt du tri",
+    "fichier": "js/admin-suivi.js",
+    "de": "    const ref=tries[0];",
+    "vers": "    const ref=tries[tries.length-1];"
+  },
+  {
+    "nom": "une date de la copie écrase celle du client (perd la date à la main du même jour)",
+    "fichier": "js/admin-suivi.js",
+    "de": "f.app.forEach(j=>{const e=jours.get(j)||{jour:j,app:false,manuel:null};e.app=true;jours.set(j,e);});",
+    "vers": "f.app.forEach(j=>{const e={jour:j,app:false,manuel:null};e.app=true;jours.set(j,e);});"
+  },
+  {
+    "nom": "une date à la main écrase le « Complété » du même jour (perd « app »)",
+    "fichier": "js/admin-suivi.js",
+    "de": "f.manuel.forEach((m,j)=>{const e=jours.get(j)||{jour:j,app:false,manuel:null};e.manuel=m;jours.set(j,e);});",
+    "vers": "f.manuel.forEach((m,j)=>{const e={jour:j,app:false,manuel:null};e.manuel=m;jours.set(j,e);});"
+  },
+  {
+    "nom": "une date à la main perd sa référence (manuel: null)",
+    "fichier": "js/admin-suivi.js",
+    "de": "e.manuel=m;jours.set(j,e);});\n    });",
+    "vers": "e.manuel=null;jours.set(j,e);});\n    });"
+  },
+  {
+    "nom": "les dates sont classées de la plus récente à la plus vieille",
+    "fichier": "js/admin-suivi.js",
+    "de": ".sort((a,b)=>a.jour.localeCompare(b.jour));",
+    "vers": ".sort((a,b)=>b.jour.localeCompare(a.jour));"
+  },
+  {
+    "nom": "le « dernier passage » est le PREMIER",
+    "fichier": "js/admin-suivi.js",
+    "de": "dates[dates.length-1].jour:null",
+    "vers": "dates[0].jour:null"
+  },
+  {
+    "nom": "les jours depuis le dernier passage sont comptés à l'envers",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviJoursEntre(dernier,o.aujourdhui)",
+    "vers": "suiviJoursEntre(o.aujourdhui,dernier)"
+  },
+  {
+    "nom": "le nom du client est celui de l'arrêt de référence même s'il est vide",
+    "fichier": "js/admin-suivi.js",
+    "de": "client:(tries.map(s=>(s.client||'').trim()).find(x=>x))||''",
+    "vers": "client:(tries[0].client||'')"
+  },
+  {
+    "nom": "le nom du client garde ses espaces (et un nom d'espaces compte comme un nom)",
+    "fichier": "js/admin-suivi.js",
+    "de": "client:(tries.map(s=>(s.client||'').trim()).find(x=>x))||''",
+    "vers": "client:(tries.map(s=>(s.client||'')).find(x=>x))||''"
+  },
+  {
+    "nom": "un arrêt sans route n'est plus « Sans route »",
+    "fichier": "js/admin-suivi.js",
+    "de": "section:nomRoute(ref.route_id)||'Sans route'",
+    "vers": "section:nomRoute(ref.route_id)||''"
+  },
+  {
+    "nom": "la section vient du dernier arrêt (la copie temporaire) au lieu de la référence",
+    "fichier": "js/admin-suivi.js",
+    "de": "section:nomRoute(ref.route_id)||'Sans route'",
+    "vers": "section:nomRoute(tries[tries.length-1].route_id)||'Sans route'"
+  },
+  {
+    "nom": "l'état ignore le rythme du service",
+    "fichier": "js/admin-suivi.js",
+    "de": "etat:suiviEtat(dates.length,nbJours,o.rythme)",
+    "vers": "etat:suiviEtat(dates.length,nbJours,null)"
+  },
+  {
+    "nom": "les dates ne sont cherchées que sur l'arrêt de référence (pas sur les copies)",
+    "fichier": "js/admin-suivi.js",
+    "de": "arretIds:tries.map(s=>s.id)",
+    "vers": "arretIds:[ref.id]"
+  },
+  {
+    "nom": "le filtre « Aucun passage » ne filtre plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(filtre==='aucun'&&l.etat!=='aucun') return false;\n",
+    "vers": ""
+  },
+  {
+    "nom": "le filtre « À faire » ne filtre plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(filtre==='afaire'&&!SUIVI_A_FAIRE.includes(l.etat)) return false;\n",
+    "vers": ""
+  },
+  {
+    "nom": "la recherche garde un client dès qu'UN mot correspond (some au lieu de every)",
+    "fichier": "js/admin-suivi.js",
+    "de": "mots.every(m=>cle.includes(m))",
+    "vers": "mots.some(m=>cle.includes(m))"
+  },
+  {
+    "nom": "la recherche ne regarde plus le nom du client",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviCle(l.adresse+' '+l.client)",
+    "vers": "suiviCle(l.adresse)"
+  },
+  {
+    "nom": "la recherche ne regarde plus l'adresse",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviCle(l.adresse+' '+l.client)",
+    "vers": "suiviCle(l.client)"
+  },
+  {
+    "nom": "« Sans route » n'est plus rangé à la fin",
+    "fichier": "js/admin-suivi.js",
+    "de": "(a[0]==='Sans route')-(b[0]==='Sans route')||",
+    "vers": ""
+  },
+  {
+    "nom": "les sections se classent sans égard aux accents et aux majuscules : plus le cas",
+    "fichier": "js/admin-suivi.js",
+    "de": "a[0].localeCompare(b[0],'fr',{sensitivity:'base'})",
+    "vers": "(a[0]<b[0]?-1:1)"
+  },
+  {
+    "nom": "les clients d'une section ne suivent plus l'ordre de la route",
+    "fichier": "js/admin-suivi.js",
+    "de": "l.sort((x,y)=>x.ordre-y.ordre||x.adresse.localeCompare(y.adresse,'fr',{sensitivity:'base'}))",
+    "vers": "l.sort((x,y)=>x.adresse.localeCompare(y.adresse,'fr',{sensitivity:'base'}))"
+  },
+  {
+    "nom": "à égalité de place, l'adresse ne classe plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "l.sort((x,y)=>x.ordre-y.ordre||x.adresse.localeCompare(y.adresse,'fr',{sensitivity:'base'}))",
+    "vers": "l.sort((x,y)=>x.ordre-y.ordre)"
+  },
+  {
+    "nom": "le résumé compte « à faire » seulement les « à faire » (pas les retards ni les sans passage)",
+    "fichier": "js/admin-suivi.js",
+    "de": "aFaire:lignes.filter(l=>SUIVI_A_FAIRE.includes(l.etat)).length",
+    "vers": "aFaire:lignes.filter(l=>l.etat==='afaire').length"
+  },
+  {
+    "nom": "le résumé compte « sans passage » à l'envers",
+    "fichier": "js/admin-suivi.js",
+    "de": "aucun:lignes.filter(l=>l.etat==='aucun').length",
+    "vers": "aucun:lignes.filter(l=>l.etat!=='aucun').length"
+  },
+  {
+    "nom": "le résumé compte 1 par client au lieu des passages",
+    "fichier": "js/admin-suivi.js",
+    "de": "passages:lignes.reduce((s,l)=>s+l.total,0)",
+    "vers": "passages:lignes.reduce((s,l)=>s+1,0)"
+  },
+  {
+    "nom": "le libellé n'a plus de version sans nom (« undefined : adresse »)",
+    "fichier": "js/admin-suivi.js",
+    "de": "l.client?l.client+' : '+l.adresse:l.adresse",
+    "vers": "l.client+' : '+l.adresse"
+  },
+  {
+    "nom": "le libellé sépare par un tiret au lieu de « : »",
+    "fichier": "js/admin-suivi.js",
+    "de": "l.client?l.client+' : '+l.adresse:l.adresse",
+    "vers": "l.client?l.client+' - '+l.adresse:l.adresse"
+  },
+  {
+    "nom": "la date de départ par défaut est le 1er février",
+    "fichier": "js/admin-suivi.js",
+    "de": "return new Date().getFullYear()+'-01-01';",
+    "vers": "return new Date().getFullYear()+'-02-01';"
+  },
+  {
+    "nom": "une date de départ retenue illisible est acceptée telle quelle",
+    "fichier": "js/admin-suivi.js",
+    "de": "/^\\d{4}-\\d{2}-\\d{2}$/.test(v||'')?v:suiviDepuisParDefaut()",
+    "vers": "v||suiviDepuisParDefaut()"
+  },
+  {
+    "nom": "« aujourd'hui » est le 1er janvier 1970",
+    "fichier": "js/admin-suivi.js",
+    "de": "function suiviAujourdhui(){return suiviJourLocal(Date.now());}",
+    "vers": "function suiviAujourdhui(){return suiviJourLocal(0);}"
+  },
+  {
+    "nom": "la date de départ retenue est la même pour tous les services",
+    "fichier": "js/admin-suivi.js",
+    "de": "const v=suiviLire('lp_suivi_depuis_'+service);",
+    "vers": "const v=suiviLire('lp_suivi_depuis');"
+  },
+  {
+    "nom": "les pages lues font 500 lignes",
+    "fichier": "js/admin-suivi.js",
+    "de": "const SUIVI_PAGE=1000;",
+    "vers": "const SUIVI_PAGE=500;"
+  },
+  {
+    "nom": "la lecture s'arrête après une seule page",
+    "fichier": "js/admin-suivi.js",
+    "de": "const SUIVI_PAGES_MAX=60;",
+    "vers": "const SUIVI_PAGES_MAX=1;"
+  },
+  {
+    "nom": "la lecture continue jusqu'à une page VIDE (une requête de trop)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(page.length<SUIVI_PAGE) break;",
+    "vers": "if(page.length===0) break;"
+  },
+  {
+    "nom": "la lecture s'arrête quand la page est pleine (exactement 1000 lignes perdent la suite)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(page.length<SUIVI_PAGE) break;",
+    "vers": "if(page.length<=SUIVI_PAGE) break;"
+  },
+  {
+    "nom": "la lecture n'a plus d'ordre stable (pas de tri par identifiant)",
+    "fichier": "js/admin-suivi.js",
+    "de": ".order(ordre).order('id').range(",
+    "vers": ".order(ordre).range("
+  },
+  {
+    "nom": "une erreur de lecture est ignorée",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(r.error) throw r.error;\n    const page=",
+    "vers": "    const page="
+  },
+  {
+    "nom": "les types désactivés sont proposés comme services",
+    "fichier": "js/admin-suivi.js",
+    "de": ".filter(t=>t.actif!==false).forEach(t=>noms.add(t.nom));",
+    "vers": ".forEach(t=>noms.add(t.nom));"
+  },
+  {
+    "nom": "un service qui n'existe que dans un arrêt n'est plus proposé",
+    "fichier": "js/admin-suivi.js",
+    "de": "  (stops||[]).filter(s=>s.actif!==false&&s.service).forEach(s=>noms.add(s.service));\n",
+    "vers": ""
+  },
+  {
+    "nom": "les services ne sont plus rangés par ordre alphabétique",
+    "fichier": "js/admin-suivi.js",
+    "de": "return [...noms].sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base'}));",
+    "vers": "return [...noms];"
+  },
+  {
+    "nom": "une lecture plus vieille peut remplacer une plus récente",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(numero!==_suiviLecture) return null;",
+    "vers": ""
+  },
+  {
+    "nom": "le numéro de lecture n'avance plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "const numero=++_suiviLecture;",
+    "vers": "const numero=_suiviLecture;"
+  },
+  {
+    "nom": "le début de journée est décalé d'un mois",
+    "fichier": "js/admin-suivi.js",
+    "de": "Number(depuis.slice(5,7))-1,Number(depuis.slice(8,10))).toISOString();\n  const passages",
+    "vers": "Number(depuis.slice(5,7)),Number(depuis.slice(8,10))).toISOString();\n  const passages"
+  },
+  {
+    "nom": "les « Complété » sont lus depuis un jour sans heure (pas le début de la journée locale)",
+    "fichier": "js/admin-suivi.js",
+    "de": "q=>q.gte('complete_le',debutIso)",
+    "vers": "q=>q.gte('complete_le',depuis)"
+  },
+  {
+    "nom": "une erreur de lecture des dates à la main est prise pour « table absente »",
+    "fichier": "js/admin-suivi.js",
+    "de": "catch(e){if(suiviTableAbsente(e)) manuelsDispo=false; else throw e;}",
+    "vers": "catch(e){manuelsDispo=false;}"
+  },
+  {
+    "nom": "l'ouverture sans réseau tente quand même de lire",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!reseau.enLigne){\n    body.appendChild(suiviMessage('📴",
+    "vers": "  if(false){\n    body.appendChild(suiviMessage('📴"
+  },
+  {
+    "nom": "la première lecture ignore la date de départ retenue",
+    "fichier": "js/admin-suivi.js",
+    "de": "const depuisRetenu=suiviDepuisDe(suiviService||suiviLire('lp_suivi_service')||'Coupe de gazon');",
+    "vers": "const depuisRetenu=suiviDepuisParDefaut();"
+  },
+  {
+    "nom": "une panne de lecture n'est plus signalée au téléphone",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(typeof signalerEchecReseau==='function') signalerEchecReseau(e);\n    return;\n  }\n  if(!d||",
+    "vers": "    return;\n  }\n  if(!d||"
+  },
+  {
+    "nom": "un changement d'onglet pendant la lecture ne l'arrête plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!d||_adminOnglet!=='suivi') return;",
+    "vers": "if(!d) return;"
+  },
+  {
+    "nom": "le service retenu n'est plus relu à l'ouverture",
+    "fichier": "js/admin-suivi.js",
+    "de": "    const retenu=suiviLire('lp_suivi_service');",
+    "vers": "    const retenu=null;"
+  },
+  {
+    "nom": "le service de départ n'est plus la coupe de gazon",
+    "fichier": "js/admin-suivi.js",
+    "de": "d.services.includes('Coupe de gazon')?'Coupe de gazon':(d.services[0]||null)",
+    "vers": "(d.services[0]||null)"
+  },
+  {
+    "nom": "la relecture avec la date du service retenu est retirée",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(suiviService&&suiviDepuisDe(suiviService)!==d.depuis){",
+    "vers": "    if(false){"
+  },
+  {
+    "nom": "la puce du service n'est plus « appuyée » pour les lecteurs d'écran",
+    "fichier": "js/admin-suivi.js",
+    "de": "    b.setAttribute('aria-pressed',nom===suiviService?'true':'false');\n",
+    "vers": ""
+  },
+  {
+    "nom": "la date de départ affichée est vide",
+    "fichier": "js/admin-suivi.js",
+    "de": "iDepuis.type='date';iDepuis.id='su-depuis';iDepuis.value=d.depuis;",
+    "vers": "iDepuis.type='date';iDepuis.id='su-depuis';"
+  },
+  {
+    "nom": "le rythme peut aller jusqu'à 366 dans le champ",
+    "fichier": "js/admin-suivi.js",
+    "de": "iRythme.min='1';iRythme.max='365';",
+    "vers": "iRythme.min='1';iRythme.max='366';"
+  },
+  {
+    "nom": "le rythme peut être 0 dans le champ",
+    "fichier": "js/admin-suivi.js",
+    "de": "iRythme.min='1';iRythme.max='365';",
+    "vers": "iRythme.min='0';iRythme.max='365';"
+  },
+  {
+    "nom": "un rythme vide s'écrit « null » dans le champ",
+    "fichier": "js/admin-suivi.js",
+    "de": "iRythme.value=rythme===null?'':String(rythme);",
+    "vers": "iRythme.value=String(rythme);"
+  },
+  {
+    "nom": "les puces de filtre ne savent plus qui elles sont (dataset)",
+    "fichier": "js/admin-suivi.js",
+    "de": "    b.dataset.filtre=id;\n",
+    "vers": ""
+  },
+  {
+    "nom": "toutes les puces de filtre s'allument ensemble",
+    "fichier": "js/admin-suivi.js",
+    "de": "x.className='su-puce'+(x.dataset.filtre===suiviFiltre?' on':'')",
+    "vers": "x.className='su-puce on'"
+  },
+  {
+    "nom": "la recherche ne redessine plus la liste",
+    "fichier": "js/admin-suivi.js",
+    "de": "iRech.oninput=()=>{suiviRecherche=iRech.value;renderSuiviListe();};",
+    "vers": "iRech.oninput=()=>{suiviRecherche=iRech.value;};"
+  },
+  {
+    "nom": "le message « dates à la main pas activées » n'apparaît plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!d.manuelsDispo) body.appendChild(",
+    "vers": "if(false) body.appendChild("
+  },
+  {
+    "nom": "« 1 clients » : le pluriel du résumé est toujours mis",
+    "fichier": "js/admin-suivi.js",
+    "de": "resume.clients+' client'+(resume.clients>1?'s':'')",
+    "vers": "resume.clients+' client'+'s'"
+  },
+  {
+    "nom": "le résumé mélange « à faire » et « sans passage »",
+    "fichier": "js/admin-suivi.js",
+    "de": "(rythme?' · '+resume.aFaire+' à faire':' · '+resume.aucun+' sans passage')",
+    "vers": "(!rythme?' · '+resume.aFaire+' à faire':' · '+resume.aucun+' sans passage')"
+  },
+  {
+    "nom": "les deux messages « aucun client » sont échangés",
+    "fichier": "js/admin-suivi.js",
+    "de": "toutes.length?'Aucun client ne correspond.':'Aucun client pour ce service.'",
+    "vers": "toutes.length?'Aucun client pour ce service.':'Aucun client ne correspond.'"
+  },
+  {
+    "nom": "« 1 clients » : le pluriel d'une section est toujours mis",
+    "fichier": "js/admin-suivi.js",
+    "de": "sec.lignes.length+' client'+(sec.lignes.length>1?'s':'')",
+    "vers": "sec.lignes.length+' client'+'s'"
+  },
+  {
+    "nom": "le bouton « une date pour plusieurs clients » ne fait rien",
+    "fichier": "js/admin-suivi.js",
+    "de": "bLot.onclick=()=>suiviDialogueLot();",
+    "vers": "bLot.onclick=()=>{};"
+  },
+  {
+    "nom": "le bouton « Actualiser » ne fait rien",
+    "fichier": "js/admin-suivi.js",
+    "de": "bMaj.onclick=()=>suiviOuvrir();",
+    "vers": "bMaj.onclick=()=>{};"
+  },
+  {
+    "nom": "la ligne montre l'adresse au lieu du nom du client",
+    "fichier": "js/admin-suivi.js",
+    "de": "numero+' · '+(l.client||l.adresse)",
+    "vers": "numero+' · '+l.adresse"
+  },
+  {
+    "nom": "toucher le nom du client n'ouvre plus le détail",
+    "fichier": "js/admin-suivi.js",
+    "de": "nom.onclick=()=>suiviDialogueDetail(l);",
+    "vers": "nom.onclick=()=>{};"
+  },
+  {
+    "nom": "un client « neutre » reçoit un badge vide",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(l.etat!=='neutre'){",
+    "vers": "if(true){"
+  },
+  {
+    "nom": "le badge n'indique plus les jours",
+    "fichier": "js/admin-suivi.js",
+    "de": "(SUIVI_TEXTE_ETAT[l.etat]+' · '+l.jours+' j')",
+    "vers": "SUIVI_TEXTE_ETAT[l.etat]"
+  },
+  {
+    "nom": "« 1 passages » : le pluriel du nombre de passages est toujours mis",
+    "fichier": "js/admin-suivi.js",
+    "de": "l.total+' passage'+(l.total>1?'s':'')",
+    "vers": "l.total+' passage'+'s'"
+  },
+  {
+    "nom": "l'adresse sous le nom n'est plus montrée",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(l.client) div.appendChild(suiviEl('div','su-adresse',l.adresse));\n",
+    "vers": ""
+  },
+  {
+    "nom": "une date à la main n'est plus un bouton",
+    "fichier": "js/admin-suivi.js",
+    "de": "x.manuel&&!x.app?'button':'span'",
+    "vers": "'span'"
+  },
+  {
+    "nom": "une date à la main n'a plus sa classe « manuel »",
+    "fichier": "js/admin-suivi.js",
+    "de": "'su-date'+(x.manuel&&!x.app?' manuel':'')",
+    "vers": "'su-date'"
+  },
+  {
+    "nom": "toucher une date à la main ne la retire plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "p.onclick=()=>suiviRetirerManuel(l,x);",
+    "vers": ""
+  },
+  {
+    "nom": "l'info-bulle d'une date à la main est vide",
+    "fichier": "js/admin-suivi.js",
+    "de": "p.title=x.manuel.note?('Noté à la main : '+x.manuel.note):'Noté à la main : toucher pour le retirer';",
+    "vers": "p.title='';"
+  },
+  {
+    "nom": "la date à la main n'a plus de nom pour les lecteurs d'écran",
+    "fichier": "js/admin-suivi.js",
+    "de": "      p.setAttribute('aria-label','Date notée à la main, '+suiviDateCourte(x.jour,annee)+' : toucher pour la retirer');\n",
+    "vers": ""
+  },
+  {
+    "nom": "« ＋ date » n'ouvre plus la fenêtre",
+    "fichier": "js/admin-suivi.js",
+    "de": "plus.onclick=()=>suiviDialogueDate(l);",
+    "vers": "plus.onclick=()=>{};"
+  },
+  {
+    "nom": "« ＋ date » n'a plus de nom pour les lecteurs d'écran",
+    "fichier": "js/admin-suivi.js",
+    "de": "  plus.setAttribute('aria-label','Ajouter une date pour '+suiviLibelle(l));\n",
+    "vers": ""
+  },
+  {
+    "nom": "« En retard » est écrit « Retard »",
+    "fichier": "js/admin-suivi.js",
+    "de": "retard:'En retard'",
+    "vers": "retard:'Retard'"
+  },
+  {
+    "nom": "« À jour » est écrit « OK »",
+    "fichier": "js/admin-suivi.js",
+    "de": "ok:'À jour'",
+    "vers": "ok:'OK'"
+  },
+  {
+    "nom": "le service choisi n'est plus retenu",
+    "fichier": "js/admin-suivi.js",
+    "de": "  suiviEcrire('lp_suivi_service',nom);\n",
+    "vers": ""
+  },
+  {
+    "nom": "changer de service ne relit plus avec la date de départ de ce service",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(suiviDonnees&&depuis!==suiviDonnees.depuis){",
+    "vers": "  if(false){"
+  },
+  {
+    "nom": "une date de départ vide ou illisible est acceptée",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(valeur||'')||valeur<'2000-01-01'){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "une date de départ d'avant 2000 est acceptée",
+    "fichier": "js/admin-suivi.js",
+    "de": "||valeur<'2000-01-01'){toast('⚠ Choisis une date de départ')",
+    "vers": "){toast('⚠ Choisis une date de départ')"
+  },
+  {
+    "nom": "la date de départ choisie n'est pas retenue",
+    "fichier": "js/admin-suivi.js",
+    "de": "  suiviEcrire('lp_suivi_depuis_'+suiviService,valeur);\n",
+    "vers": ""
+  },
+  {
+    "nom": "un rythme vide devient 0 (au lieu d'aucun rythme)",
+    "fichier": "js/admin-suivi.js",
+    "de": "const v=texte===''?null:Number(texte);",
+    "vers": "const v=Number(texte);"
+  },
+  {
+    "nom": "un rythme décimal (7,5) est accepté",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(v!==null&&(!Number.isInteger(v)||v<1||v>365)){",
+    "vers": "if(v!==null&&(v<1||v>365)){"
+  },
+  {
+    "nom": "les bornes du rythme sont 0 et 366",
+    "fichier": "js/admin-suivi.js",
+    "de": "v<1||v>365)){\n    toast('⚠ Le rythme",
+    "vers": "v<0||v>366)){\n    toast('⚠ Le rythme"
+  },
+  {
+    "nom": "hors réseau, le rythme est écrit quand même",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!reseau.enLigne){toast('📴 Pas de réseau : le rythme ne peut pas être enregistré maintenant.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "le rythme est écrit pour TOUS les services (aucun filtre sur le nom)",
+    "fichier": "js/admin-suivi.js",
+    "de": ".update({frequence_jours:v}).eq('nom',suiviService).select('nom')",
+    "vers": ".update({frequence_jours:v}).select('nom')"
+  },
+  {
+    "nom": "l'écriture du rythme ne demande pas la réponse",
+    "fichier": "js/admin-suivi.js",
+    "de": ".update({frequence_jours:v}).eq('nom',suiviService).select('nom')",
+    "vers": ".update({frequence_jours:v}).eq('nom',suiviService)"
+  },
+  {
+    "nom": "« aucune ligne changée » est pris pour une réussite (le rythme)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!r||!Array.isArray(r.data)||!r.data.length){\n      toast('❌ Ce service",
+    "vers": "if(!r||!Array.isArray(r.data)){\n      toast('❌ Ce service"
+  },
+  {
+    "nom": "le rythme choisi n'est pas gardé dans l'écran",
+    "fichier": "js/admin-suivi.js",
+    "de": "    suiviDonnees.rythmes[suiviService]=v;\n",
+    "vers": ""
+  },
+  {
+    "nom": "le message du rythme choisi est changé",
+    "fichier": "js/admin-suivi.js",
+    "de": "'✔ Rythme : tous les '+v+' jours'",
+    "vers": "'OK'"
+  },
+  {
+    "nom": "la feuille ne s'ouvre plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "document.getElementById('suivi-feuille-overlay').classList.add('open');",
+    "vers": ""
+  },
+  {
+    "nom": "la feuille ne se ferme plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "  document.getElementById('suivi-feuille-overlay').classList.remove('open');\n}\nfunction suiviBgFeuille",
+    "vers": "}\nfunction suiviBgFeuille"
+  },
+  {
+    "nom": "toucher n'importe où ferme la feuille (même dedans)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(e.target===document.getElementById('suivi-feuille-overlay')) suiviFermerFeuille();",
+    "vers": "suiviFermerFeuille();"
+  },
+  {
+    "nom": "toucher le fond sombre ne ferme plus la feuille",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(e.target===document.getElementById('suivi-feuille-overlay')) suiviFermerFeuille();",
+    "vers": ""
+  },
+  {
+    "nom": "« Annuler » ne ferme plus la feuille",
+    "fichier": "js/admin-suivi.js",
+    "de": "bNon.onclick=suiviFermerFeuille;",
+    "vers": ""
+  },
+  {
+    "nom": "la date proposée au départ n'est plus aujourd'hui",
+    "fichier": "js/admin-suivi.js",
+    "de": "  i.value=suiviAujourdhui();\n",
+    "vers": ""
+  },
+  {
+    "nom": "la date du champ n'a plus de maximum (le futur est proposé)",
+    "fichier": "js/admin-suivi.js",
+    "de": "  i.max=suiviAujourdhui();\n",
+    "vers": ""
+  },
+  {
+    "nom": "la date du champ n'a plus de minimum",
+    "fichier": "js/admin-suivi.js",
+    "de": "  i.min='2000-01-01';\n",
+    "vers": ""
+  },
+  {
+    "nom": "une date vide ou illisible est acceptée",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(jour||'')) return 'Choisis la date du passage.';\n",
+    "vers": ""
+  },
+  {
+    "nom": "aujourd'hui est refusé (>= au lieu de >)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(jour>suiviAujourdhui()) return 'Cette date est dans le futur.';",
+    "vers": "if(jour>=suiviAujourdhui()) return 'Cette date est dans le futur.';"
+  },
+  {
+    "nom": "une date dans le futur est acceptée",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(jour>suiviAujourdhui()) return 'Cette date est dans le futur.';\n",
+    "vers": ""
+  },
+  {
+    "nom": "une date d'avant 2000 est acceptée pour un passage",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(jour<'2000-01-01') return 'Cette date est trop ancienne.';\n",
+    "vers": ""
+  },
+  {
+    "nom": "la fenêtre d'un passage ne nomme plus le client",
+    "fichier": "js/admin-suivi.js",
+    "de": "  corps.appendChild(suiviEl('div','su-cible',suiviLibelle(l)));\n  const iDate",
+    "vers": "  const iDate"
+  },
+  {
+    "nom": "la note peut faire 20 caractères seulement",
+    "fichier": "js/admin-suivi.js",
+    "de": "iNote.type='text';iNote.maxLength=200;",
+    "vers": "iNote.type='text';iNote.maxLength=20;"
+  },
+  {
+    "nom": "le passage est noté sur la COPIE du client au lieu de la référence",
+    "fichier": "js/admin-suivi.js",
+    "de": "{stop_id:l.arretRef,jour:iDate.value,note:(iNote.value||'').trim()||null}",
+    "vers": "{stop_id:l.arretIds[1],jour:iDate.value,note:(iNote.value||'').trim()||null}"
+  },
+  {
+    "nom": "la note n'est plus nettoyée (espaces gardés)",
+    "fichier": "js/admin-suivi.js",
+    "de": "note:(iNote.value||'').trim()||null}",
+    "vers": "note:iNote.value||null}"
+  },
+  {
+    "nom": "une note vide est envoyée comme un texte vide au lieu de null",
+    "fichier": "js/admin-suivi.js",
+    "de": "note:(iNote.value||'').trim()||null}",
+    "vers": "note:(iNote.value||'').trim()}"
+  },
+  {
+    "nom": "un échec d'écriture ferme quand même la fenêtre avec « Passage noté »",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(nouveaux===null) return;\n    if(nouveaux===0){toast('Cette date",
+    "vers": "    if(nouveaux===0){toast('Cette date"
+  },
+  {
+    "nom": "une date déjà notée est traitée comme une réussite",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(nouveaux===0){toast('Cette date est déjà notée pour ce client.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "la fenêtre d'un passage ne se ferme pas après l'enregistrement",
+    "fichier": "js/admin-suivi.js",
+    "de": "    suiviFermerFeuille();\n    toast('✔ Passage noté : '",
+    "vers": "    toast('✔ Passage noté : '"
+  },
+  {
+    "nom": "la liste « plusieurs clients » ignore le filtre et la recherche",
+    "fichier": "js/admin-suivi.js",
+    "de": "const lignes=suiviGrouper(suiviFiltrer(suiviLignes(),suiviFiltre,suiviRecherche)).flatMap(s=>s.lignes);",
+    "vers": "const lignes=suiviGrouper(suiviLignes()).flatMap(s=>s.lignes);"
+  },
+  {
+    "nom": "« aucun client à cocher » n'est plus signalé",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!lignes.length){toast('Aucun client à cocher.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "« Tout cocher » décoche",
+    "fichier": "js/admin-suivi.js",
+    "de": "bTout.onclick=()=>{cases.forEach(c=>{c.input.checked=true;});majBoutonLot();};",
+    "vers": "bTout.onclick=()=>{cases.forEach(c=>{c.input.checked=false;});majBoutonLot();};"
+  },
+  {
+    "nom": "« Tout décocher » coche",
+    "fichier": "js/admin-suivi.js",
+    "de": "bRien.onclick=()=>{cases.forEach(c=>{c.input.checked=false;});majBoutonLot();};",
+    "vers": "bRien.onclick=()=>{cases.forEach(c=>{c.input.checked=true;});majBoutonLot();};"
+  },
+  {
+    "nom": "le bouton « Enregistrer (N) » ne compte plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "bOk.textContent=n?'Enregistrer ('+n+')':'Enregistrer';",
+    "vers": "bOk.textContent='Enregistrer';"
+  },
+  {
+    "nom": "cocher une case ne met plus le bouton à jour",
+    "fichier": "js/admin-suivi.js",
+    "de": "    input.onchange=()=>majBoutonLot();\n",
+    "vers": ""
+  },
+  {
+    "nom": "les titres de section de la liste à cocher disparaissent",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(l.section!==section){section=l.section;liste.appendChild(suiviEl('div','su-cases-section',section));}",
+    "vers": ""
+  },
+  {
+    "nom": "toutes les cases sont enregistrées, cochées ou non",
+    "fichier": "js/admin-suivi.js",
+    "de": "const choisis=cases.filter(c=>c.input.checked).map(c=>c.l);",
+    "vers": "const choisis=cases.map(c=>c.l);"
+  },
+  {
+    "nom": "« Coche au moins un client » n'est plus vérifié",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(!choisis.length){toast('⚠ Coche au moins un client.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "les passages en lot portent une note vide au lieu de null",
+    "fichier": "js/admin-suivi.js",
+    "de": "stop_id:l.arretRef,jour:iDate.value,note:null}))",
+    "vers": "stop_id:l.arretRef,jour:iDate.value,note:''}))"
+  },
+  {
+    "nom": "le message du lot oublie les dates déjà notées",
+    "fichier": "js/admin-suivi.js",
+    "de": "const deja=choisis.length-nouveaux;",
+    "vers": "const deja=0;"
+  },
+  {
+    "nom": "les dates à la main ne s'écrivent plus si une écriture est déjà en cours : contrôle retiré",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(_suiviOccupe) return null;\n",
+    "vers": ""
+  },
+  {
+    "nom": "hors réseau, les dates sont écrites quand même",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!reseau.enLigne){toast('📴 Pas de réseau : les dates ne peuvent pas être enregistrées maintenant.');return null;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "la table absente n'est plus détectée avant d'écrire",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(suiviDonnees&&suiviDonnees.manuelsDispo===false){toast(",
+    "vers": "  if(false){toast("
+  },
+  {
+    "nom": "le conflit se règle sur le jour seul",
+    "fichier": "js/admin-suivi.js",
+    "de": "{onConflict:'stop_id,jour',ignoreDuplicates:true}",
+    "vers": "{onConflict:'jour',ignoreDuplicates:true}"
+  },
+  {
+    "nom": "une date déjà notée est remplacée au lieu d'être ignorée",
+    "fichier": "js/admin-suivi.js",
+    "de": "{onConflict:'stop_id,jour',ignoreDuplicates:true}",
+    "vers": "{onConflict:'stop_id,jour',ignoreDuplicates:false}"
+  },
+  {
+    "nom": "l'écriture ne redemande que l'identifiant",
+    "fichier": "js/admin-suivi.js",
+    "de": ".select('id, stop_id, jour, note');",
+    "vers": ".select('id');"
+  },
+  {
+    "nom": "les dates notées ne sont pas gardées dans l'écran",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviDonnees.manuels.push({id:a.id,stop_id:a.stop_id,jour:String(a.jour).slice(0,10),note:a.note||null});",
+    "vers": ""
+  },
+  {
+    "nom": "l'écran n'est pas redessiné après une écriture",
+    "fichier": "js/admin-suivi.js",
+    "de": "    renderSuiviListe();\n    return ajoutees.length;",
+    "vers": "    return ajoutees.length;"
+  },
+  {
+    "nom": "le nombre de nouvelles dates est celui des dates envoyées",
+    "fichier": "js/admin-suivi.js",
+    "de": "    return ajoutees.length;",
+    "vers": "    return rows.length;"
+  },
+  {
+    "nom": "une écriture qui échoue laisse l'écran bloqué (le verrou n'est pas retiré)",
+    "fichier": "js/admin-suivi.js",
+    "de": "    _suiviOccupe=false;\n    showSync(false);\n  }\n}\n\n// Toucher une date notée",
+    "vers": "    showSync(false);\n  }\n}\n\n// Toucher une date notée"
+  },
+  {
+    "nom": "retirer une date ne demande plus de confirmation",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!(await confirmer('Retirer cette date ?',",
+    "vers": "if(false&&!(await confirmer('Retirer cette date ?',"
+  },
+  {
+    "nom": "les boutons de la confirmation « Retirer » sont échangés",
+    "fichier": "js/admin-suivi.js",
+    "de": "'Retirer','Garder'))) return;",
+    "vers": "'Garder','Retirer'))) return;"
+  },
+  {
+    "nom": "retirer une date supprime TOUTES les dates (aucun filtre sur l'identifiant)",
+    "fichier": "js/admin-suivi.js",
+    "de": ".delete().eq('id',x.manuel.id).select('id')",
+    "vers": ".delete().select('id')"
+  },
+  {
+    "nom": "« aucune ligne changée » est pris pour une réussite (retirer)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!r||!Array.isArray(r.data)||!r.data.length){toast('❌ La date n’a pas pu être retirée (déjà retirée, ou accès refusé).');return;}",
+    "vers": "if(!r||!Array.isArray(r.data)){toast('❌ La date n’a pas pu être retirée (déjà retirée, ou accès refusé).');return;}"
+  },
+  {
+    "nom": "la date retirée reste dans l'écran",
+    "fichier": "js/admin-suivi.js",
+    "de": "    suiviDonnees.manuels=suiviDonnees.manuels.filter(m=>m.id!==x.manuel.id);\n",
+    "vers": ""
+  },
+  {
+    "nom": "aucun message après avoir retiré une date",
+    "fichier": "js/admin-suivi.js",
+    "de": "    toast('🗑 Date retirée');\n",
+    "vers": ""
+  },
+  {
+    "nom": "hors réseau, une date est retirée quand même",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!reseau.enLigne){toast('📴 Pas de réseau : la date ne peut pas être retirée maintenant.');return;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "le détail ne lit que l'arrêt de référence (pas les copies)",
+    "fichier": "js/admin-suivi.js",
+    "de": "passes(equipes(nom))').in('stop_id',l.arretIds)",
+    "vers": "passes(equipes(nom))').in('stop_id',[l.arretRef])"
+  },
+  {
+    "nom": "le détail de repli ne lit que l'arrêt de référence (pas les copies)",
+    "fichier": "js/admin-suivi.js",
+    "de": "select('complete_le').in('stop_id',l.arretIds)",
+    "vers": "select('complete_le').in('stop_id',[l.arretRef])"
+  },
+  {
+    "nom": "le détail de repli lit aussi les passages d'avant la date de départ",
+    "fichier": "js/admin-suivi.js",
+    "de": "select('complete_le').in('stop_id',l.arretIds).gte('complete_le',debutIso)",
+    "vers": "select('complete_le').in('stop_id',l.arretIds)"
+  },
+  {
+    "nom": "le détail lit aussi les passages d'avant la date de départ",
+    "fichier": "js/admin-suivi.js",
+    "de": "    let r=await db.from('passe_arrets').select('complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds).gte('complete_le',debutIso)",
+    "vers": "    let r=await db.from('passe_arrets').select('complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds)"
+  },
+  {
+    "nom": "le détail est lu du plus vieux au plus récent (les lignes de la lecture)",
+    "fichier": "js/admin-suivi.js",
+    "de": ".order('complete_le',{ascending:false});\n    if(r.error) r=await",
+    "vers": ".order('complete_le',{ascending:true});\n    if(r.error) r=await"
+  },
+  {
+    "nom": "sans lien avec les personnes, le détail plante au lieu de relire les dates seules",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(r.error) r=await db.from('passe_arrets').select('complete_le')",
+    "vers": "    if(false) r=await db.from('passe_arrets').select('complete_le')"
+  },
+  {
+    "nom": "« Chargement… » reste affiché dans le détail",
+    "fichier": "js/admin-suivi.js",
+    "de": "  chargement.remove();\n",
+    "vers": ""
+  },
+  {
+    "nom": "le détail montre aussi les dates à la main qui sont des « Complété »",
+    "fichier": "js/admin-suivi.js",
+    "de": "l.dates.filter(x=>x.manuel&&!x.app).forEach(",
+    "vers": "l.dates.filter(x=>x.manuel).forEach("
+  },
+  {
+    "nom": "le détail classe du plus vieux au plus récent",
+    "fichier": "js/admin-suivi.js",
+    "de": "  tout.sort((a,b)=>b.jour.localeCompare(a.jour));",
+    "vers": "  tout.sort((a,b)=>a.jour.localeCompare(b.jour));"
+  },
+  {
+    "nom": "la personne et le camion sont séparés par une barre",
+    "fichier": "js/admin-suivi.js",
+    "de": "[qui,camion].filter(Boolean).join(' · ')",
+    "vers": "[qui,camion].filter(Boolean).join(' / ')"
+  },
+  {
+    "nom": "« Aucun passage depuis le … » a toujours un point de plus",
+    "fichier": "js/admin-suivi.js",
+    "de": "(depuis.endsWith('.')?'':'.')",
+    "vers": "'.'"
+  },
+  {
+    "nom": "l'adresse n'est plus sous le titre du détail",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(l.client) corps.appendChild(suiviEl('div','su-cible',l.adresse));\n  const chargement",
+    "vers": "  const chargement"
+  },
+  {
+    "nom": "le titre du détail est l'adresse même quand il y a un nom",
+    "fichier": "js/admin-suivi.js",
+    "de": "const corps=suiviOuvrirFeuille(l.client||l.adresse);",
+    "vers": "const corps=suiviOuvrirFeuille(l.adresse);"
+  },
+  {
+    "nom": "une erreur du détail n'est plus dite",
+    "fichier": "js/admin-suivi.js",
+    "de": "    chargement.textContent='❌ Impossible de charger le détail.';\n",
+    "vers": ""
+  },
+  {
+    "nom": "« Aucun passage depuis… » disparaît du détail",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(!tout.length){",
+    "vers": "  if(false){"
+  },
+  {
+    "nom": "l'onglet Suivi n'est plus dans le panneau",
+    "fichier": "js/admin.js",
+    "de": "    {id:'suivi',icone:'📋',label:'Suivi',titre:'Suivi des passages',charger:(typeof chargerSuiviAdmin==='function')?chargerSuiviAdmin:null},\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'onglet Suivi s'appelle « Suivis »",
+    "fichier": "js/admin.js",
+    "de": "label:'Suivi',titre",
+    "vers": "label:'Suivis',titre"
+  },
+  {
+    "nom": "l'onglet Suivi a un autre titre",
+    "fichier": "js/admin.js",
+    "de": "titre:'Suivi des passages'",
+    "vers": "titre:'Suivi'"
+  },
+  {
+    "nom": "l'onglet Suivi plante si le fichier n'est pas chargé (plus de repli sûr)",
+    "fichier": "js/admin.js",
+    "de": "charger:(typeof chargerSuiviAdmin==='function')?chargerSuiviAdmin:null}",
+    "vers": "charger:chargerSuiviAdmin}"
+  },
+  {
+    "nom": "la page ne charge plus admin-suivi.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/admin-suivi.js\"></script>",
+    "vers": ""
+  },
+  {
+    "nom": "un toucher sur le fond de la feuille n'est plus relié",
+    "fichier": "index.html",
+    "de": "onclick=\"suiviBgFeuille(event)\"",
+    "vers": ""
+  },
+  {
+    "nom": "la feuille du Suivi n'est plus une boîte de dialogue modale",
+    "fichier": "index.html",
+    "de": "role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"suivi-feuille-titre\"",
+    "vers": "role=\"dialog\" aria-labelledby=\"suivi-feuille-titre\""
+  },
+  {
+    "nom": "le titre de la feuille perd son identifiant",
+    "fichier": "index.html",
+    "de": "<h2 id=\"suivi-feuille-titre\">Suivi</h2>",
+    "vers": "<h2>Suivi</h2>"
+  },
+  {
+    "nom": "le corps de la feuille perd son identifiant",
+    "fichier": "index.html",
+    "de": "<div id=\"suivi-feuille-corps\"></div>",
+    "vers": "<div></div>"
+  },
+  {
+    "nom": "la feuille passe SOUS le panneau d'administration (z-index 1000)",
+    "fichier": "css/style.css",
+    "de": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}",
+    "vers": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;align-items:flex-end;padding-bottom:var(--sa-bottom);}"
+  },
+  {
+    "nom": "la feuille n'est plus alignée en bas",
+    "fichier": "css/style.css",
+    "de": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}",
+    "vers": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;padding-bottom:var(--sa-bottom);}"
+  },
+  {
+    "nom": "la feuille oublie la zone sûre du bas (iPhone)",
+    "fichier": "css/style.css",
+    "de": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}",
+    "vers": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}"
+  },
+  {
+    "nom": "la feuille n'est plus cachée au départ",
+    "fichier": "css/style.css",
+    "de": "#suivi-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}",
+    "vers": "#suivi-feuille-overlay{display:flex;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}"
+  },
+  {
+    "nom": "le contenu de la feuille ne défile plus",
+    "fichier": "css/style.css",
+    "de": "max-height:85vh;overflow-y:auto;animation:slideUp .25s ease;}\n#suivi-feuille h2",
+    "vers": "max-height:85vh;animation:slideUp .25s ease;}\n#suivi-feuille h2"
+  },
+  {
+    "nom": "la liste à cocher ne défile plus",
+    "fichier": "css/style.css",
+    "de": ".su-cases{max-height:38vh;overflow-y:auto;",
+    "vers": ".su-cases{max-height:38vh;"
+  },
+  {
+    "nom": "le badge « à jour » n'est plus vert",
+    "fichier": "css/style.css",
+    "de": ".su-badge.ok{background:rgba(74,222,128,.15);color:#4ade80;}",
+    "vers": ".su-badge.ok{background:rgba(74,222,128,.15);color:#ffffff;}"
+  },
+  {
+    "nom": "le badge « à faire » n'est plus jaune",
+    "fichier": "css/style.css",
+    "de": ".su-badge.afaire{background:rgba(251,191,36,.15);color:#fbbf24;}",
+    "vers": ".su-badge.afaire{background:rgba(251,191,36,.15);color:#ffffff;}"
+  },
+  {
+    "nom": "le badge « en retard » n'est plus rouge",
+    "fichier": "css/style.css",
+    "de": ".su-badge.retard,.su-badge.aucun{background:rgba(239,68,68,.15);color:#ef4444;}",
+    "vers": ".su-badge.retard,.su-badge.aucun{background:rgba(239,68,68,.15);color:#ffffff;}"
+  },
+  {
+    "nom": "une date à la main n'est plus en pointillés bleus",
+    "fichier": "css/style.css",
+    "de": ".su-date.manuel{border-style:dashed;border-color:#60a5fa;",
+    "vers": ".su-date.manuel{border-style:solid;border-color:#252d3a;"
+  },
+  {
+    "nom": "la puce allumée n'a plus la couleur d'accent",
+    "fichier": "css/style.css",
+    "de": ".su-puce.on{background:var(--accent);",
+    "vers": ".su-puce.on{background:#000000;"
+  },
+  {
+    "nom": "les puces de service ne défilent plus de côté",
+    "fichier": "css/style.css",
+    "de": ".su-puces{display:flex;gap:6px;overflow-x:auto;",
+    "vers": ".su-puces{display:flex;gap:6px;"
+  },
+  {
+    "nom": "la règle « .su-detail-qui » n'existe plus",
+    "fichier": "css/style.css",
+    "de": ".su-detail-qui{",
+    "vers": ".su-detail-autre{"
+  },
+  {
+    "nom": "la règle « .su-case » n'existe plus",
+    "fichier": "css/style.css",
+    "de": ".su-case{display:flex;",
+    "vers": ".su-caseX{display:flex;"
+  }
+]

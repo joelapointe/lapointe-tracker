@@ -74,7 +74,7 @@
 
 <div id="stop-card">
   <div id="sc-head">
-    <div><div id="sc-addr">—</div><div id="sc-svc">—</div><div id="sc-cli"></div><div id="sc-tour"></div><div id="sc-prob"></div></div>
+    <div><div id="sc-addr">—</div><div id="sc-svc">—</div><div id="sc-cli"></div><div id="sc-tour"></div><div id="sc-prob"></div><button type="button" id="btn-zone" class="sc-zone" onclick="modifierZoneArret()" style="display:none">✏ Modifier la zone</button></div>
     <button id="sc-x" onclick="closeCard()">✕</button>
   </div>
   <div id="sc-acts">
@@ -83,6 +83,17 @@
 	  <button class="scb skip" onclick="closeCard()">Passer</button>
 	<button class="scb prob" onclick="openProbleme()">⚠ Problème</button>
     <button id="btn-del" class="scb del" onclick="deleteStop()">🗑</button>
+  </div>
+</div>
+
+<!-- DESSINER LA ZONE D'UN TERRAIN (zone-terrain.js) : une barre qui recouvre la barre du bas le temps que les 4 coins se déplacent -->
+<div id="zone-barre" role="group" aria-label="Zone du terrain">
+  <div id="zone-titre">✏ Glisse les coins sur le terrain</div>
+  <div id="zone-ligne"><div id="zone-adresse"></div><div id="zone-info"></div></div>
+  <div id="zone-actions">
+    <button type="button" id="zone-ok" class="zb ok" onclick="zoneEnregistrer()">✔ Enregistrer</button>
+    <button type="button" id="zone-sans" class="zb sec" onclick="zoneSansZone()">Passer (sans zone)</button>
+    <button type="button" id="zone-annuler" class="zb non" onclick="zoneAnnuler()" aria-label="Annuler">✕</button>
   </div>
 </div>
 
@@ -437,6 +448,7 @@
 <script src="js/parcours.js"></script>
 <script src="js/tracking.js"></script>
 <script src="js/placement.js"></script>
+<script src="js/zone-terrain.js"></script>
 <script src="js/demarrage.js"></script>
 </body>
 </html>

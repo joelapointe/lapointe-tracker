@@ -562,6 +562,7 @@ log('\n=== CARTE.JS, POSITION.JS ET LE RESTE DU CÂBLAGE ===');
   vrai('arrets.js : ouvrir une fiche met le suivi en pause AVANT que la carte s\'envole vers le client', /suspendreSuiviCarte\(\);[^\n]*\n\s*map\.flyTo\(\[s\.lat,s\.lon\]/.test(arr));
   vrai('arrets.js : fermer la fiche reprend le suivi', /function closeCard\(\)\{[^}]*reprendreSuiviCarte\(\)/s.test(arr));
   vrai('liste-arrets.js : ajouter un arrêt arrête le suivi AVANT que la carte s\'envole vers lui', /arreterSuiviCarte\(\);[^\n]*\n\s*map\.flyTo\(\[saved\.lat,saved\.lon\]/.test(lst));
+  vrai('liste-arrets.js : « ＋ Nouveau stop » arrête aussi le suivi AVANT d\'ouvrir l\'éditeur de zone (la carte va vers l\'adresse ; demande 3)', /arreterSuiviCarte\(\);[^\n]*\n\s*demarrerEditeurZone\(\{/.test(lst));
   vrai('placement.js : « Placer sur la carte » (4 points touchés) arrête le suivi : la carte ne bouge pas toute seule pendant qu\'on touche ses coins', /function activerPlacement\(\)\{\s*if\(typeof arreterSuiviCarte==='function'\) arreterSuiviCarte\(\);/.test(lire('js/placement.js')));
   vrai('vehicules.js : la bulle d\'un camion n\'est redessinée que si son texte change', /if\(m\._bulleHtml!==bulle\)\{m\._bulleHtml=bulle;m\.setPopupContent\(bulle\);\}/.test(veh));
   vrai('suivi-carte.js : la bulle est rafraîchie APRÈS le toucher (setTimeout), jamais pendant : Leaflet fermerait la bulle (essai réel dans le vrai Leaflet)', /if\(typeof majVehicules==='function'\) setTimeout\(majVehicules,0\);/.test(lire('js/suivi-carte.js')));
@@ -572,7 +573,8 @@ log('\n=== CARTE.JS, POSITION.JS ET LE RESTE DU CÂBLAGE ===');
   // Aucun autre fichier ne déplace la carte : un futur code qui le ferait devrait arrêter le suivi (sinon la carte et le suivi se battent)
   const fichiers = fs.readdirSync(WWW + 'js').filter((f) => f.endsWith('.js'));
   const deplacent = fichiers.filter((f) => /\bmap\.(flyTo|setView|fitBounds|panTo|panBy|flyToBounds|setZoom|zoomIn|zoomOut|setMaxBounds)\(/.test(lire('js/' + f)));
-  eq('seuls carte.js (premier point), arrets.js (fiche), liste-arrets.js (nouvel arrêt) et suivi-carte.js déplacent la carte : un nouveau code qui la déplacerait doit arrêter ou suspendre le suivi', deplacent.sort(), ['arrets.js', 'carte.js', 'liste-arrets.js', 'suivi-carte.js']);
+  // (zone-terrain.js, demande 3 : l'éditeur de zone place la carte sur le terrain ; le suivi y est arrêté par « ＋ Nouveau stop » (liste-arrets.js) ou déjà en pause par la fiche du client, et AUCUN suivi ne démarre tant que l'éditeur est ouvert : voir test-app-zone-terrain.mjs)
+  eq('seuls carte.js (premier point), arrets.js (fiche), liste-arrets.js (nouvel arrêt), suivi-carte.js et zone-terrain.js (éditeur de zone) déplacent la carte : un nouveau code qui la déplacerait doit arrêter ou suspendre le suivi', deplacent.sort(), ['arrets.js', 'carte.js', 'liste-arrets.js', 'suivi-carte.js', 'zone-terrain.js']);
 }
 
 log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);

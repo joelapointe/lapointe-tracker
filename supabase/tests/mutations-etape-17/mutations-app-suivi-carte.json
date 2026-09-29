@@ -488,8 +488,8 @@
   {
     "nom": "ajouter un arrêt n'arrête plus le suivi avant que la carte s'envole",
     "fichier": "js/liste-arrets.js",
-    "de": "    if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)",
-    "vers": "    ;"
+    "de": "if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)\n  map.flyTo([saved.lat,saved.lon],17,{duration:.8});",
+    "vers": ";\n  map.flyTo([saved.lat,saved.lon],17,{duration:.8});"
   },
   {
     "nom": "le bandeau de la passe ne met plus le suivi au diapason de ma passe",
@@ -526,5 +526,11 @@
     "fichier": "css/style.css",
     "de": ".camion-suivre{display:block;width:100%;min-height:40px;",
     "vers": ".camion-suivre{display:block;width:100%;min-height:16px;"
+  },
+  {
+    "nom": "« ＋ Nouveau stop » n'arrête plus le suivi avant d'ouvrir l'éditeur de zone (la carte va vers l'adresse)",
+    "fichier": "js/liste-arrets.js",
+    "de": "      if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();",
+    "vers": ""
   }
 ]

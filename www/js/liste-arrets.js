@@ -137,15 +137,36 @@ async function addStop(){
     if(!d.length){st.className='err';st.textContent='❌ Adresse introuvable';return;}
   const lat=window._zoneLat||parseFloat(d[0].lat);
 const lon=window._zoneLon||parseFloat(d[0].lon);
-const ns={adresse:addr,client:client||null,service,lat,lon,ordre:stops.length,route_id:routeActive||null,zone_points:window._zonePoints||null};
+const zonePlacee=window._zonePoints||null;   // « 📍 Placer sur la carte » (4 touchers, placement.js) a déjà dessiné la zone
 window._zonePoints=null;window._zoneLat=null;window._zoneLon=null;
-    st.className='ok';st.textContent='✔ Sauvegarde…';
-    const saved=await dbSave(ns);
-    if(!saved)return;
-    stops.push(saved);renderAll();
-    if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)
-    map.flyTo([saved.lat,saved.lon],17,{duration:.8});
-    toast('📍 Stop ajouté !');
-    setTimeout(closeModal,500);
+    const base={adresse:addr,client:client||null,service,lat,lon,route_id:routeActive||null};
+    if(!zonePlacee&&typeof demarrerEditeurZone==='function'){
+      // Demande 3 de Joé (29 sept. 2026) : la zone du terrain se dessine TOUT DE SUITE, dans le même geste : un rectangle de 15 m × 15 m autour de l'adresse, dont les 4 coins se
+      // déplacent au doigt (zone-terrain.js). Le formulaire se cache le temps de l'édition (ses champs restent : « ✕ » y revient) ; « Passer (sans zone) » enregistre l'arrêt comme avant.
+      st.className='';st.textContent='';
+      document.getElementById('overlay').classList.remove('open');
+      if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)
+      demarrerEditeurZone({
+        adresse:addr,lat,lon,points:null,titre:'📍 Glisse les 4 coins sur le terrain',libelleSans:'Passer (sans zone)',
+        enregistrer:pts=>enregistrerNouvelArret(base,pts),
+        sans:()=>enregistrerNouvelArret(base,null),
+        annule:()=>document.getElementById('overlay').classList.add('open'),
+      });
+      return;
+    }
+    await enregistrerNouvelArret(base,zonePlacee);
   }catch(e){st.className='err';st.textContent='❌ Erreur réseau';}
+}
+// Enregistre le nouvel arrêt (avec sa zone, ou sans) et amène la carte dessus. Renvoie true s'il est enregistré (sinon dbSave a déjà montré la raison).
+async function enregistrerNouvelArret(base,zonePts){
+  const st=document.getElementById('geo-st');
+  st.className='ok';st.textContent='✔ Sauvegarde…';
+  const saved=await dbSave({...base,ordre:stops.length,zone_points:zonePts});
+  if(!saved){st.className='err';st.textContent='❌ L’arrêt n’a pas été enregistré';return false;}
+  stops.push(saved);renderAll();
+  if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();   // la carte va vers le nouvel arrêt : elle ne suit plus (suivi-carte.js)
+  map.flyTo([saved.lat,saved.lon],17,{duration:.8});
+  toast('📍 Stop ajouté !');
+  setTimeout(closeModal,500);
+  return true;
 }

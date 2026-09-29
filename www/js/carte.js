@@ -16,12 +16,16 @@ function initApp(){
     showErr('Erreur carte: '+esc(e.message)); return;
   }
 
+  // maxNativeZoom (demande 3 de Joé, essai dans la vraie carte, 29 sept. 2026) : les images satellite d'Esri n'existent pas à tous les zooms. Mesuré avec les vraies tuiles : à Shawinigan, Grand-Mère et
+  // Trois-Rivières elles s'arrêtent au zoom 18 (au-delà, Esri répond « Map data not yet available », une image grise de 2521 octets) ; à Charette et à Saint-Étienne-des-Grès elles vont jusqu'à 20.
+  // Le zoom 18 est donc le plus haut que l'on trouve partout : au-delà, la carte AGRANDIT les images du zoom 18 (un peu floues, mais on voit le terrain) au lieu d'afficher des tuiles grises.
+  // (La carte routière OpenStreetMap s'arrête au zoom 19 : au zoom 20 elle ne répondait plus du tout.)
   const layers={
     sat: L.layerGroup([
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20}),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:18}),
       L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,opacity:.9}),
     ]),
-    map: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20}),
+    map: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:19}),
   };
   let curL='sat';
   layers.sat.addTo(map);

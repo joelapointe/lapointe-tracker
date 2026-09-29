@@ -6,7 +6,7 @@
 // Les règles d'accès (routes_admin, stops_admin) laissent déjà l'administrateur tout faire dessus : AUCUNE fonction serveur
 // n'est nécessaire ici, des écritures directes suffisent (même principe que Véhicules et Types de service, étape 19).
 //
-// Copier = un TOUT NOUVEL arrêt (même adresse/client/position), sur la route destination. L'arrêt d'origine n'est JAMAIS
+// Copier = un TOUT NOUVEL arrêt (même adresse/client/position/zone dessinée), sur la route destination. L'arrêt d'origine n'est JAMAIS
 // touché : il reste sur sa route (demande de Joé, 23 sept. 2026 : le client « apparaît aux deux »). Chaque copie a son
 // propre historique, sa propre place dans la liste (▲▼), et peut être désactivée séparément.
 // Le SERVICE d'une copie reste celui de l'original pour une copie groupée (plusieurs clients cochés). Il n'est modifiable
@@ -123,7 +123,7 @@ function renderZoneSourceChoisieAdmin(){
 async function chargerListeClientsSourceAdmin(zone){
   let data=null,error=null;
   try{
-    const r=await db.from('stops').select('id,adresse,client,service,lat,lon,passe_arrets(complete_le)').eq('route_id',routesAdminSource).eq('actif',true);
+    const r=await db.from('stops').select('id,adresse,client,service,lat,lon,zone_points,passe_arrets(complete_le)').eq('route_id',routesAdminSource).eq('actif',true);
     data=r.data;error=r.error;
   }catch(e){error=e;}
   if(!document.getElementById('ra-source-choisie')) return;   // l'admin a changé d'onglet entre-temps
@@ -133,7 +133,7 @@ async function chargerListeClientsSourceAdmin(zone){
   }
   routesAdminListeSource=(data||[]).map(s=>{
     const dates=(s.passe_arrets||[]).map(p=>p.complete_le).filter(Boolean).sort();
-    return {id:s.id,adresse:s.adresse,client:s.client,service:s.service,lat:s.lat,lon:s.lon,dernier:dates.length?dates[dates.length-1]:null};
+    return {id:s.id,adresse:s.adresse,client:s.client,service:s.service,lat:s.lat,lon:s.lon,zone_points:s.zone_points||null,dernier:dates.length?dates[dates.length-1]:null};
   }).sort((a,b)=>{
     if(!a.dernier&&!b.dernier) return (a.adresse||'').localeCompare(b.adresse||'');
     if(!a.dernier) return -1;
@@ -344,7 +344,7 @@ async function copierClientsAdmin(){
   }
   const serviceChoisi=(coches.length===1&&routesAdminServiceOverride)?routesAdminServiceOverride:null;
   const copies=coches.map((s,i)=>({
-    adresse:s.adresse,client:s.client,service:serviceChoisi||s.service,lat:s.lat,lon:s.lon,
+    adresse:s.adresse,client:s.client,service:serviceChoisi||s.service,lat:s.lat,lon:s.lon,zone_points:s.zone_points||null,   // la zone dessinée suit la copie (demande 3 de Joé)
     actif:true,route_id:destinationId,ordre:stops.length+i
   }));
   let data=null,error=null;

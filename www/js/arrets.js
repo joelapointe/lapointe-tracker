@@ -103,6 +103,7 @@ function renderAll(){
   stops.forEach(s=>{
     if(!s.zone_points||!Array.isArray(s.zone_points))return;
     if(routeActive!==null && s.route_id!==routeActive) return;
+    if(typeof zoneArretEnEdition==='function'&&zoneArretEnEdition(s)) return;   // la zone qu'on corrige (zone-terrain.js) : le polygone de l'éditeur la remplace le temps de l'édition
     const c=couleurEtat(estFait(s),aProbleme(s),estEnCours(s));
     polys.push(L.polygon(s.zone_points,{
       color:c,fillColor:c,fillOpacity:.15,weight:2
@@ -136,6 +137,7 @@ function updateBar(){
 // ── STOP CARD ──────────────────────────────────────────
 function openCard(i){
   const s=stops[i];if(!s)return;
+  if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()) return;   // on déplace les coins d'une zone (zone-terrain.js) : un toucher sur un client ne doit pas ouvrir sa fiche par-dessus
   activeIdx=i;
   majCarte();
   document.getElementById('stop-card').classList.add('open');
@@ -158,6 +160,7 @@ function majCarte(){
   b.textContent=e.texte;
   b.className=e.classe;
   b.disabled=!e.actif;
+  if(typeof majBoutonZoneFiche==='function') majBoutonZoneFiche(s);   // « ✏ Modifier la zone » : l'administrateur seulement (zone-terrain.js)
 }
 
 function closeCard(){

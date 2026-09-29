@@ -1,0 +1,854 @@
+[
+  {
+    "nom": "le rectangle de départ n'est plus de 15 m (20 m)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const ZONE_COTE_DEPART_M=15;",
+    "vers": "const ZONE_COTE_DEPART_M=20;"
+  },
+  {
+    "nom": "le zoom d'édition maximal passe à 20",
+    "fichier": "js/zone-terrain.js",
+    "de": "const ZONE_ZOOM_MAX=19;",
+    "vers": "const ZONE_ZOOM_MAX=20;"
+  },
+  {
+    "nom": "une zone minuscule est acceptée (aire minimale 0)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const ZONE_AIRE_MIN_M2=2;",
+    "vers": "const ZONE_AIRE_MIN_M2=0;"
+  },
+  {
+    "nom": "une zone de 4 m² est refusée (aire minimale 5)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const ZONE_AIRE_MIN_M2=2;",
+    "vers": "const ZONE_AIRE_MIN_M2=5;"
+  },
+  {
+    "nom": "les mètres par degré sont faux (100 000)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const ZONE_M_PAR_DEGRE=111320;",
+    "vers": "const ZONE_M_PAR_DEGRE=100000;"
+  },
+  {
+    "nom": "la latitude au-delà de 90 est acceptée",
+    "fichier": "js/zone-terrain.js",
+    "de": "&&Math.abs(p[0])<=90",
+    "vers": ""
+  },
+  {
+    "nom": "la longitude au-delà de 180 est acceptée",
+    "fichier": "js/zone-terrain.js",
+    "de": "&&Math.abs(p[1])<=180",
+    "vers": ""
+  },
+  {
+    "nom": "un coin à 3 nombres est accepté",
+    "fichier": "js/zone-terrain.js",
+    "de": "p.length===2&&",
+    "vers": "p.length>=2&&"
+  },
+  {
+    "nom": "des chiffres écrits en texte sont acceptés comme coordonnées",
+    "fichier": "js/zone-terrain.js",
+    "de": "typeof p[0]==='number'&&typeof p[1]==='number'&&",
+    "vers": ""
+  },
+  {
+    "nom": "une zone de 2 coins est acceptée",
+    "fichier": "js/zone-terrain.js",
+    "de": "pts.length>=3&&pts.every",
+    "vers": "pts.length>=2&&pts.every"
+  },
+  {
+    "nom": "une zone est valide si UN seul coin l'est",
+    "fichier": "js/zone-terrain.js",
+    "de": "pts.every(zonePointValide)",
+    "vers": "pts.some(zonePointValide)"
+  },
+  {
+    "nom": "zoneValide plante sur autre chose qu'une liste",
+    "fichier": "js/zone-terrain.js",
+    "de": "return Array.isArray(pts)&&pts.length>=3",
+    "vers": "return pts.length>=3"
+  },
+  {
+    "nom": "le rectangle de départ mesure le double (pas de division par 2)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const demi=(cote||ZONE_COTE_DEPART_M)/2;",
+    "vers": "const demi=(cote||ZONE_COTE_DEPART_M);"
+  },
+  {
+    "nom": "la largeur du rectangle ne tient pas compte de la latitude (degrés de longitude trop larges)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const dLon=demi/(ZONE_M_PAR_DEGRE*Math.cos(lat*Math.PI/180));",
+    "vers": "const dLon=demi/ZONE_M_PAR_DEGRE;"
+  },
+  {
+    "nom": "deux coins du rectangle échangés (nord-ouest ↔ nord-est)",
+    "fichier": "js/zone-terrain.js",
+    "de": "return [[lat+dLat,lon-dLon],[lat+dLat,lon+dLon],[lat-dLat,lon+dLon],[lat-dLat,lon-dLon]];",
+    "vers": "return [[lat+dLat,lon+dLon],[lat+dLat,lon-dLon],[lat-dLat,lon+dLon],[lat-dLat,lon-dLon]];"
+  },
+  {
+    "nom": "l'aire est le double (pas de division par 2)",
+    "fichier": "js/zone-terrain.js",
+    "de": "return Math.abs(somme)/2;",
+    "vers": "return Math.abs(somme);"
+  },
+  {
+    "nom": "l'aire dépend du sens des coins (pas de valeur absolue)",
+    "fichier": "js/zone-terrain.js",
+    "de": "return Math.abs(somme)/2;",
+    "vers": "return somme/2;"
+  },
+  {
+    "nom": "l'aire oublie la latitude (cosinus)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const k=Math.cos(lat0*Math.PI/180);",
+    "vers": "const k=1;"
+  },
+  {
+    "nom": "la formule de l'aire est fausse (+ au lieu de −)",
+    "fichier": "js/zone-terrain.js",
+    "de": "somme+=a[0]*b[1]-b[0]*a[1];",
+    "vers": "somme+=a[0]*b[1]+b[0]*a[1];"
+  },
+  {
+    "nom": "les côtés qui se croisent ne sont plus détectés",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(zoneSeCroise(pts)) return",
+    "vers": "if(false) return"
+  },
+  {
+    "nom": "deux côtés sont « croisés » dès que leurs DROITES se coupent (pas les segments)",
+    "fichier": "js/zone-terrain.js",
+    "de": "&&sens(c,d,a)*sens(c,d,b)<0;",
+    "vers": ";"
+  },
+  {
+    "nom": "le message « se croisent » est changé",
+    "fichier": "js/zone-terrain.js",
+    "de": "return 'Les côtés de la zone se croisent : déplace un coin.';",
+    "vers": "return 'Zone croisée.';"
+  },
+  {
+    "nom": "« trop petite » est testé à l'envers",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(zoneAireM2(pts)<ZONE_AIRE_MIN_M2) return",
+    "vers": "if(zoneAireM2(pts)>ZONE_AIRE_MIN_M2) return"
+  },
+  {
+    "nom": "une zone illisible n'est plus signalée « pas valide »",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(!zoneValide(pts)) return",
+    "vers": "if(false) return"
+  },
+  {
+    "nom": "l'arrondi est de 5 décimales au lieu de 7",
+    "fichier": "js/zone-terrain.js",
+    "de": "Math.round(p[0]*1e7)/1e7,Math.round(p[1]*1e7)/1e7",
+    "vers": "Math.round(p[0]*1e5)/1e5,Math.round(p[1]*1e5)/1e5"
+  },
+  {
+    "nom": "la poignée ne fait plus 44 px",
+    "fichier": "js/zone-terrain.js",
+    "de": "iconSize:[44,44]",
+    "vers": "iconSize:[22,22]"
+  },
+  {
+    "nom": "la poignée n'est plus ancrée en son centre",
+    "fichier": "js/zone-terrain.js",
+    "de": "iconAnchor:[22,22]",
+    "vers": "iconAnchor:[0,0]"
+  },
+  {
+    "nom": "la poignée perd sa classe (zone-poignee)",
+    "fichier": "js/zone-terrain.js",
+    "de": "className:'zone-poignee'",
+    "vers": "className:''"
+  },
+  {
+    "nom": "la surface n'est plus arrondie",
+    "fichier": "js/zone-terrain.js",
+    "de": "'≈ '+Math.round(zoneAireM2(zoneEd.points))+' m²'",
+    "vers": "'≈ '+zoneAireM2(zoneEd.points)+' m²'"
+  },
+  {
+    "nom": "la surface en erreur n'est plus marquée « err » (rouge)",
+    "fichier": "js/zone-terrain.js",
+    "de": "info.className=erreur?'err':'';",
+    "vers": "info.className='';"
+  },
+  {
+    "nom": "« Enregistrer » n'est plus grisé quand la zone est fausse",
+    "fichier": "js/zone-terrain.js",
+    "de": "document.getElementById('zone-ok').disabled=!!erreur||zoneEd.occupe;",
+    "vers": "document.getElementById('zone-ok').disabled=zoneEd.occupe;"
+  },
+  {
+    "nom": "« Enregistrer » n'est plus grisé pendant l'envoi",
+    "fichier": "js/zone-terrain.js",
+    "de": "document.getElementById('zone-ok').disabled=!!erreur||zoneEd.occupe;",
+    "vers": "document.getElementById('zone-ok').disabled=!!erreur;"
+  },
+  {
+    "nom": "« sans zone » n'est plus grisé pendant l'envoi",
+    "fichier": "js/zone-terrain.js",
+    "de": "document.getElementById('zone-sans').disabled=zoneEd.occupe;",
+    "vers": "document.getElementById('zone-sans').disabled=false;"
+  },
+  {
+    "nom": "« ✕ » n'est plus grisé pendant l'envoi",
+    "fichier": "js/zone-terrain.js",
+    "de": "document.getElementById('zone-annuler').disabled=zoneEd.occupe;",
+    "vers": "document.getElementById('zone-annuler').disabled=false;"
+  },
+  {
+    "nom": "un coin tiré : latitude et longitude sont échangées",
+    "fichier": "js/zone-terrain.js",
+    "de": "zoneEd.points[i]=[ll.lat,ll.lng];",
+    "vers": "zoneEd.points[i]=[ll.lng,ll.lat];"
+  },
+  {
+    "nom": "un coin tiré : le polygone ne suit plus",
+    "fichier": "js/zone-terrain.js",
+    "de": "zoneEd.poly.setLatLngs(zoneEd.points);",
+    "vers": ""
+  },
+  {
+    "nom": "un coin tiré : la surface n'est plus recalculée",
+    "fichier": "js/zone-terrain.js",
+    "de": "zoneEd.poly.setLatLngs(zoneEd.points);",
+    "vers": "zoneEd.poly.setLatLngs(zoneEd.points);return;"
+  },
+  {
+    "nom": "« drag » n'est plus écouté (le polygone ne suit pas pendant le glissement)",
+    "fichier": "js/zone-terrain.js",
+    "de": "mk.on('drag',()=>zoneCoinBouge(i));",
+    "vers": ""
+  },
+  {
+    "nom": "« dragend » n'est plus écouté (le dernier point est perdu)",
+    "fichier": "js/zone-terrain.js",
+    "de": "mk.on('dragend',()=>zoneCoinBouge(i));",
+    "vers": ""
+  },
+  {
+    "nom": "un 2ᵉ éditeur ne retire plus le premier",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(zoneEd) zoneRetirer();",
+    "vers": ""
+  },
+  {
+    "nom": "les coins d'une zone existante sont ignorés (toujours le rectangle de départ)",
+    "fichier": "js/zone-terrain.js",
+    "de": "const points=zoneValide(o.points)?",
+    "vers": "const points=false?"
+  },
+  {
+    "nom": "l'éditeur modifie la zone d'origine (pas de copie des coins)",
+    "fichier": "js/zone-terrain.js",
+    "de": "o.points.map(p=>[p[0],p[1]])",
+    "vers": "o.points"
+  },
+  {
+    "nom": "la fiche du client ne se range plus à l'ouverture",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(fiche) fiche.classList.remove('open');",
+    "vers": ""
+  },
+  {
+    "nom": "la fiche n'est plus « fermée » (activeIdx) à l'ouverture",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(typeof activeIdx!=='undefined') activeIdx=null;",
+    "vers": ""
+  },
+  {
+    "nom": "le polygone de l'éditeur capte les touchers (interactive:true)",
+    "fichier": "js/zone-terrain.js",
+    "de": "dashArray:'6',interactive:false}",
+    "vers": "dashArray:'6',interactive:true}"
+  },
+  {
+    "nom": "le polygone de l'éditeur n'est plus en pointillés",
+    "fichier": "js/zone-terrain.js",
+    "de": "dashArray:'6',interactive:false}",
+    "vers": "interactive:false}"
+  },
+  {
+    "nom": "les poignées ne sont plus déplaçables",
+    "fichier": "js/zone-terrain.js",
+    "de": "{draggable:true,icon:iconePoigneeZone()",
+    "vers": "{draggable:false,icon:iconePoigneeZone()"
+  },
+  {
+    "nom": "les poignées passent sous les autres marqueurs",
+    "fichier": "js/zone-terrain.js",
+    "de": "zIndexOffset:2000",
+    "vers": "zIndexOffset:0"
+  },
+  {
+    "nom": "les poignées prennent le focus du clavier",
+    "fichier": "js/zone-terrain.js",
+    "de": "keyboard:false}",
+    "vers": "keyboard:true}"
+  },
+  {
+    "nom": "l'ancienne zone d'un arrêt reste affichée à l'ouverture de l'éditeur",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(ed.stopId&&typeof renderAll==='function') renderAll();",
+    "vers": ""
+  },
+  {
+    "nom": "le titre de départ change",
+    "fichier": "js/zone-terrain.js",
+    "de": "o.titre||'✏ Glisse les coins sur le terrain'",
+    "vers": "o.titre||''"
+  },
+  {
+    "nom": "l'adresse n'est plus écrite dans la barre",
+    "fichier": "js/zone-terrain.js",
+    "de": "document.getElementById('zone-adresse').textContent=o.adresse||'';",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton « sans zone » reste visible sans action",
+    "fichier": "js/zone-terrain.js",
+    "de": "sans.style.display=o.sans?'':'none';",
+    "vers": "sans.style.display='';"
+  },
+  {
+    "nom": "le libellé de départ du bouton « sans zone » disparaît",
+    "fichier": "js/zone-terrain.js",
+    "de": "sans.textContent=o.libelleSans||'Sans zone';",
+    "vers": "sans.textContent=o.libelleSans||'';"
+  },
+  {
+    "nom": "la barre ne s'affiche plus",
+    "fichier": "js/zone-terrain.js",
+    "de": "document.getElementById('zone-barre').classList.add('active');",
+    "vers": ""
+  },
+  {
+    "nom": "la carte ne se place plus sur la zone (flyToBounds)",
+    "fichier": "js/zone-terrain.js",
+    "de": "try{map.flyToBounds(points,",
+    "vers": "try{map.flyTo(points[0],"
+  },
+  {
+    "nom": "le vol vers la zone n'est plus limité au zoom 19",
+    "fichier": "js/zone-terrain.js",
+    "de": "maxZoom:ZONE_ZOOM_MAX,",
+    "vers": ""
+  },
+  {
+    "nom": "le vol vers la zone oublie la place de la barre du haut",
+    "fichier": "js/zone-terrain.js",
+    "de": "paddingTopLeft:[40,80],",
+    "vers": ""
+  },
+  {
+    "nom": "le vol vers la zone oublie la place de la barre du bas",
+    "fichier": "js/zone-terrain.js",
+    "de": "paddingBottomRight:[40,170],",
+    "vers": ""
+  },
+  {
+    "nom": "fermer oublie de retirer le polygone",
+    "fichier": "js/zone-terrain.js",
+    "de": "map.removeLayer(ed.poly);",
+    "vers": ""
+  },
+  {
+    "nom": "fermer oublie de retirer les poignées",
+    "fichier": "js/zone-terrain.js",
+    "de": "ed.poignees.forEach(m=>map.removeLayer(m));",
+    "vers": ""
+  },
+  {
+    "nom": "fermer laisse la barre affichée",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(barre) barre.classList.remove('active');",
+    "vers": ""
+  },
+  {
+    "nom": "fermer ne redessine plus l'ancienne zone de l'arrêt",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(ed&&ed.stopId&&typeof renderAll==='function') renderAll();",
+    "vers": ""
+  },
+  {
+    "nom": "fermer ne reprend plus le suivi mis en pause par la fiche",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(typeof reprendreSuiviCarte==='function') reprendreSuiviCarte();",
+    "vers": ""
+  },
+  {
+    "nom": "fermer ne relance plus le suivi d'une passe commencée pendant l'édition",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(typeof majSuiviSelonPasse==='function') majSuiviSelonPasse();",
+    "vers": ""
+  },
+  {
+    "nom": "pendant l'envoi, les boutons ne sont plus bloqués",
+    "fichier": "js/zone-terrain.js",
+    "de": "ed.occupe=true;zoneMajBarre();",
+    "vers": "zoneMajBarre();"
+  },
+  {
+    "nom": "un refus (false) est traité comme une réussite",
+    "fichier": "js/zone-terrain.js",
+    "de": "try{ok=!!(await action(points));}",
+    "vers": "try{ok=true;await action(points);}"
+  },
+  {
+    "nom": "un plantage de l'envoi n'affiche plus de message",
+    "fichier": "js/zone-terrain.js",
+    "de": "catch(e){toast('❌ Erreur réseau');}",
+    "vers": "catch(e){}"
+  },
+  {
+    "nom": "après un refus, les boutons restent bloqués",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(ok) zoneFermer(); else zoneMajBarre();",
+    "vers": "if(ok) zoneFermer();"
+  },
+  {
+    "nom": "après un refus, l'éditeur se ferme quand même",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(ok) zoneFermer(); else zoneMajBarre();",
+    "vers": "zoneFermer();"
+  },
+  {
+    "nom": "une zone fausse est envoyée quand même",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(erreur){toast('⚠ '+erreur);return;}",
+    "vers": ""
+  },
+  {
+    "nom": "la zone est envoyée sans arrondi",
+    "fichier": "js/zone-terrain.js",
+    "de": "await zoneTerminer(zoneEd.enregistrer,zoneArrondie(zoneEd.points));",
+    "vers": "await zoneTerminer(zoneEd.enregistrer,zoneEd.points);"
+  },
+  {
+    "nom": "« ✕ » agit pendant l'envoi",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(!ed||ed.occupe) return;",
+    "vers": "if(!ed) return;"
+  },
+  {
+    "nom": "« ✕ » n'appelle plus le rappel « annule » (le formulaire ne revient pas)",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(ed.annule) ed.annule();",
+    "vers": ""
+  },
+  {
+    "nom": "tout le monde est administrateur pour la zone",
+    "fichier": "js/zone-terrain.js",
+    "de": "function estAdminZone(){return !!currentUser&&currentUser.role==='admin';}",
+    "vers": "function estAdminZone(){return true;}"
+  },
+  {
+    "nom": "personne n'est administrateur pour la zone (test inversé)",
+    "fichier": "js/zone-terrain.js",
+    "de": "currentUser.role==='admin';}",
+    "vers": "currentUser.role!=='admin';}"
+  },
+  {
+    "nom": "le bouton de la fiche est visible pour un employé",
+    "fichier": "js/zone-terrain.js",
+    "de": "b.style.display=(estAdminZone()&&s)?'inline-block':'none';",
+    "vers": "b.style.display='inline-block';"
+  },
+  {
+    "nom": "les textes « Modifier / Dessiner » sont échangés",
+    "fichier": "js/zone-terrain.js",
+    "de": "?'✏ Modifier la zone':'✏ Dessiner la zone';",
+    "vers": "?'✏ Dessiner la zone':'✏ Modifier la zone';"
+  },
+  {
+    "nom": "un employé peut ouvrir l'éditeur (modifierZoneArret ne vérifie plus le rôle)",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(activeIdx===null||!estAdminZone()) return;",
+    "vers": "if(activeIdx===null) return;"
+  },
+  {
+    "nom": "un arrêt sans position ouvre l'éditeur quand même",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(!s.lat||!s.lon){toast(",
+    "vers": "if(false){toast("
+  },
+  {
+    "nom": "l'éditeur d'un arrêt existant ignore sa zone",
+    "fichier": "js/zone-terrain.js",
+    "de": "points:avait?s.zone_points:null,",
+    "vers": "points:null,"
+  },
+  {
+    "nom": "les titres « Ajuste / Glisse » sont échangés",
+    "fichier": "js/zone-terrain.js",
+    "de": "titre:avait?'✏ Ajuste les coins de la zone':'✏ Glisse les coins sur le terrain',",
+    "vers": "titre:avait?'✏ Glisse les coins sur le terrain':'✏ Ajuste les coins de la zone',"
+  },
+  {
+    "nom": "le libellé « Retirer la zone » change",
+    "fichier": "js/zone-terrain.js",
+    "de": "libelleSans:'Retirer la zone',",
+    "vers": "libelleSans:'Sans zone',"
+  },
+  {
+    "nom": "« Retirer la zone » est offert même quand il n'y a pas de zone",
+    "fichier": "js/zone-terrain.js",
+    "de": "sans:avait?async()=>{",
+    "vers": "sans:true?async()=>{"
+  },
+  {
+    "nom": "« Retirer la zone » ne demande plus de confirmation",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(!(await confirmer('Retirer la zone ?',",
+    "vers": "if(false&&!(await confirmer('Retirer la zone ?',"
+  },
+  {
+    "nom": "les boutons de la confirmation sont échangés",
+    "fichier": "js/zone-terrain.js",
+    "de": "'Retirer','Garder'",
+    "vers": "'Garder','Retirer'"
+  },
+  {
+    "nom": "le message « zone enregistrée » change",
+    "fichier": "js/zone-terrain.js",
+    "de": "ecrireZoneArret(id,pts,'✔ Zone enregistrée')",
+    "vers": "ecrireZoneArret(id,pts,'OK')"
+  },
+  {
+    "nom": "le message « zone retirée » change",
+    "fichier": "js/zone-terrain.js",
+    "de": "ecrireZoneArret(id,null,'🗑 Zone retirée')",
+    "vers": "ecrireZoneArret(id,null,'OK')"
+  },
+  {
+    "nom": "hors réseau, la zone est écrite quand même",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(!reseau.enLigne){toast('📴 Pas de réseau : la zone ne peut pas être enregistrée maintenant.');return false;}",
+    "vers": ""
+  },
+  {
+    "nom": "l'écriture touche aussi une autre colonne (actif)",
+    "fichier": "js/zone-terrain.js",
+    "de": ".update({zone_points:pts})",
+    "vers": ".update({zone_points:pts,actif:true})"
+  },
+  {
+    "nom": "l'écriture ne demande plus les lignes changées (select)",
+    "fichier": "js/zone-terrain.js",
+    "de": ".eq('id',id).select('id');",
+    "vers": ".eq('id',id);"
+  },
+  {
+    "nom": "l'écriture n'est plus limitée à CET arrêt (aucun filtre : toutes les lignes !)",
+    "fichier": "js/zone-terrain.js",
+    "de": ".update({zone_points:pts}).eq('id',id).select('id');",
+    "vers": ".update({zone_points:pts}).select('id');"
+  },
+  {
+    "nom": "les messages « signal disparu » et « pas pu » sont échangés",
+    "fichier": "js/zone-terrain.js",
+    "de": "toast(estErreurReseau(r.error)?'📴 Le signal a disparu : la zone n’a pas été enregistrée.':'❌ La zone n’a pas pu être enregistrée.');",
+    "vers": "toast(estErreurReseau(r.error)?'❌ La zone n’a pas pu être enregistrée.':'📴 Le signal a disparu : la zone n’a pas été enregistrée.');"
+  },
+  {
+    "nom": "une panne de réseau n'est plus signalée au téléphone",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(estErreurReseau(r.error)) signalerEchecReseau(r.error);",
+    "vers": ""
+  },
+  {
+    "nom": "« aucune ligne changée » est accepté comme une réussite",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(!r||!Array.isArray(r.data)||!r.data.length){",
+    "vers": "if(!r||!Array.isArray(r.data)){"
+  },
+  {
+    "nom": "l'arrêt de la liste n'est pas mis à jour ici",
+    "fichier": "js/zone-terrain.js",
+    "de": "if(s) s.zone_points=pts;",
+    "vers": ""
+  },
+  {
+    "nom": "aucun message après l'enregistrement",
+    "fichier": "js/zone-terrain.js",
+    "de": "toast(message);",
+    "vers": ""
+  },
+  {
+    "nom": "le « ⟳ Sync… » n'est jamais allumé",
+    "fichier": "js/zone-terrain.js",
+    "de": "showSync(true);",
+    "vers": ""
+  },
+  {
+    "nom": "le « ⟳ Sync… » reste allumé après l'écriture",
+    "fichier": "js/zone-terrain.js",
+    "de": "showSync(false);",
+    "vers": ""
+  },
+  {
+    "nom": "un plantage de la requête n'affiche plus de message",
+    "fichier": "js/zone-terrain.js",
+    "de": "toast('📴 Le signal a disparu : la zone n’a pas été enregistrée.');",
+    "vers": ""
+  },
+  {
+    "nom": "un plantage de la requête n'est plus signalé au téléphone",
+    "fichier": "js/zone-terrain.js",
+    "de": "signalerEchecReseau(e);",
+    "vers": ""
+  },
+  {
+    "nom": "arrets.js : une fiche s'ouvre pendant l'édition",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()) return;",
+    "vers": ""
+  },
+  {
+    "nom": "arrets.js : la zone en cours d'édition est redessinée par renderAll",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof zoneArretEnEdition==='function'&&zoneArretEnEdition(s)) return;",
+    "vers": ""
+  },
+  {
+    "nom": "arrets.js : la fiche ne met plus à jour le bouton de zone",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof majBoutonZoneFiche==='function') majBoutonZoneFiche(s);",
+    "vers": ""
+  },
+  {
+    "nom": "suivi-carte.js : le suivi démarre pendant l'édition (demarrerSuiviCarte)",
+    "fichier": "js/suivi-carte.js",
+    "de": "if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()) return false;",
+    "vers": ""
+  },
+  {
+    "nom": "suivi-carte.js : ◎ s'allume pendant l'édition",
+    "fichier": "js/suivi-carte.js",
+    "de": "if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()){toast('✏ Termine d’abord la zone : Enregistrer ou ✕');return false;}",
+    "vers": ""
+  },
+  {
+    "nom": "suivi-carte.js : le suivi de la passe démarre (et est « consommé ») pendant l'édition",
+    "fichier": "js/suivi-carte.js",
+    "de": "if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()) return;",
+    "vers": ""
+  },
+  {
+    "nom": "liste-arrets.js : « ＋ Nouveau stop » n'ouvre plus l'éditeur (enregistre tout de suite)",
+    "fichier": "js/liste-arrets.js",
+    "de": "if(!zonePlacee&&typeof demarrerEditeurZone==='function'){",
+    "vers": "if(false&&!zonePlacee&&typeof demarrerEditeurZone==='function'){"
+  },
+  {
+    "nom": "liste-arrets.js : le formulaire ne se cache plus pendant l'édition",
+    "fichier": "js/liste-arrets.js",
+    "de": "      document.getElementById('overlay').classList.remove('open');",
+    "vers": ""
+  },
+  {
+    "nom": "liste-arrets.js : le suivi de la carte n'est plus arrêté",
+    "fichier": "js/liste-arrets.js",
+    "de": "      if(typeof arreterSuiviCarte==='function') arreterSuiviCarte();",
+    "vers": ""
+  },
+  {
+    "nom": "liste-arrets.js : « ✕ » ne ramène plus le formulaire",
+    "fichier": "js/liste-arrets.js",
+    "de": "annule:()=>document.getElementById('overlay').classList.add('open'),",
+    "vers": "annule:()=>{},"
+  },
+  {
+    "nom": "liste-arrets.js : « Enregistrer » enregistre l'arrêt SANS la zone dessinée",
+    "fichier": "js/liste-arrets.js",
+    "de": "enregistrer:pts=>enregistrerNouvelArret(base,pts),",
+    "vers": "enregistrer:pts=>enregistrerNouvelArret(base,null),"
+  },
+  {
+    "nom": "liste-arrets.js : « Passer (sans zone) » enregistre une zone vide au lieu de null",
+    "fichier": "js/liste-arrets.js",
+    "de": "sans:()=>enregistrerNouvelArret(base,null),",
+    "vers": "sans:()=>enregistrerNouvelArret(base,[]),"
+  },
+  {
+    "nom": "liste-arrets.js : la place dans l'ordre est figée à 0",
+    "fichier": "js/liste-arrets.js",
+    "de": "{...base,ordre:stops.length,zone_points:zonePts}",
+    "vers": "{...base,ordre:0,zone_points:zonePts}"
+  },
+  {
+    "nom": "liste-arrets.js : la zone n'est pas envoyée à la base",
+    "fichier": "js/liste-arrets.js",
+    "de": "{...base,ordre:stops.length,zone_points:zonePts}",
+    "vers": "{...base,ordre:stops.length,zone_points:null}"
+  },
+  {
+    "nom": "liste-arrets.js : un refus de la base ferme quand même l'éditeur",
+    "fichier": "js/liste-arrets.js",
+    "de": "st.textContent='❌ L’arrêt n’a pas été enregistré';return false;}",
+    "vers": "st.textContent='❌ L’arrêt n’a pas été enregistré';return true;}"
+  },
+  {
+    "nom": "liste-arrets.js : les points de « Placer sur la carte » ne sont plus effacés",
+    "fichier": "js/liste-arrets.js",
+    "de": "window._zonePoints=null;window._zoneLat=null;window._zoneLon=null;",
+    "vers": ""
+  },
+  {
+    "nom": "liste-arrets.js : la zone de « Placer sur la carte » est ignorée",
+    "fichier": "js/liste-arrets.js",
+    "de": "const zonePlacee=window._zonePoints||null;",
+    "vers": "const zonePlacee=null;"
+  },
+  {
+    "nom": "liste-arrets.js : « ⏳ Géocodage… » reste affiché pendant l'édition",
+    "fichier": "js/liste-arrets.js",
+    "de": "st.className='';st.textContent='';",
+    "vers": ""
+  },
+  {
+    "nom": "liste-arrets.js : l'arrêt n'est plus ajouté à la liste",
+    "fichier": "js/liste-arrets.js",
+    "de": "stops.push(saved);renderAll();",
+    "vers": "renderAll();"
+  },
+  {
+    "nom": "liste-arrets.js : le message « Stop ajouté » disparaît",
+    "fichier": "js/liste-arrets.js",
+    "de": "toast('📍 Stop ajouté !');",
+    "vers": ""
+  },
+  {
+    "nom": "admin-routes.js : la zone n'est pas lue dans la route source",
+    "fichier": "js/admin-routes.js",
+    "de": "lat,lon,zone_points,passe_arrets(complete_le)",
+    "vers": "lat,lon,passe_arrets(complete_le)"
+  },
+  {
+    "nom": "admin-routes.js : la zone n'est pas gardée dans la liste",
+    "fichier": "js/admin-routes.js",
+    "de": "lon:s.lon,zone_points:s.zone_points||null,dernier:",
+    "vers": "lon:s.lon,dernier:"
+  },
+  {
+    "nom": "admin-routes.js : la zone n'est pas copiée avec le client",
+    "fichier": "js/admin-routes.js",
+    "de": "lon:s.lon,zone_points:s.zone_points||null,   // la zone dessinée suit la copie",
+    "vers": "lon:s.lon,   // la zone dessinée suit la copie"
+  },
+  {
+    "nom": "index.html : « ✕ » perd son nom pour les lecteurs d'écran",
+    "fichier": "index.html",
+    "de": "onclick=\"zoneAnnuler()\" aria-label=\"Annuler\"",
+    "vers": "onclick=\"zoneAnnuler()\""
+  },
+  {
+    "nom": "index.html : « Enregistrer » est relié à « annuler »",
+    "fichier": "index.html",
+    "de": "onclick=\"zoneEnregistrer()\"",
+    "vers": "onclick=\"zoneAnnuler()\""
+  },
+  {
+    "nom": "index.html : « Passer (sans zone) » est relié à « enregistrer »",
+    "fichier": "index.html",
+    "de": "onclick=\"zoneSansZone()\"",
+    "vers": "onclick=\"zoneEnregistrer()\""
+  },
+  {
+    "nom": "index.html : le fichier zone-terrain.js n'est plus chargé",
+    "fichier": "index.html",
+    "de": "<script src=\"js/zone-terrain.js\"></script>",
+    "vers": ""
+  },
+  {
+    "nom": "index.html : le bouton de zone de la fiche est visible pour tout le monde au départ",
+    "fichier": "index.html",
+    "de": "onclick=\"modifierZoneArret()\" style=\"display:none\">",
+    "vers": "onclick=\"modifierZoneArret()\">"
+  },
+  {
+    "nom": "index.html : « Enregistrer » n'est plus un bouton sans envoi de formulaire",
+    "fichier": "index.html",
+    "de": "<button type=\"button\" id=\"zone-ok\"",
+    "vers": "<button id=\"zone-ok\""
+  },
+  {
+    "nom": "style.css : la barre passe SOUS la barre du bas (z-index 900)",
+    "fichier": "css/style.css",
+    "de": "bottom:0;z-index:1200;background:#111418;",
+    "vers": "bottom:0;z-index:900;background:#111418;"
+  },
+  {
+    "nom": "style.css : la barre redevient transparente",
+    "fichier": "css/style.css",
+    "de": "bottom:0;z-index:1200;background:#111418;",
+    "vers": "bottom:0;z-index:1200;background:rgba(17,20,24,.97);"
+  },
+  {
+    "nom": "style.css : la barre oublie la zone sûre du bas (iPhone)",
+    "fichier": "css/style.css",
+    "de": "padding:10px 16px calc(12px + var(--sa-bottom));}",
+    "vers": "padding:10px 16px 12px;}"
+  },
+  {
+    "nom": "style.css : la barre ne s'affiche jamais",
+    "fichier": "css/style.css",
+    "de": "#zone-barre.active{display:block;}",
+    "vers": "#zone-barre.active{display:none;}"
+  },
+  {
+    "nom": "style.css : les boutons de la barre font 30 px de haut",
+    "fichier": "css/style.css",
+    "de": ".zb{flex:2;min-height:48px;",
+    "vers": ".zb{flex:2;min-height:30px;"
+  },
+  {
+    "nom": "style.css : « ✕ » n'est plus étroit",
+    "fichier": "css/style.css",
+    "de": ".zb.non{flex:0 0 52px;",
+    "vers": ".zb.non{flex:2;"
+  },
+  {
+    "nom": "style.css : le rond visible de la poignée est trop petit",
+    "fichier": "css/style.css",
+    "de": ".zone-poignee span{width:22px;height:22px;",
+    "vers": ".zone-poignee span{width:10px;height:10px;"
+  },
+  {
+    "nom": "style.css : un bouton grisé ne se voit plus",
+    "fichier": "css/style.css",
+    "de": ".zb:disabled{opacity:.4;cursor:default;}",
+    "vers": ".zb:disabled{opacity:1;cursor:default;}"
+  },
+  {
+    "nom": "style.css : une longue adresse pousse les boutons hors de l'écran",
+    "fichier": "css/style.css",
+    "de": "#zone-adresse{flex:1 1 0;min-width:0;",
+    "vers": "#zone-adresse{flex:1 1 0;"
+  },
+  {
+    "nom": "style.css : le message d'erreur n'a plus sa propre ligne",
+    "fichier": "css/style.css",
+    "de": "#zone-info.err{flex:1 1 100%;",
+    "vers": "#zone-info.err{flex:0 0 auto;"
+  },
+  {
+    "nom": "carte.js : les images satellite ne sont plus agrandies au-delà du zoom 18",
+    "fichier": "js/carte.js",
+    "de": "{maxZoom:20,maxNativeZoom:18}",
+    "vers": "{maxZoom:20}"
+  },
+  {
+    "nom": "carte.js : la carte routière n'est plus limitée au zoom 19",
+    "fichier": "js/carte.js",
+    "de": "{maxZoom:20,maxNativeZoom:19}",
+    "vers": "{maxZoom:20}"
+  }
+]

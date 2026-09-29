@@ -68,6 +68,7 @@ function _suiviDetacher(){
 
 function demarrerSuiviCarte(cible,options){
   if(!map||!cible) return false;
+  if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()) return false;   // on déplace les coins d'une zone (zone-terrain.js) : la carte ne doit pas partir sous les doigts
   _suiviDetacher();
   suiviCarte={type:cible.type,passeId:cible.passeId||null,auto:!!(options&&options.auto),zoomDepart:(options&&typeof options.zoom==='number')?options.zoom:null,marqueur:null};
   _suiviSuspendu=null;
@@ -116,6 +117,7 @@ function cibleSuiviParDefaut(){
 // ◎ : allume le suivi, ou l'éteint s'il est allumé. Renvoie true si le suivi est allumé après le toucher.
 function basculerSuiviCarte(){
   if(suiviCarte){arreterSuiviCarte();return false;}
+  if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()){toast('✏ Termine d’abord la zone : Enregistrer ou ✕');return false;}
   const cible=cibleSuiviParDefaut();
   if(cible.type==='moi'&&!lastPos){toast('📍 Position du téléphone pas encore trouvée');return false;}
   return demarrerSuiviCarte(cible,{auto:false});
@@ -130,6 +132,7 @@ function majSuiviSelonPasse(){
   const passeId=m?m.passe.passe_id:(bord?bord.passe.passe_id:null);
   if(passeId){
     if(_passeSuivieAuto===passeId) return;
+    if(typeof zoneEditeurActif==='function'&&zoneEditeurActif()) return;   // une zone est en train d'être dessinée (zone-terrain.js) : le suivi partira à sa fin (zoneFermer rappelle cette fonction)
     _passeSuivieAuto=passeId;
     demarrerSuiviCarte(m?{type:'moi'}:{type:'camion',passeId},{auto:true});
     return;

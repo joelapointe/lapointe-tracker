@@ -351,6 +351,16 @@
 .camion span{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:#c8e63c;}
 .camion em{font-style:normal;font-size:11px;color:#9aa8ba;}
 .camion.perime{opacity:.5;border-color:#6b7a8d;}
+/* Demande 2 : les icônes des TÂCHES (icones-taches.js) — du trait de la couleur du texte ; ico-f = le fond derrière une roue ; ico-p = un point plein */
+.ico{width:30px;height:20px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;}
+.ico .ico-f{fill:var(--ico-fond,#1a1f26);}
+.ico .ico-p{fill:currentColor;stroke:none;}
+.camion .camion-ico{color:#c8e63c;}
+.bulle-ico{width:26px;height:17px;vertical-align:-3px;color:#1a1f26;--ico-fond:#fff;}
+/* Onglet « Services » : le bouton de l'icône de chaque tâche, dernier dans la page mais À GAUCHE de la ligne (order) */
+.emp-item .ts-ico{order:-1;flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:56px;height:40px;padding:0;border-radius:8px;border:1px solid var(--border);background:#1a1f26;color:#c8e63c;cursor:pointer;}
+.emp-item .ts-ico .ico{width:42px;height:28px;}
+.emp-item .ts-ico:active{filter:brightness(.85);}
 /* « 📌 Suivre ce camion » : le bouton de la bulle du camion, pour l'administrateur (suivi-carte.js) ; 40 px de haut, facile à toucher */
 .camion-suivre{display:block;width:100%;min-height:40px;margin-top:8px;padding:8px 10px;background:#1a1f26;border:1px solid #c8e63c;border-radius:8px;color:#c8e63c;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:700;cursor:pointer;}
 .camion-suivre:active{transform:scale(.97);}
@@ -572,6 +582,18 @@
 #nouveau-type-service-overlay.open{display:flex;}
 #nouveau-type-service-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;animation:slideUp .25s ease;}
 #nouveau-type-service-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;}
+
+/* Demande 2 : le choix de l'icône d'un type de service (admin-types-service.js) : « Par défaut » puis la banque d'icônes, en grille de 3 */
+#icone-tache-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}
+#icone-tache-overlay.open{display:flex;}
+#icone-tache-modal{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 32px;width:100%;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease;}
+#icone-tache-modal h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:14px;overflow-wrap:anywhere;}
+#it-grille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.it-tuile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;min-height:88px;padding:10px 4px 8px;border-radius:10px;border:1px solid var(--border);background:#1a1f26;color:#c8e63c;cursor:pointer;}
+.it-tuile .ico{width:60px;height:40px;}
+.it-tuile span{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--text);text-align:center;line-height:1.15;}
+.it-tuile.choisie{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+.it-tuile:active{filter:brightness(.85);}
 
 #correction-quart-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;}
 #correction-quart-overlay.open{display:flex;}

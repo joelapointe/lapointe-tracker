@@ -1,0 +1,614 @@
+[
+  {
+    "nom": "l'icône générique n'est plus le véhicule",
+    "fichier": "js/icones-taches.js",
+    "de": "const ICONE_GENERIQUE='vus';",
+    "vers": "const ICONE_GENERIQUE='tracteur';"
+  },
+  {
+    "nom": "les noms hérités de JavaScript (constructor…) passent pour des clés de la banque",
+    "fichier": "js/icones-taches.js",
+    "de": "return typeof cle==='string'&&Object.prototype.hasOwnProperty.call(ICONES_TACHES,cle);",
+    "vers": "return typeof cle==='string'&&cle in ICONES_TACHES;"
+  },
+  {
+    "nom": "une clé inconnue fait planter svgIcone au lieu de donner l'icône générique",
+    "fichier": "js/icones-taches.js",
+    "de": "const i=ICONES_TACHES[estCleIcone(cle)?cle:ICONE_GENERIQUE];",
+    "vers": "const i=ICONES_TACHES[cle];"
+  },
+  {
+    "nom": "le SVG n'est plus marqué décoratif (aria-hidden, focusable)",
+    "fichier": "js/icones-taches.js",
+    "de": "viewBox=\"0 0 48 32\" aria-hidden=\"true\" focusable=\"false\">",
+    "vers": "viewBox=\"0 0 48 32\">"
+  },
+  {
+    "nom": "la classe de l'appelant n'est plus ajoutée au SVG",
+    "fichier": "js/icones-taches.js",
+    "de": "'<svg class=\"ico'+(classe?' '+classe:'')+'\"",
+    "vers": "'<svg class=\"ico\""
+  },
+  {
+    "nom": "la boîte des dessins n'est plus de 48 × 32",
+    "fichier": "js/icones-taches.js",
+    "de": "viewBox=\"0 0 48 32\"",
+    "vers": "viewBox=\"0 0 48 30\""
+  },
+  {
+    "nom": "les accents ne sont plus retirés du nom (« déneigement » n'est plus reconnu)",
+    "fichier": "js/icones-taches.js",
+    "de": ".normalize('NFD').replace(/\\p{M}/gu,'')",
+    "vers": ""
+  },
+  {
+    "nom": "les majuscules ne sont plus ramenées en minuscules (« ÉPANDAGE DE SEL » n'est plus reconnu)",
+    "fichier": "js/icones-taches.js",
+    "de": ".replace(/\\p{M}/gu,'').toLowerCase()",
+    "vers": ".replace(/\\p{M}/gu,'')"
+  },
+  {
+    "nom": "« sel » n'est plus un MOT (« sélection » passe pour du sel)",
+    "fichier": "js/icones-taches.js",
+    "de": "[/\\bsel\\b|\\bsable\\b|abrasif|fondant|deglac/,'camion-benne']",
+    "vers": "[/sel|\\bsable\\b|abrasif|fondant|deglac/,'camion-benne']"
+  },
+  {
+    "nom": "« sable » n'est plus reconnu comme du sel",
+    "fichier": "js/icones-taches.js",
+    "de": "|\\bsable\\b|",
+    "vers": "|"
+  },
+  {
+    "nom": "« déglaçage » n'est plus reconnu",
+    "fichier": "js/icones-taches.js",
+    "de": "|fondant|deglac/,'camion-benne']",
+    "vers": "|fondant/,'camion-benne']"
+  },
+  {
+    "nom": "le sel passe APRÈS « épandage » (le camion de sel devient un épandeur)",
+    "fichier": "js/icones-taches.js",
+    "de": "  [/\\bsel\\b|\\bsable\\b|abrasif|fondant|deglac/,'camion-benne'],\n  [/engrais|fertilis|epandeur|epandage|semence|ensemenc|chaux/,'epandeur'],",
+    "vers": "  [/engrais|fertilis|epandeur|epandage|semence|ensemenc|chaux/,'epandeur'],\n  [/\\bsel\\b|\\bsable\\b|abrasif|fondant|deglac/,'camion-benne'],"
+  },
+  {
+    "nom": "« épandage » seul n'est plus un épandeur",
+    "fichier": "js/icones-taches.js",
+    "de": "|epandeur|epandage|",
+    "vers": "|epandeur|"
+  },
+  {
+    "nom": "l'engrais n'est plus un épandeur",
+    "fichier": "js/icones-taches.js",
+    "de": "[/engrais|fertilis|",
+    "vers": "[/fertilis|"
+  },
+  {
+    "nom": "la coupe de gazon n'est plus un zéro-turn",
+    "fichier": "js/icones-taches.js",
+    "de": "[/gazon|tonte|tondre|tondeuse|pelouse/,'zero-turn']",
+    "vers": "[/tonte|tondre|tondeuse|pelouse/,'zero-turn']"
+  },
+  {
+    "nom": "les feuilles ne sont plus la feuille d'érable",
+    "fichier": "js/icones-taches.js",
+    "de": "[/feuille|feuillage|automne/,'feuille-erable']",
+    "vers": "[/feuillage|automne/,'feuille-erable']"
+  },
+  {
+    "nom": "l'entretien paysager n'est plus la brouette",
+    "fichier": "js/icones-taches.js",
+    "de": "[/paysag|jardin|",
+    "vers": "[/jardin|"
+  },
+  {
+    "nom": "« plates-bandes » n'est plus reconnu (l'ancienne règle trop courte)",
+    "fichier": "js/icones-taches.js",
+    "de": "plates?.?bandes?",
+    "vers": "plate.?bande"
+  },
+  {
+    "nom": "le déneigement manuel n'est plus la souffleuse (il devient un tracteur)",
+    "fichier": "js/icones-taches.js",
+    "de": "  [/neige.*(manuel|main|pelle)|(manuel|main|pelle).*neige/,'souffleuse'],   // (« déneigement » contient « neige »)\n",
+    "vers": ""
+  },
+  {
+    "nom": "le déneigement n'est plus un tracteur",
+    "fichier": "js/icones-taches.js",
+    "de": "[/neige|souffl/,'tracteur']",
+    "vers": "[/souffl/,'tracteur']"
+  },
+  {
+    "nom": "le déneigement « à la main » n'est plus reconnu comme manuel",
+    "fichier": "js/icones-taches.js",
+    "de": ".*(manuel|main|pelle)|(manuel|main|pelle).*neige/",
+    "vers": ".*(manuel|pelle)|(manuel|pelle).*neige/"
+  },
+  {
+    "nom": "un nom inconnu donne un tracteur au lieu de l'icône générique",
+    "fichier": "js/icones-taches.js",
+    "de": "return r?r[1]:ICONE_GENERIQUE;",
+    "vers": "return r?r[1]:'tracteur';"
+  },
+  {
+    "nom": "une clé inconnue est acceptée comme icône choisie",
+    "fichier": "js/icones-taches.js",
+    "de": "if(l&&typeof l.nom==='string'&&estCleIcone(l.icone)) m[l.nom]=l.icone;",
+    "vers": "if(l&&typeof l.nom==='string'&&l.icone) m[l.nom]=l.icone;"
+  },
+  {
+    "nom": "une icône choisie qui n'a pas de nom est retenue",
+    "fichier": "js/icones-taches.js",
+    "de": "if(l&&typeof l.nom==='string'&&estCleIcone(l.icone))",
+    "vers": "if(l&&estCleIcone(l.icone))"
+  },
+  {
+    "nom": "l'icône choisie ne passe plus avant l'icône déduite",
+    "fichier": "js/icones-taches.js",
+    "de": "return estCleIcone(choisie)?choisie:iconeParNom(tache);",
+    "vers": "return iconeParNom(tache);"
+  },
+  {
+    "nom": "une icône choisie inconnue est rendue telle quelle (jamais vérifiée à la lecture)",
+    "fichier": "js/icones-taches.js",
+    "de": "return estCleIcone(choisie)?choisie:iconeParNom(tache);",
+    "vers": "return choisie||iconeParNom(tache);"
+  },
+  {
+    "nom": "les dernières icônes connues ne sont plus remises hors réseau",
+    "fichier": "js/icones-taches.js",
+    "de": "if(c&&Array.isArray(c.data)) installerIconesTaches(c.data);",
+    "vers": ";"
+  },
+  {
+    "nom": "la banque perd une icône (le tracteur)",
+    "fichier": "js/icones-taches.js",
+    "de": "  'tracteur':{nom:'Tracteur',svg:",
+    "vers": "  'tracteur-perdu':{nom:'Tracteur',svg:"
+  },
+  {
+    "nom": "mon camion n'est plus à MA position (celle du serveur, en retard)",
+    "fichier": "js/vehicules.js",
+    "de": "const pos=(moi&&maPositionDeCamion())||positionsVehicules.find(x=>x.passe_id===p.passe_id);",
+    "vers": "const pos=positionsVehicules.find(x=>x.passe_id===p.passe_id);"
+  },
+  {
+    "nom": "la route affichée cache MON camion",
+    "fichier": "js/vehicules.js",
+    "de": "if(!moi&&routeActive!==null&&t.route_id!==routeActive) return;",
+    "vers": "if(routeActive!==null&&t.route_id!==routeActive) return;"
+  },
+  {
+    "nom": "un passager est pris pour le chauffeur (son camion devient « le mien »)",
+    "fichier": "js/vehicules.js",
+    "de": "const moi=!!p.je_suis_chauffeur;",
+    "vers": "const moi=!!(p.je_suis_chauffeur||p.je_suis_a_bord);"
+  },
+  {
+    "nom": "personne n'est jamais « moi » : mon camion reste un marqueur de plus",
+    "fichier": "js/vehicules.js",
+    "de": "const moi=!!p.je_suis_chauffeur;",
+    "vers": "const moi=false;"
+  },
+  {
+    "nom": "les camions gardent toujours le petit tracteur 🚜",
+    "fichier": "js/vehicules.js",
+    "de": "(typeof svgIcone==='function'&&typeof iconeDeTache==='function')?svgIcone",
+    "vers": "(false&&typeof iconeDeTache==='function')?svgIcone"
+  },
+  {
+    "nom": "l'icône vient du NOM du véhicule au lieu de la tâche (étiquette)",
+    "fichier": "js/vehicules.js",
+    "de": "htmlIconeTache(c.tour.tache,'camion-ico')",
+    "vers": "htmlIconeTache(c.nom,'camion-ico')"
+  },
+  {
+    "nom": "l'icône vient du NOM du véhicule au lieu de la tâche (bulle)",
+    "fichier": "js/vehicules.js",
+    "de": "htmlIconeTache(t.tache,'bulle-ico')",
+    "vers": "htmlIconeTache(c.nom,'bulle-ico')"
+  },
+  {
+    "nom": "la bulle prend la classe de l'étiquette (icône lime sur fond blanc)",
+    "fichier": "js/vehicules.js",
+    "de": "htmlIconeTache(t.tache,'bulle-ico')",
+    "vers": "htmlIconeTache(t.tache,'camion-ico')"
+  },
+  {
+    "nom": "l'administrateur voit « Suivre ce camion » sur MON camion",
+    "fichier": "js/vehicules.js",
+    "de": "((!c.moi&&typeof peutSuivreCamion==='function'&&peutSuivreCamion())",
+    "vers": "((typeof peutSuivreCamion==='function'&&peutSuivreCamion())"
+  },
+  {
+    "nom": "sans point vert, mon camion est déclaré dessiné (il disparaît de la carte)",
+    "fichier": "js/vehicules.js",
+    "de": "if(!m||typeof m.setIcon!=='function') return false;",
+    "vers": "if(!m||typeof m.setIcon!=='function') return true;"
+  },
+  {
+    "nom": "mon étiquette est redessinée à chaque relecture des camions",
+    "fichier": "js/vehicules.js",
+    "de": "if(m._etiquetteHtml!==etiquette){",
+    "vers": "if(true){"
+  },
+  {
+    "nom": "mon étiquette n'est jamais mémorisée (redessinée à chaque fois)",
+    "fichier": "js/vehicules.js",
+    "de": "    m._etiquetteHtml=etiquette;\n    m.setIcon(",
+    "vers": "    m.setIcon("
+  },
+  {
+    "nom": "ma bulle est rattachée de nouveau à chaque relecture (un toucher est perdu)",
+    "fichier": "js/vehicules.js",
+    "de": "if(m._bulleHtml==null) m.bindPopup(bulle); else m.setPopupContent(bulle);",
+    "vers": "m.bindPopup(bulle);"
+  },
+  {
+    "nom": "ma bulle n'est jamais mémorisée",
+    "fichier": "js/vehicules.js",
+    "de": "    m._bulleHtml=bulle;\n  }\n  return true;",
+    "vers": "  }\n  return true;"
+  },
+  {
+    "nom": "ma bulle ne se met plus à jour quand l'avancement change",
+    "fichier": "js/vehicules.js",
+    "de": "if(m._bulleHtml==null) m.bindPopup(bulle); else m.setPopupContent(bulle);",
+    "vers": "if(m._bulleHtml==null) m.bindPopup(bulle);"
+  },
+  {
+    "nom": "le rond vert est remis à chaque relecture même hors passe",
+    "fichier": "js/vehicules.js",
+    "de": "if(!m||m._etiquetteHtml==null) return;",
+    "vers": "if(!m) return;"
+  },
+  {
+    "nom": "quand ma passe finit, le point reste un camion",
+    "fichier": "js/vehicules.js",
+    "de": "  m.setIcon(iconePointVert());\n",
+    "vers": ""
+  },
+  {
+    "nom": "quand ma passe finit, la bulle de mon camion reste attachée",
+    "fichier": "js/vehicules.js",
+    "de": "    if(typeof m.unbindPopup==='function') m.unbindPopup();\n",
+    "vers": ""
+  },
+  {
+    "nom": "quand ma passe finit, l'étiquette n'est pas oubliée (le rond vert est remis sans cesse)",
+    "fichier": "js/vehicules.js",
+    "de": "  m._etiquetteHtml=null;\n  m.setIcon(iconePointVert());",
+    "vers": "  m.setIcon(iconePointVert());"
+  },
+  {
+    "nom": "sans point vert, mon camion ne suit plus la route affichée",
+    "fichier": "js/vehicules.js",
+    "de": "      if(routeActive!==null&&c.tour.route_id!==routeActive) return;\n    }\n    vus[c.passeId]=true;",
+    "vers": "    }\n    vus[c.passeId]=true;"
+  },
+  {
+    "nom": "le point vert n'est plus rétabli quand je ne conduis plus",
+    "fichier": "js/vehicules.js",
+    "de": "  if(!moiSurLaCarte) retablirPointVert();",
+    "vers": "  ;"
+  },
+  {
+    "nom": "mon camion est dessiné deux fois (le point ET un marqueur de plus)",
+    "fichier": "js/vehicules.js",
+    "de": "if(majMonCamion(c,perime)){moiSurLaCarte=true;return;}",
+    "vers": "if(majMonCamion(c,perime)){moiSurLaCarte=true;}"
+  },
+  {
+    "nom": "le rond vert n'est plus rond",
+    "fichier": "js/carte.js",
+    "de": "border-radius:50%;background:#4ade80",
+    "vers": "border-radius:0;background:#4ade80"
+  },
+  {
+    "nom": "la première lecture du GPS ne rappelle plus les camions (mon camion attend la prochaine mise à jour)",
+    "fichier": "js/carte.js",
+    "de": "        if(typeof majVehicules==='function') majVehicules();   // je conduis déjà une passe : le point devient tout de suite mon camion\n",
+    "vers": ""
+  },
+  {
+    "nom": "la lecture ne demande plus l'icône",
+    "fichier": "js/liste-arrets.js",
+    "de": "select('nom, icone')",
+    "vers": "select('nom')"
+  },
+  {
+    "nom": "sans la colonne « icone », la lecture n'est pas refaite avec les seuls noms (le menu se vide)",
+    "fichier": "js/liste-arrets.js",
+    "de": "    if(r.error) r=await db.from('types_service').select('nom').eq('actif',true).order('nom');\n",
+    "vers": ""
+  },
+  {
+    "nom": "les icônes choisies ne sont plus installées",
+    "fichier": "js/liste-arrets.js",
+    "de": "      installerIconesTaches(lignes);\n",
+    "vers": ""
+  },
+  {
+    "nom": "les icônes choisies ne sont plus gardées pour le hors réseau",
+    "fichier": "js/liste-arrets.js",
+    "de": "      lectureReussie('iconesTaches',lignes);   // gardées pour le hors réseau (hors-reseau.js : restaurerDepuisCache)\n",
+    "vers": ""
+  },
+  {
+    "nom": "sans réponse du serveur, les dernières icônes connues ne reviennent pas",
+    "fichier": "js/liste-arrets.js",
+    "de": "    if(typeof restaurerIconesTaches==='function') await restaurerIconesTaches();   // pas de réponse : les dernières icônes connues\n",
+    "vers": ""
+  },
+  {
+    "nom": "le menu des types ne se remplit plus",
+    "fichier": "js/liste-arrets.js",
+    "de": "typesServiceActifs=lignes.map(x=>x.nom);",
+    "vers": "typesServiceActifs=[];"
+  },
+  {
+    "nom": "au démarrage sans signal, les icônes des tâches ne sont pas remises",
+    "fichier": "js/hors-reseau.js",
+    "de": "  if(typeof restaurerIconesTaches==='function') await restaurerIconesTaches();   // les icônes des tâches sur la carte : les dernières connues (elles ne comptent pas non plus dans « données de … »)\n",
+    "vers": ""
+  },
+  {
+    "nom": "la liste de l'onglet Services ne lit plus l'icône",
+    "fichier": "js/admin-types-service.js",
+    "de": "select('id, nom, actif, icone')",
+    "vers": "select('id, nom, actif')"
+  },
+  {
+    "nom": "sans la colonne, la liste de l'onglet Services n'est pas refaite (elle reste vide)",
+    "fichier": "js/admin-types-service.js",
+    "de": "    if(r.error) r=await db.from('types_service').select('id, nom, actif').order('nom');",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton d'icône perd sa classe (il n'est plus à gauche ni de la bonne taille)",
+    "fichier": "js/admin-types-service.js",
+    "de": "btIcone.className='ts-ico';",
+    "vers": "btIcone.className='';"
+  },
+  {
+    "nom": "le bouton d'icône ne dit plus à quoi il sert",
+    "fichier": "js/admin-types-service.js",
+    "de": "btIcone.setAttribute('aria-label','Icône de '+t.nom+' : '+nomIcone(cle)+'. Toucher pour la changer');",
+    "vers": "btIcone.setAttribute('aria-label','Icône');"
+  },
+  {
+    "nom": "le bouton d'icône n'ouvre plus la fenêtre",
+    "fichier": "js/admin-types-service.js",
+    "de": "      btIcone.onclick=()=>ouvrirIconeTache(t);\n",
+    "vers": ""
+  },
+  {
+    "nom": "le bouton montre une icône inconnue telle quelle",
+    "fichier": "js/admin-types-service.js",
+    "de": "const cle=estCleIcone(t.icone)?t.icone:iconeParNom(t.nom);",
+    "vers": "const cle=t.icone||iconeParNom(t.nom);"
+  },
+  {
+    "nom": "le bouton montre toujours l'icône par défaut (le choix est ignoré)",
+    "fichier": "js/admin-types-service.js",
+    "de": "const cle=estCleIcone(t.icone)?t.icone:iconeParNom(t.nom);",
+    "vers": "const cle=iconeParNom(t.nom);"
+  },
+  {
+    "nom": "la tuile choisie n'est plus marquée pour un lecteur d'écran",
+    "fichier": "js/admin-types-service.js",
+    "de": "b.setAttribute('aria-pressed',choisie?'true':'false');",
+    "vers": "b.setAttribute('aria-pressed','false');"
+  },
+  {
+    "nom": "la tuile choisie n'est plus encadrée",
+    "fichier": "js/admin-types-service.js",
+    "de": "b.className='it-tuile'+(choisie?' choisie':'');",
+    "vers": "b.className='it-tuile';"
+  },
+  {
+    "nom": "« Par défaut » écrit l'icône déduite au lieu de « vide »",
+    "fichier": "js/admin-types-service.js",
+    "de": "nomIcone(defaut)+')',null,actuelle===null)",
+    "vers": "nomIcone(defaut)+')',defaut,actuelle===null)"
+  },
+  {
+    "nom": "la tuile « Par défaut » n'est jamais marquée",
+    "fichier": "js/admin-types-service.js",
+    "de": "nomIcone(defaut)+')',null,actuelle===null)",
+    "vers": "nomIcone(defaut)+')',null,false)"
+  },
+  {
+    "nom": "la fenêtre oublie la première icône de la banque",
+    "fichier": "js/admin-types-service.js",
+    "de": "clesIcones().forEach(cle=>grille.appendChild(",
+    "vers": "clesIcones().slice(1).forEach(cle=>grille.appendChild("
+  },
+  {
+    "nom": "la fenêtre ne s'ouvre plus",
+    "fichier": "js/admin-types-service.js",
+    "de": "  document.getElementById('icone-tache-overlay').classList.add('open');\n}",
+    "vers": "}"
+  },
+  {
+    "nom": "la fenêtre ne s'appelle plus du nom du type",
+    "fichier": "js/admin-types-service.js",
+    "de": "textContent='Icône de « '+t.nom+' »';",
+    "vers": "textContent='Icône';"
+  },
+  {
+    "nom": "toucher DANS la fenêtre la ferme",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(e.target===document.getElementById('icone-tache-overlay')) fermerIconeTache();",
+    "vers": "  fermerIconeTache();"
+  },
+  {
+    "nom": "le SQL 27 manquant n'est plus expliqué (message brut)",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(/icone/i.test(texte)&&/column|colonne|schema cache|42703|PGRST204/i.test(texte)) return '❌ La base n’est pas encore à jour pour les icônes : le fichier SQL 27 est à exécuter dans Supabase.';\n",
+    "vers": ""
+  },
+  {
+    "nom": "une panne de réseau n'est plus expliquée",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(estErreurReseau(error)) return '📴 Pas de réseau : rien n’a été changé.';\n  const texte=",
+    "vers": "  const texte="
+  },
+  {
+    "nom": "une clé qui n'est pas dans la banque est écrite dans la base",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(cle!==null&&!estCleIcone(cle)) return;\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'écriture vise le nom du type au lieu de son identifiant",
+    "fichier": "js/admin-types-service.js",
+    "de": "update({icone:cle}).eq('id',t.id)",
+    "vers": "update({icone:cle}).eq('nom',t.nom)"
+  },
+  {
+    "nom": "l'écriture n'envoie plus l'icône (elle envoie le nom)",
+    "fichier": "js/admin-types-service.js",
+    "de": "update({icone:cle})",
+    "vers": "update({nom:t.nom})"
+  },
+  {
+    "nom": "après une erreur, la fenêtre se ferme et dit « changé »",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(error){toast(messageErreurIconeTache(error));return;}",
+    "vers": "  if(error){toast(messageErreurIconeTache(error));}"
+  },
+  {
+    "nom": "la fenêtre ne se ferme pas après un choix",
+    "fichier": "js/admin-types-service.js",
+    "de": "  fermerIconeTache();\n  _typeIconeEnEdition=null;",
+    "vers": "  _typeIconeEnEdition=null;"
+  },
+  {
+    "nom": "la liste de l'onglet n'est pas relue après un choix",
+    "fichier": "js/admin-types-service.js",
+    "de": "  _typeIconeEnEdition=null;\n  await chargerTypesServiceAdmin();",
+    "vers": "  _typeIconeEnEdition=null;"
+  },
+  {
+    "nom": "la carte ne relit pas les icônes après un choix",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(typeof chargerTypesService==='function') await chargerTypesService();   // la carte (les camions de cette tâche) suit tout de suite\n",
+    "vers": ""
+  },
+  {
+    "nom": "les camions ne sont pas redessinés après un choix",
+    "fichier": "js/admin-types-service.js",
+    "de": "  if(typeof majVehicules==='function') majVehicules();\n}",
+    "vers": "}"
+  },
+  {
+    "nom": "sans type ouvert, un choix plante au lieu de ne rien faire",
+    "fichier": "js/admin-types-service.js",
+    "de": "  const t=_typeIconeEnEdition;\n  if(!t) return;\n",
+    "vers": "  const t=_typeIconeEnEdition;\n"
+  },
+  {
+    "nom": "le message de réussite ne dit plus l'icône choisie",
+    "fichier": "js/admin-types-service.js",
+    "de": "toast(cle?'✔ Icône de '+t.nom+' : '+nomIcone(cle):",
+    "vers": "toast(cle?'✔ Icône changée':"
+  },
+  {
+    "nom": "la page ne charge plus icones-taches.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/icones-taches.js\"></script>\n",
+    "vers": ""
+  },
+  {
+    "nom": "icones-taches.js est chargé après vehicules.js",
+    "fichier": "index.html",
+    "de": "<script src=\"js/icones-taches.js\"></script>\n<script src=\"js/vehicules.js\"></script>",
+    "vers": "<script src=\"js/vehicules.js\"></script>\n<script src=\"js/icones-taches.js\"></script>"
+  },
+  {
+    "nom": "la fenêtre du choix perd sa grille",
+    "fichier": "index.html",
+    "de": "<div id=\"it-grille\"></div>",
+    "vers": "<div id=\"it-grille-x\"></div>"
+  },
+  {
+    "nom": "la fenêtre du choix perd son bouton « Fermer »",
+    "fichier": "index.html",
+    "de": "onclick=\"fermerIconeTache()\">Fermer</button>",
+    "vers": "onclick=\"fermerLaFenetre()\">Fermer</button>"
+  },
+  {
+    "nom": "toucher en dehors de la fenêtre n'est plus relié",
+    "fichier": "index.html",
+    "de": "<div id=\"icone-tache-overlay\" onclick=\"bgClickIconeTache(event)\">",
+    "vers": "<div id=\"icone-tache-overlay\">"
+  },
+  {
+    "nom": "les icônes ne sont plus en trait (elles se remplissent de couleur)",
+    "fichier": "css/style.css",
+    "de": ".ico{width:30px;height:20px;flex-shrink:0;fill:none;stroke:currentColor;",
+    "vers": ".ico{width:30px;height:20px;flex-shrink:0;fill:currentColor;stroke:currentColor;"
+  },
+  {
+    "nom": "le fond d'une roue n'a plus la couleur du fond",
+    "fichier": "css/style.css",
+    "de": ".ico .ico-f{fill:var(--ico-fond,#1a1f26);}",
+    "vers": ".ico .ico-f{fill:none;}"
+  },
+  {
+    "nom": "les points pleins ne sont plus pleins",
+    "fichier": "css/style.css",
+    "de": ".ico .ico-p{fill:currentColor;stroke:none;}",
+    "vers": ".ico .ico-p{fill:none;}"
+  },
+  {
+    "nom": "l'icône de l'étiquette n'a plus la couleur du nom",
+    "fichier": "css/style.css",
+    "de": ".camion .camion-ico{color:#c8e63c;}",
+    "vers": ".camion .camion-ico{color:#000;}"
+  },
+  {
+    "nom": "l'icône de la bulle est claire sur fond blanc (invisible)",
+    "fichier": "css/style.css",
+    "de": ".bulle-ico{width:26px;height:17px;vertical-align:-3px;color:#1a1f26;--ico-fond:#fff;}",
+    "vers": ".bulle-ico{width:26px;height:17px;vertical-align:-3px;color:#fff;--ico-fond:#fff;}"
+  },
+  {
+    "nom": "le bouton d'icône n'est plus à gauche de la ligne",
+    "fichier": "css/style.css",
+    "de": ".emp-item .ts-ico{order:-1;",
+    "vers": ".emp-item .ts-ico{order:0;"
+  },
+  {
+    "nom": "le bouton d'icône est trop petit pour un doigt",
+    "fichier": "css/style.css",
+    "de": "width:56px;height:40px;padding:0;border-radius:8px;",
+    "vers": "width:56px;height:20px;padding:0;border-radius:8px;"
+  },
+  {
+    "nom": "la grille de la banque n'est plus de 3 colonnes",
+    "fichier": "css/style.css",
+    "de": "#it-grille{display:grid;grid-template-columns:repeat(3,",
+    "vers": "#it-grille{display:grid;grid-template-columns:repeat(4,"
+  },
+  {
+    "nom": "la tuile choisie n'est plus encadrée",
+    "fichier": "css/style.css",
+    "de": ".it-tuile.choisie{border-color:var(--accent);",
+    "vers": ".it-tuile.choisie{border-color:var(--border);"
+  },
+  {
+    "nom": "la fenêtre du choix ne défile plus (la banque déborde de l'écran)",
+    "fichier": "css/style.css",
+    "de": "width:100%;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease;}\n#icone-tache-modal h2",
+    "vers": "width:100%;animation:slideUp .25s ease;}\n#icone-tache-modal h2"
+  },
+  {
+    "nom": "la fenêtre du choix oublie la barre d'accueil d'un iPhone",
+    "fichier": "css/style.css",
+    "de": "align-items:flex-end;padding-bottom:var(--sa-bottom);}\n#icone-tache-overlay.open",
+    "vers": "align-items:flex-end;}\n#icone-tache-overlay.open"
+  }
+]

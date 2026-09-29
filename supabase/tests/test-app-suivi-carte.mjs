@@ -383,8 +383,13 @@ log('\n=== ◎ HORS PASSE, ET ◎ POUR UN PASSAGER ===');
   m.camions([{ passe: 'p2', equipe: 'e2', nom: 'Camion 2', lat: 46.6, lon: -72.8 }]);
   m.run('window.centerUser()');
   eq('… et quand le camion est dessiné : il suit LE CAMION où il est à bord', m.suivi(), { type: 'camion', passeId: 'p2', auto: false, attache: true });
-  const n = await mondeAvecPoint({ utilisateur: LUC });
-  n.tours(CHAUFFEUR('p1')); n.camions([{ passe: 'p1', equipe: 'e1', nom: 'Camion 1', lat: 46.5, lon: -72.7 }]); n.bandeau(); n.run('window.centerUser()'); n.run('window.centerUser()');
+  // Le chauffeur suit son propre point, jamais un camion. (Depuis la demande 2, quand le point vert existe, MON camion EST le point vert : aucun marqueur de camion à suivre. Le seul cas
+  // où mon camion est un marqueur à part : pas encore de point vert dessiné — une lecture du service de position, sans lecture du suivi de la carte.)
+  const n = monde({ utilisateur: LUC }); n.initCarte();
+  n.lectureFond(46.5, -72.7, 5);
+  n.tours(CHAUFFEUR('p1')); n.camions([{ passe: 'p1', equipe: 'e1', nom: 'Camion 1', lat: 46.5, lon: -72.7 }]);
+  eq('(mon camion est dessiné comme un marqueur à part : il n\'y a pas encore de point vert)', [n.point(), n.run(`Object.keys(marqueursVehicules)`)], [undefined, ['p1']]);
+  n.run('window.centerUser()');
   eq('le chauffeur, lui, suit toujours son propre point (même si son camion est dessiné)', n.suivi() && n.suivi().type, 'moi');
 }
 

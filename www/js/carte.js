@@ -51,16 +51,17 @@ function initApp(){
       const{latitude:lat,longitude:lon,accuracy}=pos.coords;   // (lastPos et lastPosInfo : déjà posés par position.js)
       dotEl.className='on';
       lblEl.textContent=`±${Math.round(accuracy)}m`;
-      const icon=L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:#4ade80;border:3px solid #fff;box-shadow:0 0 8px #4ade80"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
       // Le point vert est DESSINÉ ici, à la première lecture ; ensuite il GLISSE jusqu'à chaque lecture — de n'importe quelle source, y compris le service de position du
       // téléphone pendant ma passe, une par seconde — par majPointVert (suivi-carte.js), appelée par noterPosition (position.js). Le cercle de précision le suit.
+      // Pendant MA passe il prend l'aspect de mon camion (vehicules.js : majMonCamion) : une seule marque sur ma carte.
       if(!window._uMk){
-        window._uMk=L.marker([lat,lon],{icon,zIndexOffset:1000}).addTo(map);
+        window._uMk=L.marker([lat,lon],{icon:iconePointVert(),zIndexOffset:1000}).addTo(map);
         window._uMk._posActuelle=[lat,lon];
         window._uMk._majLeMs=lastPosInfo?lastPosInfo.le:Date.now();
         window._uCk=L.circle([lat,lon],{radius:accuracy,color:'#4ade80',fillColor:'#4ade80',fillOpacity:.08,weight:1}).addTo(map);
         window._uMk.on('move',e=>window._uCk.setLatLng(e.latlng));
         map.setView([lat,lon],15);
+        if(typeof majVehicules==='function') majVehicules();   // je conduis déjà une passe : le point devient tout de suite mon camion
         if(typeof suiviMarqueurCree==='function') suiviMarqueurCree();   // la carte attendait peut-être ce point pour le suivre
       }
       geocodeReverse(lat,lon,addrEl);
@@ -85,6 +86,11 @@ function initApp(){
 
   // Session : reprise de celle déjà ouverte sur ce téléphone (Supabase Auth), sinon écran de connexion
   restaurerSession();
+}
+
+// Le point vert de ma position (le rond vert à bord blanc). Sert au départ et quand ma passe finit (vehicules.js : retablirPointVert).
+function iconePointVert(){
+  return L.divIcon({className:'',html:`<div style="width:14px;height:14px;border-radius:50%;background:#4ade80;border:3px solid #fff;box-shadow:0 0 8px #4ade80"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
 }
 
 // ── GEOCODE ────────────────────────────────────────────

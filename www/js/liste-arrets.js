@@ -8,10 +8,20 @@ const TYPES_SERVICE_DEFAUT=['Déneigement mécanique','Déneigement manuel','Ép
 let typesServiceActifs=[];
 async function chargerTypesService(){
   try{
-    const{data,error}=await db.from('types_service').select('nom').eq('actif',true).order('nom');
-    if(error) throw error;
-    typesServiceActifs=Array.isArray(data)?data.map(x=>x.nom):[];
-  }catch(e){/* le filet (TYPES_SERVICE_DEFAUT) prend le relais dans remplirTypesService() */}
+    // « icone » : l'icône choisie pour la tâche (colonne du fichier SQL 27 ; icones-taches.js). Sans elle (le SQL pas encore exécuté), on relit les seuls noms : jamais bloquant.
+    let r=await db.from('types_service').select('nom, icone').eq('actif',true).order('nom');
+    if(r.error) r=await db.from('types_service').select('nom').eq('actif',true).order('nom');
+    if(r.error) throw r.error;
+    const lignes=Array.isArray(r.data)?r.data:[];
+    typesServiceActifs=lignes.map(x=>x.nom);
+    if(typeof installerIconesTaches==='function'){
+      installerIconesTaches(lignes);
+      lectureReussie('iconesTaches',lignes);   // gardées pour le hors réseau (hors-reseau.js : restaurerDepuisCache)
+    }
+  }catch(e){
+    /* le filet (TYPES_SERVICE_DEFAUT) prend le relais dans remplirTypesService() */
+    if(typeof restaurerIconesTaches==='function') await restaurerIconesTaches();   // pas de réponse : les dernières icônes connues
+  }
 }
 function remplirTypesService(){
   const sel=document.getElementById('f-svc');

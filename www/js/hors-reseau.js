@@ -273,6 +273,7 @@ async function restaurerDepuisCache(){
   if(typeof restaurerParcours==='function') await restaurerParcours();   // les tronçons du tracé : la dernière copie (étape 18b, parcours.js)
   employes=(lire.employes&&Array.isArray(lire.employes.data))?lire.employes.data:[];
   if(typeof restaurerReglagesQuart==='function') await restaurerReglagesQuart();   // rappel, pause : la dernière valeur connue (elle ne compte pas dans « données de … »)
+  if(typeof restaurerIconesTaches==='function') await restaurerIconesTaches();   // les icônes des tâches sur la carte : les dernières connues (elles ne comptent pas non plus dans « données de … »)
   if(lire.quart&&typeof installerQuart==='function') installerQuart(lire.quart.data||null);   // suis-je en service ? (la copie « null » = pas en service)
   positionsVehicules=[];   // les positions ne se gardent pas : un point de plus de 3 minutes ne veut plus rien dire
   // Les données affichées valent ce que vaut la plus VIEILLE des copies (honnêteté)

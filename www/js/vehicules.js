@@ -105,15 +105,23 @@ function superposerEquipages(eq){
   return copie;
 }
 
-// Les camions à dessiner : une passe en cours AVEC une position (une route choisie, ou toutes les routes ensemble)
+// Les camions à dessiner : une passe en cours AVEC une position (une route choisie, ou toutes les routes ensemble).
+// MA passe (celle que je conduis) est toujours dans la liste, à MA position : celle du GPS de ce téléphone, sans les quelques secondes de retard de celle que le serveur reçoit.
+// Elle est dessinée par majMonCamion (plus bas) : mon point vert prend l'aspect du camion, quelle que soit la route affichée, sans ajouter de deuxième marqueur. Tant que le point
+// vert n'existe pas (pas encore de position du téléphone), majVehicules la dessine comme les autres, d'après le serveur.
+function maPositionDeCamion(){
+  if(typeof lastPosInfo==='undefined'||!lastPosInfo) return null;
+  return {lat:lastPosInfo.lat,lon:lastPosInfo.lon,precision_m:lastPosInfo.precision,maj_le:new Date(lastPosInfo.le).toISOString()};
+}
 function listeCamions(){
   const res=[];
   tours.forEach(t=>{
-    if(routeActive!==null&&t.route_id!==routeActive) return;
     t.passes.forEach(p=>{
-      const pos=positionsVehicules.find(x=>x.passe_id===p.passe_id);
+      const moi=!!p.je_suis_chauffeur;
+      if(!moi&&routeActive!==null&&t.route_id!==routeActive) return;
+      const pos=(moi&&maPositionDeCamion())||positionsVehicules.find(x=>x.passe_id===p.passe_id);
       if(!pos||!pos.lat||!pos.lon) return;
-      res.push({passeId:p.passe_id,nom:nomsVehicules[p.equipe_id]||'Camion',tour:t,position:pos,equipage:equipages[p.passe_id]||[]});
+      res.push({passeId:p.passe_id,nom:nomsVehicules[p.equipe_id]||'Camion',tour:t,position:pos,equipage:equipages[p.passe_id]||[],moi});
     });
   });
   return res;
@@ -150,10 +158,18 @@ function deplacerMarqueurCamion(m,lat,lon,majLe){
   },GLISSEMENT_PAS_MS);
 }
 
+// L'icône de la TÂCHE du camion (icones-taches.js : celle que l'administrateur a choisie, sinon celle que le nom laisse deviner) ; sans la banque d'icônes, l'ancien petit tracteur
+function htmlIconeTache(tache,classe){
+  return (typeof svgIcone==='function'&&typeof iconeDeTache==='function')?svgIcone(iconeDeTache(tache),classe):'🚜';
+}
+// L'étiquette du camion sur la carte : l'icône de sa tâche, son nom, son avancement (visible par tout le monde), les personnes à bord
+function htmlEtiquetteCamion(c,perime){
+  return '<div class="camion'+(perime?' perime':'')+'">'+htmlIconeTache(c.tour.tache,'camion-ico')+'<span>'+esc(c.nom)+'</span><strong>'+Math.max(0,Math.min(100,Number(c.tour.pourcentage)||0))+' %</strong>'+(c.equipage.length?'<em>👤 '+c.equipage.length+'</em>':'')+'</div>';
+}
 function iconeCamion(c,perime){
   return L.divIcon({
     className:'',
-    html:'<div class="camion'+(perime?' perime':'')+'">🚜<span>'+esc(c.nom)+'</span><strong>'+Math.max(0,Math.min(100,Number(c.tour.pourcentage)||0))+' %</strong>'+(c.equipage.length?'<em>👤 '+c.equipage.length+'</em>':'')+'</div>',   // le pourcentage du camion : visible par tout le monde
+    html:htmlEtiquetteCamion(c,perime),
     iconSize:null,           // la taille de l'étiquette est celle de son contenu (sinon Leaflet l'écrase dans une boîte de 12 px)
     popupAnchor:[0,-16]      // la bulle s'ouvre au-dessus de l'étiquette (centrée sur la position du camion, voir style.css)
   });
@@ -164,24 +180,62 @@ function htmlCamion(c,perime){
   const t=c.tour;
   const chauffeur=c.equipage.filter(x=>x.role==='chauffeur').map(x=>esc(x.nom||'?'));
   const abord=c.equipage.filter(x=>x.role!=='chauffeur').map(x=>esc(x.nom||'?'));
-  return '<b>🚜 '+esc(c.nom)+'</b><br>Passe n° '+esc(numeroPasse(t))+' · '+esc(t.tache)+
+  return '<b>'+htmlIconeTache(t.tache,'bulle-ico')+' '+esc(c.nom)+'</b><br>Passe n° '+esc(numeroPasse(t))+' · '+esc(t.tache)+
     '<br>'+esc(t.faits)+'/'+esc(t.total)+' ('+esc(t.pourcentage)+' %)'+
     '<br>Chauffeur : '+(chauffeur.length?chauffeur.join(', '):'—')+
     '<br>À bord : '+(abord.length?abord.join(', '):'personne d’autre')+
     '<br><small>'+(perime?'⚠ ':'')+'position '+esc(ilYa(c.position.maj_le))+'</small>'+
     // L'administrateur peut faire suivre ce camion par la carte (suivi-carte.js) ; un même toucher l'arrête. (L'identifiant de la passe passe par data-passe : du TEXTE, jamais du code.)
-    ((typeof peutSuivreCamion==='function'&&peutSuivreCamion())
+    // Jamais sur MON camion : la carte me suit déjà quand je le demande (◎), et mon camion n'est pas un marqueur de camion comme les autres.
+    ((!c.moi&&typeof peutSuivreCamion==='function'&&peutSuivreCamion())
       ?'<br><button type="button" class="camion-suivre" data-passe="'+esc(c.passeId)+'" onclick="basculerSuiviCamion(this.dataset.passe)">'+(suiviCamionActif(c.passeId)?'⏹ Ne plus suivre ce camion':'📌 Suivre ce camion')+'</button>'
       :'');
+}
+
+// MON camion : pendant MA passe, le point vert de la carte (window._uMk, dessiné par carte.js) prend l'aspect du camion — l'icône de la tâche, le nom, l'avancement, l'équipage.
+// Une seule marque sur ma carte (décision de Joé : « un seul ») : ni un point vert et un camion presque superposés, ni un camion qui traîne quelques secondes derrière moi.
+// Il reste à ma position exacte : c'est le même marqueur, qui glisse à chaque lecture du GPS (suivi-carte.js : majPointVert) et que la carte suit. Renvoie true s'il est dessiné.
+function pointVertDeLaCarte(){return (typeof window!=='undefined'&&window._uMk)||null;}
+function majMonCamion(c,perime){
+  const m=pointVertDeLaCarte();
+  if(!m||typeof m.setIcon!=='function') return false;   // pas encore de position du téléphone : carte.js dessine le point à la première lecture, puis rappelle majVehicules
+  const etiquette=htmlEtiquetteCamion(c,perime);
+  if(m._etiquetteHtml!==etiquette){
+    m._etiquetteHtml=etiquette;
+    m.setIcon(L.divIcon({className:'',html:etiquette,iconSize:null,popupAnchor:[0,-16]}));
+  }
+  const bulle=htmlCamion(c,perime);
+  if(m._bulleHtml!==bulle){
+    if(m._bulleHtml==null) m.bindPopup(bulle); else m.setPopupContent(bulle);
+    m._bulleHtml=bulle;
+  }
+  return true;
+}
+// Je ne conduis pas (ou plus) : le point vert redevient un simple point, sans bulle
+function retablirPointVert(){
+  const m=pointVertDeLaCarte();
+  if(!m||m._etiquetteHtml==null) return;
+  m._etiquetteHtml=null;
+  m.setIcon(iconePointVert());
+  if(m._bulleHtml!=null){
+    m._bulleHtml=null;
+    if(typeof m.unbindPopup==='function') m.unbindPopup();
+  }
 }
 
 // Dessine, déplace ou retire les camions. Un même camion garde le même marqueur (il se déplace, la bulle ouverte reste ouverte).
 function majVehicules(){
   const camions=listeCamions();
   const vus={};
+  let moiSurLaCarte=false;
   camions.forEach(c=>{
-    vus[c.passeId]=true;
     const perime=positionPerimee(c.position);
+    if(c.moi){
+      if(majMonCamion(c,perime)){moiSurLaCarte=true;return;}   // MON camion : mon point vert lui-même, pas un marqueur de plus
+      // Pas encore de point vert (le téléphone n'a pas encore de position) : mon camion est dessiné comme les autres, d'après le serveur, et suit la route affichée
+      if(routeActive!==null&&c.tour.route_id!==routeActive) return;
+    }
+    vus[c.passeId]=true;
     let m=marqueursVehicules[c.passeId];
     if(m){
       deplacerMarqueurCamion(m,c.position.lat,c.position.lon,c.position.maj_le);
@@ -205,6 +259,7 @@ function majVehicules(){
       map.removeLayer(marqueursVehicules[id]); delete marqueursVehicules[id];   // passe terminée, ou camion d'une autre route
     }
   });
+  if(!moiSurLaCarte) retablirPointVert();   // je ne conduis pas (ou plus) : le point vert redevient un simple point
 }
 
 // Un équipage qui change (quelqu'un monte à bord, descend, est transféré) sur n'importe quel téléphone :

@@ -368,7 +368,7 @@
   {
     "nom": "tout le monde voit « Suivre ce camion » dans la bulle",
     "fichier": "js/vehicules.js",
-    "de": "((typeof peutSuivreCamion==='function'&&peutSuivreCamion())",
+    "de": "((!c.moi&&typeof peutSuivreCamion==='function'&&peutSuivreCamion())",
     "vers": "((true)"
   },
   {

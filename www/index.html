@@ -244,6 +244,17 @@
   </div>
 </div>
 
+<!-- Demande 2 : le choix de l'icône d'un type de service (admin-types-service.js) — « Par défaut », puis la banque d'icônes (icones-taches.js) -->
+<div id="icone-tache-overlay" onclick="bgClickIconeTache(event)">
+  <div id="icone-tache-modal">
+    <h2 id="it-titre">Icône</h2>
+    <div id="it-grille"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="mb s" onclick="fermerIconeTache()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Étape 19 : « Vérifier / corriger un quart » (admin-quarts.js) -->
 <div id="correction-quart-overlay" onclick="bgClickQC(event)">
   <div id="correction-quart-modal">
@@ -399,6 +410,7 @@
 <script src="js/compte.js"></script>
 <script src="js/carte.js"></script>
 <script src="js/tours.js"></script>
+<script src="js/icones-taches.js"></script>
 <script src="js/vehicules.js"></script>
 <script src="js/suivi-carte.js"></script>
 <script src="js/equipage.js"></script>

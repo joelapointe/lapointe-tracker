@@ -10,6 +10,9 @@
 // types_service.frequence_jours (le RYTHME du service : « tous les 7 jours » ; règle types_service_admin) : AUCUNE fonction serveur.
 // Une ligne = une ADRESSE pour le service choisi. Sa SECTION = la route de son arrêt le plus ANCIEN (les copies dans les routes temporaires sont plus récentes) : les routes de Joé portent déjà les noms de ses villes.
 // Un « passage » = un JOUR (deux « Complété » le même jour pour la même adresse, par exemple dans une route et sa copie, comptent pour un).
+// Demande 6 (rentabilité) : le TEMPS PASSÉ chez chaque client (arrivée et départ de la visite, notés par le téléphone du chauffeur : presence.js, table arret_presences, fichier SQL 29). Aucun prix ici : Joé fait lui-même
+// le calcul avec le temps et le nombre de visites. Seules comptent les visites d'une passe qui a COMPLÉTÉ l'arrêt (un camion qui traverse la zone d'un client sans le compléter n'est pas une visite) ; une visite
+// appartient au jour de son « Complété ».
 const SUIVI_MOIS=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
 const SUIVI_PAGE=1000;       // lignes lues par requête (le service de données n'en rend pas plus de 1000)
 const SUIVI_PAGES_MAX=60;    // garde-fou : jamais plus de 60 000 lignes lues
@@ -17,7 +20,7 @@ const SUIVI_PAGES_MAX=60;    // garde-fou : jamais plus de 60 000 lignes lues
 let suiviService=null;       // le service affiché (« Coupe de gazon »…)
 let suiviFiltre='tous';      // 'tous' | 'afaire' | 'aucun'
 let suiviRecherche='';
-let suiviDonnees=null;       // {depuis, passages:[{stop_id,complete_le}], manuels:[{id,stop_id,jour,note}], manuelsDispo, rythmes:{nom:jours|null}, rythmeDispo, services:[nom]}
+let suiviDonnees=null;       // {depuis, passages:[{stop_id,complete_le,passe_id}], manuels:[{id,stop_id,jour,note}], manuelsDispo, presences:[{passe_id,stop_id,arrivee_le,depart_le}], presencesDispo, rythmes:{nom:jours|null}, rythmeDispo, services:[nom]}
 let _suiviOccupe=false;      // une écriture est en cours (pas de double envoi)
 let _suiviLecture=0;         // le numéro de la dernière lecture demandée (une réponse plus vieille est ignorée)
 
@@ -53,9 +56,28 @@ function suiviEtat(total,jours,rythme){
   return jours>=rythme*1.5?'retard':'afaire';
 }
 const SUIVI_A_FAIRE=['aucun','afaire','retard'];   // les états qui demandent un passage
+// Une durée pour l'écran : « 45 s », « 24 min », « 1 h 05 » (à la minute près dès qu'elle dépasse une minute)
+function suiviDuree(ms){
+  const n=Number(ms);
+  if(!(n>0)) return '0 s';
+  if(n<60000) return Math.floor(n/1000)+' s';
+  const m=Math.round(n/60000);
+  if(m<60) return m+' min';
+  return Math.floor(m/60)+' h '+suiviPad(m%60);
+}
+// Ce que dit la ligne du temps d'un client : « ⏱ 1 h 12 en tout · 24 min en moyenne (3 passages mesurés sur 5) » ; vide quand aucune visite n'a été mesurée
+function suiviTexteTemps(l){
+  if(!l||!l.joursMesures) return '';
+  const nb=l.joursMesures;
+  const partiel=nb<l.total?' ('+nb+' passage'+(nb>1?'s':'')+' mesuré'+(nb>1?'s':'')+' sur '+l.total+')':'';
+  if(nb===1) return '⏱ '+suiviDuree(l.tempsMs)+partiel;
+  return '⏱ '+suiviDuree(l.tempsMs)+' en tout · '+suiviDuree(l.tempsMoyenMs)+' en moyenne'+partiel;
+}
+// Le temps passé chez tous ces clients ensemble (millisecondes)
+function suiviTempsTotal(lignes){return (lignes||[]).reduce((n,l)=>n+(l.tempsMs||0),0);}
 
 // Construit les lignes du service choisi.
-// o : {arrets (les arrêts actifs), routes, completions [{stop_id, complete_le}], manuels [{id, stop_id, jour, note}], service, depuis ('AAAA-MM-JJ'), aujourdhui ('AAAA-MM-JJ'), rythme (jours ou null)}
+// o : {arrets (les arrêts actifs), routes, completions [{stop_id, complete_le, passe_id}], manuels [{id, stop_id, jour, note}], presences [{passe_id, stop_id, arrivee_le, depart_le}], service, depuis ('AAAA-MM-JJ'), aujourdhui ('AAAA-MM-JJ'), rythme (jours ou null)}
 function suiviConstruire(o){
   const nomRoute=id=>{const r=(o.routes||[]).find(x=>x.id===id);return r?r.nom:null;};
   const groupes=new Map();
@@ -68,6 +90,17 @@ function suiviConstruire(o){
   const fiche=id=>{if(!parArret.has(id)) parArret.set(id,{app:new Set(),manuel:new Map()});return parArret.get(id);};
   (o.completions||[]).forEach(c=>{const j=suiviJourLocal(c.complete_le);if(j&&j>=o.depuis) fiche(c.stop_id).app.add(j);});
   (o.manuels||[]).forEach(m=>{const j=String(m.jour||'').slice(0,10);if(/^\d{4}-\d{2}-\d{2}$/.test(j)&&j>=o.depuis) fiche(m.stop_id).manuel.set(j,{id:m.id,note:m.note||''});});
+  // Le temps passé : les visites TERMINÉES (départ connu) d'une passe qui a complété cet arrêt ; le jour d'une visite est celui de ce « Complété »
+  const jourFait=new Map();   // « passe|arrêt » → le jour de son « Complété »
+  (o.completions||[]).forEach(c=>{const j=suiviJourLocal(c.complete_le);if(c.passe_id&&j&&j>=o.depuis) jourFait.set(c.passe_id+'|'+c.stop_id,j);});
+  const visitesParArret=new Map();   // id de l'arrêt → [{jour, ms, passeId, stopId, arrivee, depart}]
+  (o.presences||[]).forEach(p=>{
+    const jour=jourFait.get(p.passe_id+'|'+p.stop_id);
+    const ms=Date.parse(p.depart_le)-Date.parse(p.arrivee_le);
+    if(!jour||!(ms>=0)) return;   // (aucun « Complété » de cette passe, ou départ absent ou illisible)
+    if(!visitesParArret.has(p.stop_id)) visitesParArret.set(p.stop_id,[]);
+    visitesParArret.get(p.stop_id).push({jour,ms,passeId:p.passe_id,stopId:p.stop_id,arrivee:p.arrivee_le,depart:p.depart_le});
+  });
   const lignes=[];
   groupes.forEach((liste,cle)=>{
     // le plus ANCIEN arrêt de l'adresse (date de création, puis place dans la route, puis identifiant) est la référence : sa route donne la section
@@ -83,10 +116,14 @@ function suiviConstruire(o){
     const dates=[...jours.values()].sort((a,b)=>a.jour.localeCompare(b.jour));
     const dernier=dates.length?dates[dates.length-1].jour:null;
     const nbJours=dernier?suiviJoursEntre(dernier,o.aujourdhui):null;
+    const visites=tries.flatMap(a=>visitesParArret.get(a.id)||[]).sort((a,b)=>Date.parse(a.arrivee)-Date.parse(b.arrivee));
+    const tempsMs=visites.reduce((n,v)=>n+v.ms,0);
+    const joursMesures=new Set(visites.map(v=>v.jour)).size;
     lignes.push({
       cle,arretRef:ref.id,arretIds:tries.map(s=>s.id),adresse:ref.adresse||'',client:(tries.map(s=>(s.client||'').trim()).find(x=>x))||'',
       section:nomRoute(ref.route_id)||'Sans route',ordre:Number(ref.ordre)||0,
       dates,total:dates.length,dernier,jours:nbJours,etat:suiviEtat(dates.length,nbJours,o.rythme),
+      visites,tempsMs,joursMesures,tempsMoyenMs:joursMesures?Math.round(tempsMs/joursMesures):null,
     });
   });
   return lignes;
@@ -154,10 +191,13 @@ function suiviServices(types){
 async function suiviCharger(depuis){
   const numero=++_suiviLecture;
   const debutIso=new Date(Number(depuis.slice(0,4)),Number(depuis.slice(5,7))-1,Number(depuis.slice(8,10))).toISOString();
-  const passages=await suiviLireTout('passe_arrets','stop_id, complete_le',q=>q.gte('complete_le',debutIso),'complete_le');
+  const passages=await suiviLireTout('passe_arrets','stop_id, complete_le, passe_id',q=>q.gte('complete_le',debutIso),'complete_le');
   let manuels=[],manuelsDispo=true;
   try{manuels=await suiviLireTout('passages_manuels','id, stop_id, jour, note',q=>q.gte('jour',depuis),'jour');}
   catch(e){if(suiviTableAbsente(e)) manuelsDispo=false; else throw e;}
+  let presences=[],presencesDispo=true;   // le temps passé (fichier SQL 29) : sans lui, tout le reste marche
+  try{presences=await suiviLireTout('arret_presences','passe_id, stop_id, arrivee_le, depart_le',q=>q.gte('arrivee_le',debutIso),'arrivee_le');}
+  catch(e){if(suiviTableAbsente(e)) presencesDispo=false; else throw e;}
   let types=[],rythmeDispo=true;
   let r=await db.from('types_service').select('nom, actif, frequence_jours').order('nom');
   if(r.error&&suiviTableAbsente(r.error)){rythmeDispo=false;r=await db.from('types_service').select('nom, actif').order('nom');}
@@ -166,7 +206,7 @@ async function suiviCharger(depuis){
   if(numero!==_suiviLecture) return null;   // une lecture plus récente a été demandée entre-temps
   const rythmes={};
   types.forEach(t=>{rythmes[t.nom]=(typeof t.frequence_jours==='number')?t.frequence_jours:null;});
-  return {depuis,passages,manuels,manuelsDispo,rythmes,rythmeDispo,services:suiviServices(types)};
+  return {depuis,passages,manuels,manuelsDispo,presences,presencesDispo,rythmes,rythmeDispo,services:suiviServices(types)};
 }
 
 function chargerSuiviAdmin(){
@@ -223,7 +263,7 @@ function suiviRythmeDe(service){
 // Toutes les lignes du service affiché (avant le filtre et la recherche)
 function suiviLignes(){
   if(!suiviDonnees||!suiviService) return [];
-  return suiviConstruire({arrets:stops,routes,completions:suiviDonnees.passages,manuels:suiviDonnees.manuels,service:suiviService,depuis:suiviDonnees.depuis,aujourdhui:suiviAujourdhui(),rythme:suiviRythmeDe(suiviService)});
+  return suiviConstruire({arrets:stops,routes,completions:suiviDonnees.passages,manuels:suiviDonnees.manuels,presences:suiviDonnees.presences,service:suiviService,depuis:suiviDonnees.depuis,aujourdhui:suiviAujourdhui(),rythme:suiviRythmeDe(suiviService)});
 }
 
 function renderSuiviAdmin(){
@@ -280,6 +320,7 @@ function renderSuiviAdmin(){
   barre.appendChild(filtres);
   body.appendChild(barre);
   if(!d.manuelsDispo) body.appendChild(suiviMessage('Les dates à la main ne sont pas encore activées dans ta base (fichier SQL 28).'));
+  if(d.presencesDispo===false) body.appendChild(suiviMessage('Le temps passé n’est pas encore activé dans ta base (fichier SQL 29).'));
   const liste=suiviEl('div','');
   liste.id='su-liste';
   body.appendChild(liste);
@@ -295,7 +336,7 @@ function renderSuiviListe(){
   const resume=suiviResume(toutes);
   const rythme=suiviRythmeDe(suiviService);
   zone.appendChild(suiviEl('div','su-resume',
-    resume.clients+' client'+(resume.clients>1?'s':'')+(rythme?' · '+resume.aFaire+' à faire':' · '+resume.aucun+' sans passage')+' · '+resume.passages+' passage'+(resume.passages>1?'s':'')));
+    resume.clients+' client'+(resume.clients>1?'s':'')+(rythme?' · '+resume.aFaire+' à faire':' · '+resume.aucun+' sans passage')+' · '+resume.passages+' passage'+(resume.passages>1?'s':'')+(suiviTempsTotal(toutes)>0?' · ⏱ '+suiviDuree(suiviTempsTotal(toutes))+' en tout':'')));
   const lignes=suiviFiltrer(toutes,suiviFiltre,suiviRecherche);
   if(!lignes.length){
     zone.appendChild(suiviMessage(toutes.length?'Aucun client ne correspond.':'Aucun client pour ce service.'));
@@ -343,6 +384,8 @@ function suiviLigne(l,numero,annee){
   haut.appendChild(droite);
   div.appendChild(haut);
   if(l.client) div.appendChild(suiviEl('div','su-adresse',l.adresse));
+  const texteTemps=suiviTexteTemps(l);
+  if(texteTemps) div.appendChild(suiviEl('div','su-temps',texteTemps));   // le temps passé chez ce client (demande 6)
   const dates=suiviEl('div','su-dates');
   l.dates.forEach(x=>{
     const p=suiviEl(x.manuel&&!x.app?'button':'span','su-date'+(x.manuel&&!x.app?' manuel':''),suiviDateCourte(x.jour,annee));
@@ -605,14 +648,16 @@ async function suiviRetirerManuel(l,x){
 async function suiviDialogueDetail(l){
   const corps=suiviOuvrirFeuille(l.client||l.adresse);
   if(l.client) corps.appendChild(suiviEl('div','su-cible',l.adresse));
+  const texteTemps=suiviTexteTemps(l);
+  if(texteTemps) corps.appendChild(suiviEl('div','su-temps',texteTemps));
   const chargement=suiviEl('div','su-message','Chargement…');
   corps.appendChild(chargement);
   const debutIso=new Date(Number(suiviDonnees.depuis.slice(0,4)),Number(suiviDonnees.depuis.slice(5,7))-1,Number(suiviDonnees.depuis.slice(8,10))).toISOString();
   let lignes=null;
   try{
     // les personnes et les camions viennent des tables liées ; si ce lien n'existe pas, on relit les dates seules
-    let r=await db.from('passe_arrets').select('complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds).gte('complete_le',debutIso).order('complete_le',{ascending:false});
-    if(r.error) r=await db.from('passe_arrets').select('complete_le').in('stop_id',l.arretIds).gte('complete_le',debutIso).order('complete_le',{ascending:false});
+    let r=await db.from('passe_arrets').select('complete_le, passe_id, stop_id, mode, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds).gte('complete_le',debutIso).order('complete_le',{ascending:false});
+    if(r.error) r=await db.from('passe_arrets').select('complete_le, passe_id, stop_id, mode').in('stop_id',l.arretIds).gte('complete_le',debutIso).order('complete_le',{ascending:false});
     if(r.error) throw r.error;
     lignes=Array.isArray(r.data)?r.data:[];
   }catch(e){
@@ -624,11 +669,14 @@ async function suiviDialogueDetail(l){
   const tout=[];
   lignes.forEach(x=>{
     const jour=suiviJourLocal(x.complete_le);
+    if(!jour) return;   // une heure illisible est ignorée, comme dans la liste
     const d=new Date(x.complete_le);
     const heure=suiviPad(d.getHours())+' h '+suiviPad(d.getMinutes());
     const qui=(x.utilisateurs&&x.utilisateurs.nom)||'';
     const camion=(x.passes&&x.passes.equipes&&x.passes.equipes.nom)||'';
-    tout.push({jour,texte:suiviDateCourte(jour,annee)+', '+heure,detail:[qui,camion].filter(Boolean).join(' · ')||'Complété avec l’application'});
+    const visite=(l.visites||[]).filter(v=>v.passeId===x.passe_id&&v.stopId===x.stop_id);   // le temps passé pendant ce passage (s'il a été mesuré)
+    const temps=visite.length?' · ⏱ '+suiviDuree(visite.reduce((n,v)=>n+v.ms,0)):'';
+    tout.push({jour,texte:suiviDateCourte(jour,annee)+', '+heure,detail:([qui,camion].filter(Boolean).join(' · ')||'Complété avec l’application')+temps+(x.mode==='auto'?' · automatique':'')});
   });
   l.dates.filter(x=>x.manuel&&!x.app).forEach(x=>tout.push({jour:x.jour,texte:suiviDateCourte(x.jour,annee),detail:'Noté à la main'+(x.manuel.note?' : '+x.manuel.note:'')}));
   tout.sort((a,b)=>b.jour.localeCompare(a.jour));

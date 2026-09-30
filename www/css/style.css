@@ -675,6 +675,7 @@
 .su-badge.afaire{background:rgba(251,191,36,.15);color:#fbbf24;}
 .su-badge.retard,.su-badge.aucun{background:rgba(239,68,68,.15);color:#ef4444;}
 .su-adresse{font-size:12px;color:#6b7a8d;margin-top:1px;}
+.su-temps{font-size:12px;color:#93c5fd;margin-top:3px;}
 .su-dates{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
 .su-date{font-size:12px;padding:3px 8px;border-radius:6px;background:#1a1f26;border:1px solid var(--border);color:#f0f4f8;font-family:'Barlow',sans-serif;}
 .su-date.manuel{border-style:dashed;border-color:#60a5fa;color:#93c5fd;cursor:pointer;}

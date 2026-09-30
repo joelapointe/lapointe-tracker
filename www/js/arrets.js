@@ -17,10 +17,12 @@ async function loadStops(){
     await chargerPositionsVehicules();   // camions sur place → clients « en cours » (étape 13c)
     await chargerVehiculesEtEquipages(); // noms des camions et équipages à bord (étape 13f)
     if(typeof chargerReglagesQuart==='function') await chargerReglagesQuart();   // rappel, pause, durée maximale d'un quart (étape 17, quart.js) : AVANT le quart, pour que le premier contrôle les connaisse
+    if(typeof chargerReglagesPresence==='function') await chargerReglagesPresence();   // après combien de secondes dans une zone l'arrêt se complète tout seul (demande 6, presence.js)
     if(typeof chargerTypesService==='function') await chargerTypesService();   // le menu déroulant « ＋ Nouveau stop » (étape 19, liste-arrets.js)
     if(typeof chargerMonQuart==='function') await chargerMonQuart();   // suis-je en service ? (étape 17, quart.js)
     demarrerRelecturePositions();
     if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // la position du camion, si je conduis une passe (étape 18, tracking.js)
+    if(typeof presenceRestaurer==='function') presenceRestaurer();   // une visite chez un client qui était en cours avant la fermeture de l'application (demande 6, presence.js)
     await chargerProblemes();   // plusieurs problèmes possibles par arrêt (problemes.js) : plus de « un seul par arrêt »
     if(typeof chargerSegments==='function') await chargerSegments();   // les tronçons du tracé qui suit les rues (étape 18b, parcours.js) : jamais bloquant, jamais une erreur
     if(!reseau.enLigne) await restaurerDepuisCache();   // le signal a disparu pendant le chargement : on prend les copies pour ce qui manque
@@ -41,6 +43,7 @@ async function loadStops(){
         checkProblemes();
         demarrerRelecturePositions();
         if(typeof demarrerEnvoiPosition==='function') demarrerEnvoiPosition();   // (elle partira au retour du signal)
+        if(typeof presenceRestaurer==='function') presenceRestaurer();   // (la visite en cours avant la fermeture : présence.js)
         return;
       }
       showErr('Pas de réseau, et rien n’est encore gardé sur ce téléphone.<br>Ouvre l’application une première fois avec du signal : elle gardera alors de quoi travailler sans réseau.');
@@ -244,6 +247,7 @@ async function annulerArret(s,e){
   _envoiAnnulation=true;   // pas de double geste
   try{
     if(!(await confirmer('Annuler ce « Complété » ?',s.adresse+' redeviendra à faire.'+(e.termine?' La passe terminée sera rouverte.':''),'Oui, annuler','Non'))) return;
+    if(typeof presenceExclure==='function') presenceExclure(s.id,e.passeId);   // annulé à la main : il ne sera plus jamais complété tout seul dans cette passe (presence.js)
     if(!reseau.enLigne) return await annulerSansReseau(s,e);
     showSync(true);
     let r;

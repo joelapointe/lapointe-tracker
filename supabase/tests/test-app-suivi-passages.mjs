@@ -57,6 +57,22 @@ const MANUELS = () => [
   { id: 'm3', stop_id: 's1', jour: '2026-06-09', note: 'doublon' },   // le même jour qu'un « Complété »
   { id: 'm4', stop_id: 's1', jour: '2025-12-15', note: 'avant' },    // avant la date de départ par défaut
 ];
+// Le temps passé (demande 6) : des « Complété » reliés à leur passe, et les visites (arrivée, départ) notées par le téléphone du chauffeur
+const PASSES_TEMPS = { c01: 'p-a', c02: 'p-b', c03: 'p-c', c04: 'p-d', c05: 'p-e', c06: 'p-f', c07: 'p-g' };
+const COMPLETIONS_T = () => COMPLETIONS().map((c) => (PASSES_TEMPS[c.id] ? { ...c, passe_id: PASSES_TEMPS[c.id], ...(c.id === 'c06' ? { mode: 'auto' } : {}) } : c));
+const PRESENCES = () => [
+  { id: 'v1', passe_id: 'p-a', stop_id: 's1', arrivee_le: '2026-04-20T16:00:00Z', depart_le: '2026-04-20T16:20:00Z' },     // 20 min
+  { id: 'v2', passe_id: 'p-b', stop_id: 's1', arrivee_le: '2026-05-12T16:00:00Z', depart_le: '2026-05-12T17:12:00Z' },     // 72 min
+  { id: 'v2b', passe_id: 'p-b', stop_id: 's1', arrivee_le: '2026-05-12T18:00:00Z', depart_le: '2026-05-12T17:59:00Z' },    // un départ AVANT l’arrivée : ignorée
+  { id: 'v3', passe_id: 'p-c', stop_id: 's1', arrivee_le: '2026-05-26T16:00:00Z', depart_le: null },                       // sans départ : ignorée
+  { id: 'v4', passe_id: 'p-d', stop_id: 's1', arrivee_le: '2026-06-09T16:00:00Z', depart_le: '2026-06-09T16:30:00Z' },     // 30 min
+  { id: 'v5', passe_id: 'p-e', stop_id: 's1b', arrivee_le: '2026-06-09T16:10:00Z', depart_le: '2026-06-09T16:25:00Z' },    // 15 min, sur la COPIE, le même jour
+  { id: 'v6', passe_id: 'p-f', stop_id: 's1b', arrivee_le: '2026-06-23T16:00:00Z', depart_le: '2026-06-23T16:05:30Z' },    // 5 min 30 s (complété tout seul)
+  { id: 'v7', passe_id: 'p-z', stop_id: 's1', arrivee_le: '2026-07-01T16:00:00Z', depart_le: '2026-07-01T16:10:00Z' },     // aucun « Complété » de cette passe : un camion qui traverse
+  { id: 'v8', passe_id: 'p-a', stop_id: 's2', arrivee_le: '2026-04-20T17:00:00Z', depart_le: '2026-04-20T17:30:00Z' },     // la passe p-a a complété s1, pas s2
+  { id: 'v9', passe_id: 'p-g', stop_id: 's3', arrivee_le: '2026-09-12T16:00:00Z', depart_le: '2026-09-12T16:45:00Z' },     // 45 min
+  { id: 'v10', passe_id: 'p-h', stop_id: 's99', arrivee_le: '2026-09-01T16:00:00Z', depart_le: '2026-09-01T16:10:00Z' },   // un arrêt qui n’existe pas
+];
 const TYPES = () => [
   { nom: 'Coupe de gazon', actif: true, frequence_jours: 14 }, { nom: 'Désherbage', actif: true, frequence_jours: null },
   { nom: 'Épandage de sel', actif: true, frequence_jours: null }, { nom: 'Autre', actif: false, frequence_jours: null },
@@ -85,7 +101,7 @@ function monde(o = {}) {
   const el = (id) => (statiques[id] ??= creer(id, 'div'));
   const getElementById = (id) => { if (statiques[id]) return statiques[id]; for (const r of Object.values(statiques)) { const t = trouverDans(r, id); if (t) return t; } return el(id); };
 
-  const donnees = { passe_arrets: o.completions ?? COMPLETIONS(), passages_manuels: o.manuels ?? MANUELS(), types_service: o.types ?? TYPES() };
+  const donnees = { passe_arrets: o.completions ?? COMPLETIONS(), passages_manuels: o.manuels ?? MANUELS(), arret_presences: o.presences ?? [], types_service: o.types ?? TYPES() };
   const appels = { requetes: [], toasts: [], confirmations: [] };
   let compteur = 0;
   const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -99,6 +115,7 @@ function monde(o = {}) {
     const filtrer = (l) => q.filtres.every(([f, c, v]) => (f === 'gte' ? String(l[c]) >= String(v) : f === 'eq' ? l[c] === v : f === 'in' ? v.includes(l[c]) : true));
     if (q.op === 'select') {
       if (q.table === 'passages_manuels' && o.sansTableManuels) return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.passages_manuels' in the schema cache" } };
+      if (q.table === 'arret_presences' && o.sansTablePresences) return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.arret_presences' in the schema cache" } };
       if (q.table === 'types_service' && o.sansRythme && /frequence_jours/.test(q.cols || '')) return { data: null, error: { code: '42703', message: 'column types_service.frequence_jours does not exist' } };
       if (q.table === 'passe_arrets' && /utilisateurs!/.test(q.cols || '') && o.sansLiens) return { data: null, error: { code: 'PGRST200', message: 'Could not find a relationship between passe_arrets and utilisateurs' } };
       let r = lignes.filter(filtrer).map((l) => ({ ...l }));
@@ -175,7 +192,7 @@ function monde(o = {}) {
     filtres: () => (tous(corps()).filter((x) => x.className === 'su-filtres')[0]?.children ?? []).filter((x) => x.tagName === 'BUTTON'),
     champ: (id) => tous(corps()).find((x) => x.id === id),
     lignes: () => parClasse(corps(), 'su-ligne').map((l) => ({
-      nom: parClasse(l, 'su-nom')[0]?.textContent, badge: parClasse(l, 'su-badge')[0]?.textContent ?? null, n: parClasse(l, 'su-n')[0]?.textContent, adresse: parClasse(l, 'su-adresse')[0]?.textContent ?? null,
+      nom: parClasse(l, 'su-nom')[0]?.textContent, badge: parClasse(l, 'su-badge')[0]?.textContent ?? null, n: parClasse(l, 'su-n')[0]?.textContent, temps: parClasse(l, 'su-temps')[0]?.textContent ?? null, adresse: parClasse(l, 'su-adresse')[0]?.textContent ?? null,
       dates: parClasse(l, 'su-date').filter((d) => !d.className.includes('su-plus')).map((d) => d.textContent), manuelles: parClasse(l, 'su-date').filter((d) => d.className.includes('manuel')).map((d) => d.textContent), noeud: l,
     })),
     sections: () => parClasse(corps(), 'su-section').map((s) => [s.children[0].textContent, s.children[1].textContent]),
@@ -317,11 +334,13 @@ log('\n=== L\'OUVERTURE : CE QUI EST LU (par pages) ET CE QUI EST MONTRÉ ===');
   const m = monde();
   await m.ouvrir();
   const lect = m.appels.requetes;
-  eq('trois lectures : les « Complété », les dates à la main, les types de service (avec leur rythme)', lect.map((r) => [r.table, r.op]), [['passe_arrets', 'select'], ['passages_manuels', 'select'], ['types_service', 'select']]);
-  eq('les « Complété » : seulement 2 colonnes, depuis le 1er janvier de cette année, dans un ordre stable (date puis identifiant), première page de 1000', [lect[0].cols, lect[0].filtres, lect[0].ordres, lect[0].plage],
-    ['stop_id, complete_le', [['gte', 'complete_le', debutIso('2026-01-01')]], [['complete_le', 'asc'], ['id', 'asc']], [0, 999]]);
+  eq('quatre lectures : les « Complété », les dates à la main, le temps passé, les types de service (avec leur rythme)', lect.map((r) => [r.table, r.op]), [['passe_arrets', 'select'], ['passages_manuels', 'select'], ['arret_presences', 'select'], ['types_service', 'select']]);
+  eq('les « Complété » : seulement 3 colonnes (dont la passe, qui relie le temps passé), depuis le 1er janvier de cette année, dans un ordre stable (date puis identifiant), première page de 1000', [lect[0].cols, lect[0].filtres, lect[0].ordres, lect[0].plage],
+    ['stop_id, complete_le, passe_id', [['gte', 'complete_le', debutIso('2026-01-01')]], [['complete_le', 'asc'], ['id', 'asc']], [0, 999]]);
+  eq('le temps passé : ses 4 colonnes, depuis le même jour, dans un ordre stable (arrivée puis identifiant), première page de 1000', [lect[2].cols, lect[2].filtres, lect[2].ordres, lect[2].plage],
+    ['passe_id, stop_id, arrivee_le, depart_le', [['gte', 'arrivee_le', debutIso('2026-01-01')]], [['arrivee_le', 'asc'], ['id', 'asc']], [0, 999]]);
   eq('les dates à la main : depuis le même jour', [lect[1].cols, lect[1].filtres, lect[1].ordres], ['id, stop_id, jour, note', [['gte', 'jour', '2026-01-01']], [['jour', 'asc'], ['id', 'asc']]]);
-  eq('les types de service : nom, actif et rythme', [lect[2].cols], ['nom, actif, frequence_jours']);
+  eq('les types de service : nom, actif et rythme', [lect[3].cols], ['nom, actif, frequence_jours']);
   eq('les puces de service : les types ACTIFS et tout service qu\'un arrêt porte (« Autre », désactivé, n\'y est pas)', m.puces().map((b) => b.textContent), ['Aération', 'Coupe de gazon', 'Désherbage', 'Épandage de sel']);
   eq('… le service choisi au départ : « Coupe de gazon » (allumé, et dit aux lecteurs d\'écran)', m.puces().map((b) => [b.className, b.attrs['aria-pressed']]), [['su-puce', 'false'], ['su-puce on', 'true'], ['su-puce', 'false'], ['su-puce', 'false']]);
   eq('… la date de départ : le 1er janvier', m.champ('su-depuis').value, '2026-01-01');
@@ -726,7 +745,7 @@ log('\n=== LE DÉTAIL D\'UN CLIENT : TOUTES SES DATES, QUI ET QUEL CAMION ===');
   eq('la fenêtre porte le nom du client, avec son adresse dessous', [m.feuilleOuverte(), m.el('suivi-feuille-titre').textContent, parClasse(m.sheet(), 'su-cible')[0].textContent], [true, 'Famille Tremblay', '10 rue des Pins, Louiseville']);
   const r = m.requetes('passe_arrets').at(-1);
   eq('la lecture : les personnes et les camions viennent des tables liées, pour les DEUX arrêts (le client et sa copie), depuis la date de départ, du plus récent au plus vieux', [r.cols, r.filtres, r.ordres], [
-    'complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))', [['in', 'stop_id', ['s1', 's1b']], ['gte', 'complete_le', debutIso('2026-01-01')]], [['complete_le', 'desc']]]);
+    'complete_le, passe_id, stop_id, mode, utilisateurs!complete_par(nom), passes(equipes(nom))', [['in', 'stop_id', ['s1', 's1b']], ['gte', 'complete_le', debutIso('2026-01-01')]], [['complete_le', 'desc']]]);
   const lignes = rangs();
   eq('les dates, du plus récent au plus vieux (les 6 jours de l\'application + la date à la main du 7 juillet)', lignes.map((x) => x[0].replace(/, \d{1,2} h \d{2}$/, '')), ['7 juil.', '23 juin', '9 juin', '9 juin', '26 mai', '12 mai', '20 avr.']);
   eq('… la date à la main dit « Noté à la main » avec sa note', lignes[0][1], 'Noté à la main : remplaçant');
@@ -744,7 +763,7 @@ log('\n=== LE DÉTAIL D\'UN CLIENT : TOUTES SES DATES, QUI ET QUEL CAMION ===');
   await m.ouvrir();
   await cliquer(parClasse(m.lignes()[0].noeud, 'su-nom')[0]);
   const rq = m.requetes('passe_arrets').slice(-2);
-  eq('si le lien avec les personnes et les camions n\'existe pas : on relit les dates seules', [rq[0].cols, rq[1].cols], ['complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))', 'complete_le']);
+  eq('si le lien avec les personnes et les camions n\'existe pas : on relit les dates seules', [rq[0].cols, rq[1].cols], ['complete_le, passe_id, stop_id, mode, utilisateurs!complete_par(nom), passes(equipes(nom))', 'complete_le, passe_id, stop_id, mode']);
   eq('… la relecture garde les mêmes filtres (les DEUX arrêts, depuis la date de départ) et le même ordre', [rq[1].filtres, rq[1].ordres], [[['in', 'stop_id', ['s1', 's1b']], ['gte', 'complete_le', debutIso('2026-01-01')]], [['complete_le', 'desc']]]);
   eq('… et chaque date dit « Complété avec l\'application »', parClasse(m.sheet(), 'su-detail').filter((r) => r.children[1].textContent === 'Complété avec l’application').length, 6);
   const vieux = monde({ sansLiens: true, completions: [...COMPLETIONS(), { id: 'c13', stop_id: 's1', complete_le: T('2025-10-01') }, { id: 'c14', stop_id: 's1b', complete_le: T('2025-11-05') }] });
@@ -784,7 +803,7 @@ log('\n=== L\'OUVERTURE : SANS LE SQL 28, SANS RÉSEAU, EN ERREUR, ET DES LECTUR
   await a2.ouvrir();
   const avantMaj = a2.appels.requetes.length;
   await cliquer(parClasse(a2.corps(), 'su-actions')[0].children[1]);
-  eq('« ↻ Actualiser » relit tout (les 3 lectures de plus) et redessine l\'écran', [a2.appels.requetes.length - avantMaj, a2.lignes().length], [3, 5]);
+  eq('« ↻ Actualiser » relit tout (les 4 lectures de plus) et redessine l\'écran', [a2.appels.requetes.length - avantMaj, a2.lignes().length], [4, 5]);
   const r = monde({ arrets: [], types: [] });
   await r.ouvrir();
   eq('aucun service du tout : un message d\'invitation', r.messages(), ['Aucun service : ajoute d\'abord des clients (＋ Stop) ou un type de service (onglet Services).']);
@@ -835,6 +854,148 @@ log('\n=== L\'OUVERTURE : SANS LE SQL 28, SANS RÉSEAU, EN ERREUR, ET DES LECTUR
 }
 
 // =====================================================================
+// DEMANDE 6 (rentabilité) : LE TEMPS PASSÉ chez chaque client. Joé fait lui-même le calcul avec le temps et le nombre de visites : AUCUN prix ici.
+// Le téléphone du chauffeur note l’arrivée et le départ de chaque visite (presence.js, table arret_presences, SQL 29). Le Suivi les additionne : seules comptent les visites d’une passe qui a COMPLÉTÉ l’arrêt
+// (un camion qui traverse la zone d’un client sans le compléter n’est pas une visite) ; une visite appartient au jour de son « Complété ».
+// =====================================================================
+log('\n=== LE TEMPS PASSÉ : LES DURÉES ET LES PHRASES (fonctions pures) ===');
+{
+  const m = monde();
+  const d = (ms) => m.run(`suiviDuree(${ms})`);
+  eq('suiviDuree : moins d’une minute en secondes (les secondes entières, jamais arrondies vers le haut)', [d(0), d(1000), d(45000), d(59999)], ['0 s', '1 s', '45 s', '59 s']);
+  eq('… à partir d’une minute : les minutes, arrondies à la plus proche (90 s = 2 min)', [d(60000), d(89999), d(90000), d(24 * 60000), d(3569000)], ['1 min', '1 min', '2 min', '24 min', '59 min']);
+  eq('… à partir d’une heure : « 1 h 05 » (les minutes sur 2 chiffres, les heures entières : 1 h 30 n’est pas « 2 h 30 ») ; 59 min 30 s arrondit à « 1 h 00 »', [d(3600000), d(3900000), d(5400000), d(7325000), d(3570000)], ['1 h 00', '1 h 05', '1 h 30', '2 h 02', '1 h 00']);
+  eq('… une valeur qui n’est pas une durée (négative, absente, texte) : « 0 s »', [d(-5), m.run('suiviDuree(null)'), m.run('suiviDuree(undefined)'), m.run("suiviDuree('abc')")], ['0 s', '0 s', '0 s', '0 s']);
+  const t = (l) => m.run(`suiviTexteTemps(${JSON.stringify(l)})`);
+  eq('suiviTexteTemps : rien de mesuré (ou pas de ligne) : vide', [t({ joursMesures: 0, total: 3 }), t({ total: 3 }), m.run('suiviTexteTemps(null)')], ['', '', '']);
+  eq('… un seul passage, mesuré : « ⏱ 45 min » (pas de moyenne : ce serait la même chose)', t({ joursMesures: 1, total: 1, tempsMs: 2700000, tempsMoyenMs: 2700000 }), '⏱ 45 min');
+  eq('… un seul mesuré sur 4 : le dit', t({ joursMesures: 1, total: 4, tempsMs: 2700000, tempsMoyenMs: 2700000 }), '⏱ 45 min (1 passage mesuré sur 4)');
+  eq('… plusieurs, tous mesurés : le total et la moyenne', t({ joursMesures: 3, total: 3, tempsMs: 7200000, tempsMoyenMs: 2400000 }), '⏱ 2 h 00 en tout · 40 min en moyenne');
+  eq('… plusieurs, une partie seulement : avec « (3 passages mesurés sur 5) »', t({ joursMesures: 3, total: 5, tempsMs: 7200000, tempsMoyenMs: 2400000 }), '⏱ 2 h 00 en tout · 40 min en moyenne (3 passages mesurés sur 5)');
+  eq('suiviTempsTotal : la somme (une ligne sans temps compte zéro)', [m.run('suiviTempsTotal([{tempsMs: 1000}, {tempsMs: 2500}, {}, {tempsMs: null}])'), m.run('suiviTempsTotal([])'), m.run('suiviTempsTotal(null)')], [3500, 0, 0]);
+}
+
+log('\n=== LE TEMPS PASSÉ : LES LIGNES (quelles visites comptent) ===');
+{
+  const m = monde();
+  const construire = (o = {}) => m.run(`suiviConstruire(${JSON.stringify({ arrets: STOPS(), routes: ROUTES(), completions: COMPLETIONS_T(), manuels: MANUELS(), presences: PRESENCES(), service: 'Coupe de gazon', depuis: '2026-01-01', aujourdhui: AUJOURDHUI, rythme: 14, ...o })})`);
+  const par = (L, id) => L.find((l) => l.arretRef === id);
+  const L = construire();
+  const s1 = par(L, 's1');
+  eq('le client 1 : 5 visites comptées (20 min, 72 min, 30 min, 15 min, 5 min 30 s) = 2 h 22 min 30 s, sur 4 passages (les deux visites du 9 juin, sur le client et sur sa copie, sont le MÊME passage)', [s1.visites.length, s1.tempsMs, s1.joursMesures, s1.tempsMoyenMs], [5, 8550000, 4, 2137500]);
+  eq('… les visites du plus ancien au plus récent, chacune au jour de son « Complété »', s1.visites.map((v) => [v.jour, v.ms, v.passeId, v.stopId]), [['2026-04-20', 1200000, 'p-a', 's1'], ['2026-05-12', 4320000, 'p-b', 's1'], ['2026-06-09', 1800000, 'p-d', 's1'], ['2026-06-09', 900000, 'p-e', 's1b'], ['2026-06-23', 330000, 'p-f', 's1b']]);
+  eq('… le passage du 26 mai (visite sans départ) et celui du 7 juillet (noté à la main) ne sont pas mesurés : 4 mesurés sur 6', [s1.total, s1.joursMesures], [6, 4]);
+  eq('… ne comptent PAS : un camion qui traverse sans compléter (p-z), une passe qui a complété un AUTRE client (p-a chez le client 2), un départ avant l’arrivée, une visite sans départ', s1.visites.some((v) => ['p-z', 'p-c'].includes(v.passeId)) || par(L, 's2').visites.length > 0 || s1.visites.filter((v) => v.passeId === 'p-b').length !== 1, false);
+  eq('le client 3 : une seule visite de 45 min (1 mesuré sur 1)', [par(L, 's3').tempsMs, par(L, 's3').joursMesures, par(L, 's3').tempsMoyenMs, par(L, 's3').total], [2700000, 1, 2700000, 1]);
+  eq('les clients sans visite mesurée : zéro, pas de moyenne, aucune visite', [par(L, 's2').tempsMs, par(L, 's2').joursMesures, par(L, 's2').tempsMoyenMs, par(L, 's2').visites], [0, 0, null, []]);
+  eq('sans aucune présence (SQL 29 pas encore exécuté, ou rien de mesuré) : tout est à zéro, rien d’autre ne change (mêmes passages, mêmes états)', [construire({ presences: [] }).every((l) => l.tempsMs === 0 && l.joursMesures === 0), construire({ presences: undefined }).every((l) => l.tempsMs === 0), construire({ presences: [] }).map((l) => [l.total, l.etat])], [true, true, L.map((l) => [l.total, l.etat])]);
+  eq('des « Complété » SANS passe (données d’avant) : aucune visite ne peut leur être reliée', construire({ completions: COMPLETIONS() }).every((l) => l.tempsMs === 0), true);
+  const juin = par(construire({ depuis: '2026-06-01' }), 's1');
+  eq('avec « depuis le 1er juin » : seules les visites dont le « Complété » est de juin ou après comptent (30 min + 15 min + 5 min 30 s), sur 2 passages mesurés sur 3', [juin.tempsMs, juin.joursMesures, juin.total, juin.visites.map((v) => v.jour)], [3030000, 2, 3, ['2026-06-09', '2026-06-09', '2026-06-23']]);
+  eq('… le jour de départ est INCLUS pour le temps aussi (« depuis le 9 juin » garde les deux visites du 9 juin)', par(construire({ depuis: '2026-06-09' }), 's1').visites.map((v) => v.jour), ['2026-06-09', '2026-06-09', '2026-06-23']);
+  eq('… et la veille est écartée (« depuis le 10 juin » : seule celle du 23 juin)', par(construire({ depuis: '2026-06-10' }), 's1').visites.map((v) => v.jour), ['2026-06-23']);
+  const un = (presences, completions) => m.run(`suiviConstruire(${JSON.stringify({ arrets: [{ id: 'j1', adresse: '1 rue J', service: 'S', created_at: '2026-04-01T00:00:00Z' }, { id: 'j2', adresse: '1 rue J', service: 'S', created_at: '2026-05-01T00:00:00Z' }], routes: [], completions, manuels: [], presences, service: 'S', depuis: '2026-01-01', aujourdhui: AUJOURDHUI, rythme: null })})`)[0];
+  const cJ = [{ stop_id: 'j1', complete_le: T('2026-06-09'), passe_id: 'pp' }];
+  eq('une visite d’un arrêt qui n’est pas dans la liste du client (autre adresse) : ignorée', un([{ passe_id: 'pp', stop_id: 'autre', arrivee_le: T('2026-06-09'), depart_le: T('2026-06-09', 17) }], [...cJ, { stop_id: 'autre', complete_le: T('2026-06-09'), passe_id: 'pp' }]).tempsMs, 0);
+  eq('une visite de 0 seconde (départ = arrivée) : comptée (0 s), le passage est « mesuré »', [un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09'), depart_le: T('2026-06-09') }], cJ).joursMesures, un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09'), depart_le: T('2026-06-09') }], cJ).tempsMs], [1, 0]);
+  eq('des heures illisibles (arrivée ou départ) : ignorées, sans erreur', [un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: 'hier', depart_le: T('2026-06-09') }, { passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09'), depart_le: 'demain' }], cJ).joursMesures, un([], cJ).joursMesures], [0, 0]);
+  eq('deux visites de la même passe chez le même client (le camion est parti puis revenu) : les deux comptent, pour UN passage', [un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09', 14), depart_le: T('2026-06-09', 15) }, { passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09', 18), depart_le: '2026-06-09T18:30:00Z' }], cJ)].map((l) => [l.visites.length, l.joursMesures, l.tempsMs]), [[2, 1, 5400000]]);
+  eq('une passe qui a complété la COPIE : sa visite sur la copie compte pour l’adresse ; sur l’autre arrêt (sans « Complété » de cette passe) elle ne compte pas', [un([{ passe_id: 'pq', stop_id: 'j2', arrivee_le: T('2026-06-10'), depart_le: T('2026-06-10', 17) }], [{ stop_id: 'j2', complete_le: T('2026-06-10'), passe_id: 'pq' }]).tempsMs, un([{ passe_id: 'pq', stop_id: 'j1', arrivee_le: T('2026-06-10'), depart_le: T('2026-06-10', 17) }], [{ stop_id: 'j2', complete_le: T('2026-06-10'), passe_id: 'pq' }]).tempsMs], [3600000, 0]);
+  eq('le « Complété » annulé (la ligne n’existe plus) : sa visite ne compte plus', un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09'), depart_le: T('2026-06-09', 17) }], []).tempsMs, 0);
+  eq('une visite appartient au jour de son « Complété » (ici, 2 jours après son arrivée : c’est le 11 juin)', un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: T('2026-06-09'), depart_le: T('2026-06-09', 17) }], [{ stop_id: 'j1', complete_le: T('2026-06-11'), passe_id: 'pp' }]).visites.map((v) => v.jour), ['2026-06-11']);
+  const moy = un([{ passe_id: 'pp', stop_id: 'j1', arrivee_le: '2026-06-09T16:00:00.000Z', depart_le: '2026-06-09T16:00:01.500Z' }, { passe_id: 'pq', stop_id: 'j1', arrivee_le: '2026-06-10T16:00:00.000Z', depart_le: '2026-06-10T16:00:01.501Z' }], [{ stop_id: 'j1', complete_le: T('2026-06-09'), passe_id: 'pp' }, { stop_id: 'j1', complete_le: T('2026-06-10'), passe_id: 'pq' }]);
+  eq('la moyenne par passage est arrondie à la milliseconde (3001 ms sur 2 passages : 1501, pas 1500,5)', [moy.tempsMs, moy.joursMesures, moy.tempsMoyenMs], [3001, 2, 1501]);
+}
+
+log('\n=== LE TEMPS PASSÉ : CE QUE L’ÉCRAN MONTRE ===');
+{
+  const m = monde({ completions: COMPLETIONS_T(), presences: PRESENCES() });
+  await m.ouvrir();
+  const L = m.lignes();
+  eq('sous chaque client mesuré : sa ligne de temps (total, moyenne, combien de passages sont mesurés) ; rien pour les autres', L.map((l) => l.temps), ['⏱ 2 h 23 en tout · 36 min en moyenne (4 passages mesurés sur 6)', null, '⏱ 45 min', null, null]);
+  eq('… cette ligne est sous l’adresse et AVANT les dates', [L[0].noeud.children.map((c) => c.className), L[2].noeud.children.map((c) => c.className)], [['su-haut', 'su-adresse', 'su-temps', 'su-dates'], ['su-haut', 'su-adresse', 'su-temps', 'su-dates']]);
+  eq('… un client sans temps n’a pas de ligne de temps du tout', L[1].noeud.children.map((c) => c.className), ['su-haut', 'su-dates']);
+  eq('le résumé du service dit le temps total (2 h 22 min 30 s + 45 min = 3 h 07 min 30 s → « 3 h 08 »)', m.resume(), '5 clients · 3 à faire · 9 passages · ⏱ 3 h 08 en tout');
+  eq('le nombre de passages, les badges et les dates ne changent pas', [L.map((l) => l.n), L.map((l) => l.badge), L.map((l) => l.dates.length)], [['6 passages', '1 passage', '1 passage', '1 passage', '0 passage'], ['En retard · 84 j', 'À jour · 7 j', 'À faire · 17 j', 'À jour · 2 j', 'Aucun passage'], [6, 1, 1, 1, 0]]);
+  await cliquer(m.filtres()[1]);
+  eq('le filtre « À faire » garde la ligne de temps des clients affichés, et le résumé reste celui de TOUS les clients', [m.lignes().map((l) => l.temps), m.resume()], [['⏱ 2 h 23 en tout · 36 min en moyenne (4 passages mesurés sur 6)', '⏱ 45 min', null], '5 clients · 3 à faire · 9 passages · ⏱ 3 h 08 en tout']);
+  await cliquer(m.filtres()[2]);
+  eq('le filtre « Aucun passage » (un seul client, sans temps) : le résumé garde le temps de TOUS les clients', [m.lignes().map((l) => l.temps), m.resume()], [[null], '5 clients · 3 à faire · 9 passages · ⏱ 3 h 08 en tout']);
+  await cliquer(m.filtres()[0]);
+  // le temps est relu quand la date de départ change
+  const requetes0 = m.appels.requetes.length;
+  await changer(m.champ('su-depuis'), '2026-06-01');
+  const rel = m.appels.requetes.slice(requetes0);
+  eq('changer « Depuis le » au 1er juin : le temps passé est relu depuis ce jour aussi', rel.filter((r) => r.table === 'arret_presences').map((r) => r.filtres), [[['gte', 'arrivee_le', debutIso('2026-06-01')]]]);
+  eq('… le temps des clients suit : 30 + 15 + 5 min 30 s = 51 min sur 2 passages mesurés (sur 3) ; le client 3 (septembre) reste', m.lignes().map((l) => l.temps), ['⏱ 51 min en tout · 25 min en moyenne (2 passages mesurés sur 3)', null, '⏱ 45 min', null, null]);
+  eq('… et le résumé aussi (51 min + 45 min = 96 min = « 1 h 36 »)', m.resume(), '5 clients · 3 à faire · 6 passages · ⏱ 1 h 36 en tout');
+  // un autre service : ses propres visites (aucune ici)
+  await cliquer(puce(m, 'Épandage de sel'));
+  eq('un autre service (le sel) : aucune visite mesurée, pas de ligne de temps, pas de temps dans le résumé', [m.lignes().map((l) => l.temps), /⏱/.test(m.resume())], [[null], false]);
+}
+{
+  // sans temps mesuré du tout : l’écran d’avant, exactement
+  const m = monde({ completions: COMPLETIONS_T(), presences: [] });
+  await m.ouvrir();
+  eq('aucune visite mesurée : aucune ligne de temps, et le résumé est celui d’avant', [m.lignes().map((l) => l.temps), m.resume()], [[null, null, null, null, null], '5 clients · 3 à faire · 9 passages']);
+}
+
+log('\n=== LE TEMPS PASSÉ : LE DÉTAIL D’UN CLIENT (chaque visite, et « automatique ») ===');
+{
+  const m = monde({ completions: COMPLETIONS_T(), presences: PRESENCES() });
+  await m.ouvrir();
+  await cliquer(parClasse(m.lignes()[0].noeud, 'su-nom')[0]);
+  eq('la fenêtre du détail montre la même ligne de temps, sous l’adresse', [parClasse(m.sheet(), 'su-temps').map((x) => x.textContent), m.sheet().children.map((c) => c.className).slice(0, 3)], [['⏱ 2 h 23 en tout · 36 min en moyenne (4 passages mesurés sur 6)'], ['su-cible', 'su-temps', 'su-detail']]);
+  const rangs = parClasse(m.sheet(), 'su-detail').map((r) => [r.children[0].textContent.replace(/, \d{1,2} h \d{2}$/, ''), r.children[1].textContent]);
+  eq('chaque « Complété » dit le temps que le camion est resté (et « automatique » quand l’arrêt s’est complété tout seul) ; sans visite mesurée : rien de plus', rangs, [
+    ['7 juil.', 'Noté à la main : remplaçant'],
+    ['23 juin', 'Complété avec l’application · ⏱ 6 min · automatique'],
+    ['9 juin', 'Luc · Camion 2 · ⏱ 30 min'],
+    ['9 juin', 'Complété avec l’application · ⏱ 15 min'],
+    ['26 mai', 'Complété avec l’application'],
+    ['12 mai', 'Éric · Camion 1 · ⏱ 1 h 12'],
+    ['20 avr.', 'Luc · Camion 2 · ⏱ 20 min']]);
+  const r = m.requetes('passe_arrets').at(-1);
+  eq('la lecture du détail demande aussi la passe, l’arrêt et le mode (pour relier la visite et voir « automatique »)', /^complete_le, passe_id, stop_id, mode,/.test(r.cols), true);
+  const s = monde({ completions: COMPLETIONS_T(), presences: PRESENCES(), sansLiens: true });
+  await s.ouvrir();
+  await cliquer(parClasse(s.lignes()[0].noeud, 'su-nom')[0]);
+  eq('sans le lien avec les personnes et les camions : le temps et « automatique » sont montrés quand même', parClasse(s.sheet(), 'su-detail').map((x) => x.children[1].textContent).slice(1, 4), ['Complété avec l’application · ⏱ 6 min · automatique', 'Complété avec l’application · ⏱ 30 min', 'Complété avec l’application · ⏱ 15 min']);
+  // la même passe complète le client ET sa copie (deux « Complété »), chacun avec SA visite : chaque rang montre le temps de SA visite, pas la somme
+  const x = monde({ manuels: [], completions: [{ id: 'cx1', stop_id: 's1', complete_le: T('2026-08-01', 16), passe_id: 'p-x' }, { id: 'cx2', stop_id: 's1b', complete_le: T('2026-08-01', 17), passe_id: 'p-x' }],
+    presences: [{ id: 'vx1', passe_id: 'p-x', stop_id: 's1', arrivee_le: '2026-08-01T16:00:00Z', depart_le: '2026-08-01T16:10:00Z' }, { id: 'vx2', passe_id: 'p-x', stop_id: 's1b', arrivee_le: '2026-08-01T17:00:00Z', depart_le: '2026-08-01T17:20:00Z' }] });
+  await x.ouvrir();
+  await cliquer(parClasse(x.lignes()[0].noeud, 'su-nom')[0]);
+  eq('une même passe qui complète le client et sa copie : chaque « Complété » montre le temps de SA visite (20 min, puis 10 min), pas la somme', parClasse(x.sheet(), 'su-detail').map((r) => r.children[1].textContent), ['Complété avec l’application · ⏱ 20 min', 'Complété avec l’application · ⏱ 10 min']);
+  const t = monde({ completions: COMPLETIONS_T(), presences: PRESENCES() });
+  await t.ouvrir();
+  await cliquer(parClasse(t.lignes()[1].noeud, 'su-nom')[0]);
+  eq('un client sans temps mesuré : pas de ligne de temps dans son détail', parClasse(t.sheet(), 'su-temps').length, 0);
+  eq('… et un « Complété » dont l’heure est illisible (données abîmées) n’est pas montré, sans erreur : seule la date notée à la main reste', parClasse(t.sheet(), 'su-detail').map((x) => x.children[1].textContent), ['Noté à la main']);
+}
+
+log('\n=== LE TEMPS PASSÉ : SANS LE SQL 29, EN ERREUR, ET BEAUCOUP DE LIGNES ===');
+{
+  const m = monde({ completions: COMPLETIONS_T(), sansTablePresences: true });
+  await m.ouvrir();
+  eq('SQL 29 pas exécuté : l’écran s’ouvre quand même (5 clients), sans temps, avec un message qui l’explique', [m.lignes().length, m.lignes().map((l) => l.temps), m.messages().includes('Le temps passé n’est pas encore activé dans ta base (fichier SQL 29).')], [5, [null, null, null, null, null], true]);
+  const ok = monde({ completions: COMPLETIONS_T(), presences: PRESENCES() });
+  await ok.ouvrir();
+  eq('avec le SQL 29 : aucun message sur le temps passé', ok.messages().includes('Le temps passé n’est pas encore activé dans ta base (fichier SQL 29).'), false);
+  const e = monde({ completions: COMPLETIONS_T(), erreurs: { 'arret_presences.select': { message: 'refusé' } } });
+  await e.ouvrir();
+  eq('une autre erreur de lecture du temps passé : le Suivi ne s’ouvre pas (rien n’est caché)', [e.messages(), e.lignes().length], [['❌ Impossible de charger le suivi. Vérifie la connexion, puis réessaie.'], 0]);
+  const p = monde({ completions: COMPLETIONS_T(), panne: (q) => q.table === 'arret_presences' });
+  await p.ouvrir();
+  eq('le signal disparaît pendant la lecture du temps passé : « Impossible de charger le suivi », le téléphone se sait hors réseau', [p.messages(), p.run('reseau.enLigne')], [['❌ Impossible de charger le suivi. Vérifie la connexion, puis réessaie.'], false]);
+  const beaucoup = [];
+  for (let i = 0; i < 2500; i++) beaucoup.push({ id: 'z' + String(i).padStart(5, '0'), passe_id: 'p-g', stop_id: 's3', arrivee_le: '2026-09-12T16:00:00Z', depart_le: '2026-09-12T16:01:00Z' });
+  const g = monde({ completions: COMPLETIONS_T(), presences: beaucoup });
+  await g.ouvrir();
+  eq('2500 visites : lues par pages de 1000 (trois pages), toutes utilisées (2500 minutes = 41 h 40 pour le client 3, sur 1 passage)', [g.requetes('arret_presences').map((r) => r.plage), g.lignes().find((l) => l.nom === '1 · Client C').temps], [[[0, 999], [1000, 1999], [2000, 2999]], '⏱ 41 h 40']);
+}
+
+// =====================================================================
 log('\n=== LE CÂBLAGE : LA PAGE, LA FEUILLE DE STYLE, LA SÛRETÉ DU CODE ===');
 {
   const html = lire('index.html');
@@ -852,13 +1013,14 @@ log('\n=== LE CÂBLAGE : LA PAGE, LA FEUILLE DE STYLE, LA SÛRETÉ DU CODE ===')
   vrai('… ouverte : affichée', /display:flex/.test(derniere('#suivi-feuille-overlay.open')?.corps ?? ''));
   vrai('… son contenu défile quand il est long (85 % de l\'écran au plus)', /max-height:85vh/.test(derniere('#suivi-feuille')?.corps ?? '') && /overflow-y:auto/.test(derniere('#suivi-feuille')?.corps ?? ''));
   vrai('la liste des cases à cocher défile aussi (38 % de l\'écran au plus)', /max-height:38vh/.test(derniere('.su-cases')?.corps ?? '') && /overflow-y:auto/.test(derniere('.su-cases')?.corps ?? ''));
-  for (const c of ['.su-barre', '.su-puces', '.su-puce', '.su-puce.on', '.su-reglages', '.su-champ', '.su-filtres', '.su-recherche', '.su-message', '.su-resume', '.su-section', '.su-ligne', '.su-haut', '.su-nom', '.su-droite', '.su-n', '.su-badge', '.su-badge.ok', '.su-badge.afaire', '.su-badge.retard', '.su-adresse', '.su-dates', '.su-date', '.su-date.manuel', '.su-plus', '.su-actions', '.su-cible', '.su-boutons', '.su-outils', '.su-cases', '.su-cases-section', '.su-case', '.su-detail', '.su-detail-qui'])
+  for (const c of ['.su-barre', '.su-puces', '.su-puce', '.su-puce.on', '.su-reglages', '.su-champ', '.su-filtres', '.su-recherche', '.su-message', '.su-resume', '.su-section', '.su-ligne', '.su-haut', '.su-nom', '.su-droite', '.su-n', '.su-badge', '.su-badge.ok', '.su-badge.afaire', '.su-badge.retard', '.su-adresse', '.su-temps', '.su-dates', '.su-date', '.su-date.manuel', '.su-plus', '.su-actions', '.su-cible', '.su-boutons', '.su-outils', '.su-cases', '.su-cases-section', '.su-case', '.su-detail', '.su-detail-qui'])
     if (!de(c).length) fail(`la feuille de style a la règle « ${c} »`);
-  pass('la feuille de style a les 34 règles de l\'écran Suivi');
+  pass('la feuille de style a les 35 règles de l\'écran Suivi');
   vrai('le badge « à jour » est vert', /color:#4ade80/.test(derniere('.su-badge.ok')?.corps ?? ''), derniere('.su-badge.ok')?.corps);
   vrai('le badge « à faire » est jaune', /color:#fbbf24/.test(derniere('.su-badge.afaire')?.corps ?? ''), derniere('.su-badge.afaire')?.corps);
   vrai('le badge « en retard » est rouge', /color:#ef4444/.test(derniere('.su-badge.retard')?.corps ?? ''), derniere('.su-badge.retard')?.corps);
   vrai('le badge « sans passage » est rouge aussi', /color:#ef4444/.test(derniere('.su-badge.aucun')?.corps ?? ''), derniere('.su-badge.aucun')?.corps);
+  vrai('la ligne du temps passé est en bleu clair, petite (elle se distingue de l’adresse, grise)', /color:#93c5fd/.test(derniere('.su-temps')?.corps ?? '') && /font-size:12px/.test(derniere('.su-temps')?.corps ?? ''), derniere('.su-temps')?.corps);
   vrai('une date à la main est en pointillés bleus (elle se distingue d\'un « Complété »)', /border-style:dashed/.test(derniere('.su-date.manuel')?.corps ?? '') && /border-color:#60a5fa/.test(derniere('.su-date.manuel')?.corps ?? ''));
   vrai('la puce allumée prend la couleur d\'accent, comme les onglets du panneau', /background:var\(--accent\)/.test(derniere('.su-puce.on')?.corps ?? ''));
   vrai('les puces défilent de côté quand il y en a beaucoup (services)', /overflow-x:auto/.test(derniere('.su-puces')?.corps ?? ''));
@@ -877,7 +1039,7 @@ log('\n=== LE CÂBLAGE : LA PAGE, LA FEUILLE DE STYLE, LA SÛRETÉ DU CODE ===')
   vrai('… ni eval, ni gestionnaire écrit dans du texte (onclick="…")', !/eval\(|new Function|onclick\s*=\s*["']|insertAdjacentHTML|document\.write/.test(src));
   vrai('pas de fonction serveur (rpc) : des lectures et des écritures directes', !/\.rpc\(/.test(src));
   vrai('le fichier ne touche à aucun autre onglet ni à la carte (pas de map., pas de renderAll)', !/\bmap\.|renderAll\(/.test(src));
-  eq('les seules requêtes de LECTURE : passe_arrets, passages_manuels, types_service', [...new Set([...src.matchAll(/(?:db\.from|suiviLireTout)\(\s*'([a-z_]+)'/g)].map((x) => x[1]))].sort(), ['passages_manuels', 'passe_arrets', 'types_service']);
+  eq('les seules requêtes de LECTURE : passe_arrets, passages_manuels, arret_presences (le temps passé), types_service', [...new Set([...src.matchAll(/(?:db\.from|suiviLireTout)\(\s*'([a-z_]+)'/g)].map((x) => x[1]))].sort(), ['arret_presences', 'passages_manuels', 'passe_arrets', 'types_service']);
 }
 
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);

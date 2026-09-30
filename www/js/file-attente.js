@@ -23,6 +23,7 @@
 //   probleme {id, stopId, passeId, note}                      probleme_photo {problemeId}  (+ la photo, gardée dans le geste)
 //   quart_commencer {id, lat, lon, precision}                 quart_terminer {quartId?, lat, lon, precision}   (le punch : quart-ecrans.js)
 //   quart_terminer_equipier {passeId, userId, nom, lat, lon}  quart_signaler_erreur {quartId, note?}          (équipage : quart-ecrans.js)
+//   arret_presence {passeId, stopId, arrivee, depart}         (demande 6 : le temps passé chez un client, presence.js ; une MESURE : « discret », voir plus bas)
 const FILE_VERSION=1;
 const FILE_ESSAIS_INCONNUS=5;                              // erreur inconnue : au bout de 5 essais, le geste va dans « non envoyés »
 let FILE_DELAIS_MS=[5000,15000,45000,120000,300000];       // attente entre deux essais quand le serveur ne répond pas bien
@@ -171,6 +172,14 @@ const EXECUTEURS={
       catch(e){return {data:null,error:e};}
     },
     juger:()=>null
+  },
+  // Demande 6 (SQL 29) : le temps passé chez un client (l'arrivée et le départ de la visite ; presence.js). Une MESURE, jamais un geste dont la personne doit s'occuper : « discret » = si le serveur
+  // la refuse pour de bon (fonction pas encore installée, passe fermée depuis trop longtemps, client retiré…) ou ne la comprend pas après 5 essais, elle est abandonnée SANS message et SANS
+  // « Gestes non envoyés ». Une panne de réseau reste une panne passagère : elle attend le retour du signal, comme tous les autres gestes.
+  arret_presence:{
+    appeler:(i)=>db.rpc('arret_presence',{p_passe_id:i.args.passeId,p_stop_id:i.args.stopId,p_arrivee:i.args.arrivee,p_depart:i.args.depart||null}),
+    juger:()=>null,
+    discret:true
   }
 };
 // Un début de passe rejoué : les équipiers que le serveur n'a pas pu faire monter sont notés à part (rien ne se perd en silence)
@@ -349,6 +358,7 @@ async function essaiGeste(item){
     if(item.type==='probleme'&&String(r.error.code)==='23505') return {genre:'ok'};   // le problème existe déjà sous ce numéro : un renvoi, pas un échec
     const c=classerErreurGeste(r.error);
     if(c==='passager') return {genre:'passager',reseau:estErreurReseau(r.error)};
+    if(c==='definitif'&&ex.discret) return {genre:'ok'};   // une mesure refusée pour de bon : abandonnée sans bruit (le serveur a répondu)
     return {genre:c,raison:raisonDe(r.error)};
   }
   const d=r&&r.data;
@@ -395,6 +405,10 @@ async function _passeDeRejeu(){
     }
     if(v.genre==='inconnu'){
       item.essais=(item.essais||0)+1;
+      if(item.essais>=FILE_ESSAIS_INCONNUS&&EXECUTEURS[item.type].discret){   // une mesure : abandonnée sans bruit, elle ne retient pas les autres gestes
+        await retirerEnAttente(item);
+        continue;
+      }
       if(item.essais>=FILE_ESSAIS_INCONNUS){
         await refuserGeste(item,v.raison+' (après '+FILE_ESSAIS_INCONNUS+' essais)');
         bilan.refuses++;

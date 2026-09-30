@@ -7,6 +7,18 @@
 // dur : un futur réglage ajouté par SQL apparaît ici tout seul, sans changer ce fichier.
 let reglagesAdmin=[];   // [{cle, valeur, description}]
 
+// Les durées des réglages sont des HEURES, sauf celles dont la clé finit par « _s » : des SECONDES (demande 6 : presence_complete_auto_s, le « Complété » automatique). Celui-là permet 0 (= jamais) et
+// va jusqu'à 3600 ; les durées en heures restent plus grandes que 0.
+function reglageEnSecondes(cle){return /_s$/.test(String(cle));}
+function uniteReglage(cle){return reglageEnSecondes(cle)?'secondes':'heures';}
+function messageValeurReglage(cle){
+  return reglageEnSecondes(cle)?'⚠ Entre un nombre de secondes valide (0 = jamais, 3600 au plus)':'⚠ Entre un nombre d’heures valide (plus grand que 0)';
+}
+function valeurReglageValide(cle,v){
+  if(!Number.isFinite(v)) return false;
+  return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>0;
+}
+
 async function chargerReglagesAdmin(){
   const body=document.getElementById('admin-body');
   let data=null,error=null;
@@ -57,7 +69,7 @@ function renderReglagesAdmin(){
 
     const unite=document.createElement('span');
     unite.className='regl-unite';
-    unite.textContent='heures';
+    unite.textContent=uniteReglage(r.cle);
     ligne.appendChild(unite);
 
     const btn=document.createElement('button');
@@ -78,8 +90,9 @@ function messageErreurReglage(error){
 }
 
 async function enregistrerReglage(r,input){
-  const v=Number(input.value);
-  if(!Number.isFinite(v)||v<=0){toast('⚠ Entre un nombre d’heures valide (plus grand que 0)');return;}
+  const brut=String(input.value).trim();
+  const v=brut===''?NaN:Number(brut);   // (un champ vide n'est jamais « 0 » : pour le complété automatique, 0 veut dire « jamais »)
+  if(!valeurReglageValide(r.cle,v)){toast(messageValeurReglage(r.cle));return;}
   showSync(true);
   let error=null;
   try{

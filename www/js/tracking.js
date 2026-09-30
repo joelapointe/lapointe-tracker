@@ -95,6 +95,7 @@ function demarrerEnvoiPosition(){
 // À la déconnexion : l'envoi et le suivi du téléphone s'arrêtent (auth.js ; la notification permanente disparaît). Le serveur n'a rien à effacer : une position de
 // plus de 3 minutes ne compte plus.
 async function arreterTracking(){
+  if(typeof presenceArreter==='function') presenceArreter();   // la visite chez un client en cours est notée avant de partir (presence.js, demande 6)
   if(_minuterieEnvoiPosition){
     clearInterval(_minuterieEnvoiPosition);
     _minuterieEnvoiPosition=null;

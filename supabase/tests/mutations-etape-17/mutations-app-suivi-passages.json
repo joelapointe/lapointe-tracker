@@ -1076,20 +1076,20 @@
   {
     "nom": "le détail de repli ne lit que l'arrêt de référence (pas les copies)",
     "fichier": "js/admin-suivi.js",
-    "de": "select('complete_le').in('stop_id',l.arretIds)",
-    "vers": "select('complete_le').in('stop_id',[l.arretRef])"
+    "de": "select('complete_le, passe_id, stop_id, mode').in('stop_id',l.arretIds)",
+    "vers": "select('complete_le, passe_id, stop_id, mode').in('stop_id',[l.arretRef])"
   },
   {
     "nom": "le détail de repli lit aussi les passages d'avant la date de départ",
     "fichier": "js/admin-suivi.js",
-    "de": "select('complete_le').in('stop_id',l.arretIds).gte('complete_le',debutIso)",
-    "vers": "select('complete_le').in('stop_id',l.arretIds)"
+    "de": "select('complete_le, passe_id, stop_id, mode').in('stop_id',l.arretIds).gte('complete_le',debutIso)",
+    "vers": "select('complete_le, passe_id, stop_id, mode').in('stop_id',l.arretIds)"
   },
   {
     "nom": "le détail lit aussi les passages d'avant la date de départ",
     "fichier": "js/admin-suivi.js",
-    "de": "    let r=await db.from('passe_arrets').select('complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds).gte('complete_le',debutIso)",
-    "vers": "    let r=await db.from('passe_arrets').select('complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds)"
+    "de": "    let r=await db.from('passe_arrets').select('complete_le, passe_id, stop_id, mode, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds).gte('complete_le',debutIso)",
+    "vers": "    let r=await db.from('passe_arrets').select('complete_le, passe_id, stop_id, mode, utilisateurs!complete_par(nom), passes(equipes(nom))').in('stop_id',l.arretIds)"
   },
   {
     "nom": "le détail est lu du plus vieux au plus récent (les lignes de la lecture)",
@@ -1100,8 +1100,8 @@
   {
     "nom": "sans lien avec les personnes, le détail plante au lieu de relire les dates seules",
     "fichier": "js/admin-suivi.js",
-    "de": "    if(r.error) r=await db.from('passe_arrets').select('complete_le')",
-    "vers": "    if(false) r=await db.from('passe_arrets').select('complete_le')"
+    "de": "    if(r.error) r=await db.from('passe_arrets').select('complete_le, passe_id, stop_id, mode')",
+    "vers": "    if(false) r=await db.from('passe_arrets').select('complete_le, passe_id, stop_id, mode')"
   },
   {
     "nom": "« Chargement… » reste affiché dans le détail",
@@ -1136,8 +1136,8 @@
   {
     "nom": "l'adresse n'est plus sous le titre du détail",
     "fichier": "js/admin-suivi.js",
-    "de": "  if(l.client) corps.appendChild(suiviEl('div','su-cible',l.adresse));\n  const chargement",
-    "vers": "  const chargement"
+    "de": "  if(l.client) corps.appendChild(suiviEl('div','su-cible',l.adresse));\n  const texteTemps=suiviTexteTemps(l);",
+    "vers": "  const texteTemps=suiviTexteTemps(l);"
   },
   {
     "nom": "le titre du détail est l'adresse même quand il y a un nom",
@@ -1318,5 +1318,461 @@
     "fichier": "css/style.css",
     "de": ".su-actions .lf-btn.nouveau{background:#c8e63c;border-color:#c8e63c;color:#111;}",
     "vers": ".su-actions .lf-btn.nouveau{border-color:#c8e63c;color:#111;}"
+  },
+  {
+    "nom": "une durée qui n’est pas un nombre donne « NaN h NaN »",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!(n>0)) return '0 s';",
+    "vers": "if(n<0) return '0 s';"
+  },
+  {
+    "nom": "une durée nulle ou négative n’est plus « 0 s »",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!(n>0)) return '0 s';",
+    "vers": "if(!(n>0)) return '';"
+  },
+  {
+    "nom": "les secondes sont arrondies vers le haut (59 s → 60 s)",
+    "fichier": "js/admin-suivi.js",
+    "de": "return Math.floor(n/1000)+' s';",
+    "vers": "return Math.round(n/1000)+' s';"
+  },
+  {
+    "nom": "60 secondes s’écrivent « 60 s »",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(n<60000) return Math.floor(n/1000)",
+    "vers": "if(n<=60000) return Math.floor(n/1000)"
+  },
+  {
+    "nom": "les minutes sont arrondies vers le bas",
+    "fichier": "js/admin-suivi.js",
+    "de": "const m=Math.round(n/60000);",
+    "vers": "const m=Math.floor(n/60000);"
+  },
+  {
+    "nom": "les minutes sont arrondies vers le haut",
+    "fichier": "js/admin-suivi.js",
+    "de": "const m=Math.round(n/60000);",
+    "vers": "const m=Math.ceil(n/60000);"
+  },
+  {
+    "nom": "60 minutes s’écrivent « 60 min »",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(m<60) return m+' min';",
+    "vers": "if(m<=60) return m+' min';"
+  },
+  {
+    "nom": "les heures sont arrondies au lieu d’être entières",
+    "fichier": "js/admin-suivi.js",
+    "de": "return Math.floor(m/60)+' h '+suiviPad(m%60);",
+    "vers": "return Math.round(m/60)+' h '+suiviPad(m%60);"
+  },
+  {
+    "nom": "les minutes des heures s’écrivent sur un chiffre",
+    "fichier": "js/admin-suivi.js",
+    "de": "return Math.floor(m/60)+' h '+suiviPad(m%60);",
+    "vers": "return Math.floor(m/60)+' h '+(m%60);"
+  },
+  {
+    "nom": "les minutes des heures ne sont plus « modulo 60 »",
+    "fichier": "js/admin-suivi.js",
+    "de": "return Math.floor(m/60)+' h '+suiviPad(m%60);",
+    "vers": "return Math.floor(m/60)+' h '+suiviPad(m);"
+  },
+  {
+    "nom": "un client sans passage mesuré dit quand même « 0 passage mesuré »",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!l||!l.joursMesures) return '';",
+    "vers": "if(!l) return '';"
+  },
+  {
+    "nom": "la phrase du temps plante sans ligne",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!l||!l.joursMesures) return '';",
+    "vers": "if(!l.joursMesures) return '';"
+  },
+  {
+    "nom": "un passage mesuré sur un seul est dit « mesuré sur 1 »",
+    "fichier": "js/admin-suivi.js",
+    "de": "const partiel=nb<l.total?",
+    "vers": "const partiel=nb<=l.total?"
+  },
+  {
+    "nom": "« passage » ne prend plus de « s » au pluriel",
+    "fichier": "js/admin-suivi.js",
+    "de": "' passage'+(nb>1?'s':'')+' mesuré'",
+    "vers": "' passage'+' mesuré'"
+  },
+  {
+    "nom": "« mesuré » ne prend plus de « s » au pluriel",
+    "fichier": "js/admin-suivi.js",
+    "de": "' mesuré'+(nb>1?'s':'')+' sur '",
+    "vers": "' mesuré'+' sur '"
+  },
+  {
+    "nom": "un seul passage mesuré montre le total ET la moyenne",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(nb===1) return '⏱ '+suiviDuree(l.tempsMs)+partiel;",
+    "vers": "if(false) return '⏱ '+suiviDuree(l.tempsMs)+partiel;"
+  },
+  {
+    "nom": "la moyenne montre le temps total",
+    "fichier": "js/admin-suivi.js",
+    "de": "' en tout · '+suiviDuree(l.tempsMoyenMs)+' en moyenne'",
+    "vers": "' en tout · '+suiviDuree(l.tempsMs)+' en moyenne'"
+  },
+  {
+    "nom": "le total montre la moyenne",
+    "fichier": "js/admin-suivi.js",
+    "de": "return '⏱ '+suiviDuree(l.tempsMs)+' en tout · '",
+    "vers": "return '⏱ '+suiviDuree(l.tempsMoyenMs)+' en tout · '"
+  },
+  {
+    "nom": "la phrase du temps ne dit plus « en tout »",
+    "fichier": "js/admin-suivi.js",
+    "de": "' en tout · '+suiviDuree(l.tempsMoyenMs)",
+    "vers": "' · '+suiviDuree(l.tempsMoyenMs)"
+  },
+  {
+    "nom": "la somme des temps compte 1 par ligne",
+    "fichier": "js/admin-suivi.js",
+    "de": "return (lignes||[]).reduce((n,l)=>n+(l.tempsMs||0),0);",
+    "vers": "return (lignes||[]).reduce((n,l)=>n+1,0);"
+  },
+  {
+    "nom": "la somme des temps plante sans liste",
+    "fichier": "js/admin-suivi.js",
+    "de": "return (lignes||[]).reduce((n,l)=>n+(l.tempsMs||0),0);",
+    "vers": "return (lignes).reduce((n,l)=>n+(l.tempsMs||0),0);"
+  },
+  {
+    "nom": "la somme des temps plante sur une ligne sans temps",
+    "fichier": "js/admin-suivi.js",
+    "de": "n+(l.tempsMs||0)",
+    "vers": "n+l.tempsMs"
+  },
+  {
+    "nom": "les « Complété » avant la date de départ relient encore des visites",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(c.passe_id&&j&&j>=o.depuis) jourFait.set(",
+    "vers": "if(c.passe_id&&j) jourFait.set("
+  },
+  {
+    "nom": "une visite se relie à son « Complété » par l’arrêt seul",
+    "fichier": "js/admin-suivi.js",
+    "de": "const jour=jourFait.get(p.passe_id+'|'+p.stop_id);",
+    "vers": "const jour=jourFait.get(p.stop_id);"
+  },
+  {
+    "nom": "la clé passe|arrêt est à l’envers d’un côté",
+    "fichier": "js/admin-suivi.js",
+    "de": "const jour=jourFait.get(p.passe_id+'|'+p.stop_id);",
+    "vers": "const jour=jourFait.get(p.stop_id+'|'+p.passe_id);"
+  },
+  {
+    "nom": "la durée d’une visite est calculée à l’envers",
+    "fichier": "js/admin-suivi.js",
+    "de": "const ms=Date.parse(p.depart_le)-Date.parse(p.arrivee_le);",
+    "vers": "const ms=Date.parse(p.arrivee_le)-Date.parse(p.depart_le);"
+  },
+  {
+    "nom": "une visite sans « Complété » ni durée valable compte quand même (rien n’est filtré)",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!jour||!(ms>=0)) return;",
+    "vers": "if(false) return;"
+  },
+  {
+    "nom": "une visite sans « Complété » compte quand même",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!jour||!(ms>=0)) return;",
+    "vers": "if(!(ms>=0)) return;"
+  },
+  {
+    "nom": "une visite au départ absent, illisible ou avant l’arrivée compte",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!jour||!(ms>=0)) return;",
+    "vers": "if(!jour) return;"
+  },
+  {
+    "nom": "une visite de 0 seconde ne compte pas",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(!jour||!(ms>=0)) return;",
+    "vers": "if(!jour||!(ms>0)) return;"
+  },
+  {
+    "nom": "les visites sont rangées sous un autre arrêt",
+    "fichier": "js/admin-suivi.js",
+    "de": "visitesParArret.get(p.stop_id).push({jour,ms,",
+    "vers": "visitesParArret.get(p.passe_id).push({jour,ms,"
+  },
+  {
+    "nom": "une visite ne garde plus sa passe",
+    "fichier": "js/admin-suivi.js",
+    "de": "push({jour,ms,passeId:p.passe_id,stopId:p.stop_id,",
+    "vers": "push({jour,ms,passeId:p.stop_id,stopId:p.stop_id,"
+  },
+  {
+    "nom": "une visite ne garde plus son arrêt",
+    "fichier": "js/admin-suivi.js",
+    "de": "push({jour,ms,passeId:p.passe_id,stopId:p.stop_id,",
+    "vers": "push({jour,ms,passeId:p.passe_id,stopId:p.passe_id,"
+  },
+  {
+    "nom": "une visite garde le jour de son arrivée au lieu de celui du « Complété »",
+    "fichier": "js/admin-suivi.js",
+    "de": "push({jour,ms,passeId:p.passe_id,",
+    "vers": "push({jour:suiviJourLocal(p.arrivee_le),ms,passeId:p.passe_id,"
+  },
+  {
+    "nom": "seules les visites de l’arrêt de référence comptent (pas les copies)",
+    "fichier": "js/admin-suivi.js",
+    "de": "const visites=tries.flatMap(a=>visitesParArret.get(a.id)||[])",
+    "vers": "const visites=(visitesParArret.get(ref.id)||[])"
+  },
+  {
+    "nom": "les visites sont rangées de la plus récente à la plus ancienne",
+    "fichier": "js/admin-suivi.js",
+    "de": ".sort((a,b)=>Date.parse(a.arrivee)-Date.parse(b.arrivee));",
+    "vers": ".sort((a,b)=>Date.parse(b.arrivee)-Date.parse(a.arrivee));"
+  },
+  {
+    "nom": "le temps total compte 1 par visite",
+    "fichier": "js/admin-suivi.js",
+    "de": "const tempsMs=visites.reduce((n,v)=>n+v.ms,0);",
+    "vers": "const tempsMs=visites.reduce((n,v)=>n+1,0);"
+  },
+  {
+    "nom": "les passages mesurés sont comptés par visite (pas par jour)",
+    "fichier": "js/admin-suivi.js",
+    "de": "const joursMesures=new Set(visites.map(v=>v.jour)).size;",
+    "vers": "const joursMesures=visites.length;"
+  },
+  {
+    "nom": "la moyenne se calcule par visite (pas par passage)",
+    "fichier": "js/admin-suivi.js",
+    "de": "tempsMoyenMs:joursMesures?Math.round(tempsMs/joursMesures):null,",
+    "vers": "tempsMoyenMs:joursMesures?Math.round(tempsMs/visites.length):null,"
+  },
+  {
+    "nom": "la moyenne n’est plus arrondie",
+    "fichier": "js/admin-suivi.js",
+    "de": "tempsMoyenMs:joursMesures?Math.round(tempsMs/joursMesures):null,",
+    "vers": "tempsMoyenMs:joursMesures?tempsMs/joursMesures:null,"
+  },
+  {
+    "nom": "la moyenne d’un client sans visite est zéro (au lieu de « aucune »)",
+    "fichier": "js/admin-suivi.js",
+    "de": "tempsMoyenMs:joursMesures?Math.round(tempsMs/joursMesures):null,",
+    "vers": "tempsMoyenMs:joursMesures?Math.round(tempsMs/joursMesures):0,"
+  },
+  {
+    "nom": "le temps passé n’est pas lu avec sa date de fin (colonne du départ)",
+    "fichier": "js/admin-suivi.js",
+    "de": "'passe_id, stop_id, arrivee_le, depart_le'",
+    "vers": "'passe_id, stop_id, arrivee_le'"
+  },
+  {
+    "nom": "les « Complété » sont lus sans leur passe",
+    "fichier": "js/admin-suivi.js",
+    "de": "'stop_id, complete_le, passe_id'",
+    "vers": "'stop_id, complete_le'"
+  },
+  {
+    "nom": "le temps passé est lu sans filtre de date",
+    "fichier": "js/admin-suivi.js",
+    "de": "q=>q.gte('arrivee_le',debutIso),'arrivee_le'",
+    "vers": "q=>q,'arrivee_le'"
+  },
+  {
+    "nom": "le temps passé est filtré avec la mauvaise date",
+    "fichier": "js/admin-suivi.js",
+    "de": "q=>q.gte('arrivee_le',debutIso)",
+    "vers": "q=>q.gte('arrivee_le',depuis)"
+  },
+  {
+    "nom": "le temps passé est rangé par un autre ordre",
+    "fichier": "js/admin-suivi.js",
+    "de": "q=>q.gte('arrivee_le',debutIso),'arrivee_le'",
+    "vers": "q=>q.gte('arrivee_le',debutIso),'passe_id'"
+  },
+  {
+    "nom": "une erreur de lecture du temps passé est avalée",
+    "fichier": "js/admin-suivi.js",
+    "de": "catch(e){if(suiviTableAbsente(e)) presencesDispo=false; else throw e;}",
+    "vers": "catch(e){presencesDispo=false;}"
+  },
+  {
+    "nom": "la table du temps passé absente fait échouer tout le suivi",
+    "fichier": "js/admin-suivi.js",
+    "de": "catch(e){if(suiviTableAbsente(e)) presencesDispo=false; else throw e;}",
+    "vers": "catch(e){throw e;}"
+  },
+  {
+    "nom": "le temps passé est toujours dit « pas activé »",
+    "fichier": "js/admin-suivi.js",
+    "de": "let presences=[],presencesDispo=true;",
+    "vers": "let presences=[],presencesDispo=false;"
+  },
+  {
+    "nom": "le temps lu n’est pas gardé avec les autres données",
+    "fichier": "js/admin-suivi.js",
+    "de": "return {depuis,passages,manuels,manuelsDispo,presences,presencesDispo,",
+    "vers": "return {depuis,passages,manuels,manuelsDispo,presencesDispo,"
+  },
+  {
+    "nom": "le temps lu n’est pas transmis à la construction des lignes",
+    "fichier": "js/admin-suivi.js",
+    "de": "manuels:suiviDonnees.manuels,presences:suiviDonnees.presences,service:",
+    "vers": "manuels:suiviDonnees.manuels,service:"
+  },
+  {
+    "nom": "le message « SQL 29 » est toujours montré",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(d.presencesDispo===false) body.appendChild(",
+    "vers": "if(true) body.appendChild("
+  },
+  {
+    "nom": "le message « SQL 29 » n’est jamais montré",
+    "fichier": "js/admin-suivi.js",
+    "de": "if(d.presencesDispo===false) body.appendChild(",
+    "vers": "if(false) body.appendChild("
+  },
+  {
+    "nom": "le message « SQL 29 » a un autre texte",
+    "fichier": "js/admin-suivi.js",
+    "de": "Le temps passé n’est pas encore activé dans ta base (fichier SQL 29).",
+    "vers": "Le temps passé n’est pas activé (SQL 29)."
+  },
+  {
+    "nom": "le résumé montre toujours le temps (même zéro)",
+    "fichier": "js/admin-suivi.js",
+    "de": "(suiviTempsTotal(toutes)>0?' · ⏱ '",
+    "vers": "(suiviTempsTotal(toutes)>=0?' · ⏱ '"
+  },
+  {
+    "nom": "le résumé ne montre plus jamais le temps",
+    "fichier": "js/admin-suivi.js",
+    "de": "(suiviTempsTotal(toutes)>0?' · ⏱ '",
+    "vers": "(false?' · ⏱ '"
+  },
+  {
+    "nom": "le résumé ne compte que les clients affichés (filtre) pour le temps",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviTempsTotal(toutes)>0?' · ⏱ '+suiviDuree(suiviTempsTotal(toutes))",
+    "vers": "suiviTempsTotal(toutes)>0?' · ⏱ '+suiviDuree(suiviTempsTotal(suiviFiltrer(toutes,suiviFiltre,suiviRecherche)))"
+  },
+  {
+    "nom": "le résumé ne dit plus « en tout »",
+    "fichier": "js/admin-suivi.js",
+    "de": "+suiviDuree(suiviTempsTotal(toutes))+' en tout'",
+    "vers": "+suiviDuree(suiviTempsTotal(toutes))+''"
+  },
+  {
+    "nom": "la ligne du temps n’est plus montrée sous le client",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(texteTemps) div.appendChild(suiviEl('div','su-temps',texteTemps));",
+    "vers": ""
+  },
+  {
+    "nom": "la ligne du temps a une autre classe (elle perd son style)",
+    "fichier": "js/admin-suivi.js",
+    "de": "div.appendChild(suiviEl('div','su-temps',texteTemps));",
+    "vers": "div.appendChild(suiviEl('div','su-adresse',texteTemps));"
+  },
+  {
+    "nom": "la ligne du temps est montrée même quand elle est vide",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(texteTemps) div.appendChild(suiviEl('div','su-temps',texteTemps));",
+    "vers": "  div.appendChild(suiviEl('div','su-temps',texteTemps));"
+  },
+  {
+    "nom": "le détail ne montre plus la ligne du temps",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(texteTemps) corps.appendChild(suiviEl('div','su-temps',texteTemps));",
+    "vers": ""
+  },
+  {
+    "nom": "le détail montre la ligne du temps même vide",
+    "fichier": "js/admin-suivi.js",
+    "de": "  if(texteTemps) corps.appendChild(suiviEl('div','su-temps',texteTemps));",
+    "vers": "  corps.appendChild(suiviEl('div','su-temps',texteTemps));"
+  },
+  {
+    "nom": "le détail lit sans la passe, l’arrêt et le mode",
+    "fichier": "js/admin-suivi.js",
+    "de": "select('complete_le, passe_id, stop_id, mode, utilisateurs!complete_par(nom), passes(equipes(nom))')",
+    "vers": "select('complete_le, utilisateurs!complete_par(nom), passes(equipes(nom))')"
+  },
+  {
+    "nom": "le détail de repli lit sans la passe, l’arrêt et le mode",
+    "fichier": "js/admin-suivi.js",
+    "de": "select('complete_le, passe_id, stop_id, mode').in('stop_id',l.arretIds).gte(",
+    "vers": "select('complete_le').in('stop_id',l.arretIds).gte("
+  },
+  {
+    "nom": "le détail ignore les heures illisibles avec une erreur",
+    "fichier": "js/admin-suivi.js",
+    "de": "    if(!jour) return;   // une heure illisible est ignorée, comme dans la liste\n",
+    "vers": ""
+  },
+  {
+    "nom": "le détail relie la visite par la passe seule (la somme des visites de la passe)",
+    "fichier": "js/admin-suivi.js",
+    "de": "filter(v=>v.passeId===x.passe_id&&v.stopId===x.stop_id)",
+    "vers": "filter(v=>v.passeId===x.passe_id)"
+  },
+  {
+    "nom": "le détail relie la visite par l’arrêt seul",
+    "fichier": "js/admin-suivi.js",
+    "de": "filter(v=>v.passeId===x.passe_id&&v.stopId===x.stop_id)",
+    "vers": "filter(v=>v.stopId===x.stop_id)"
+  },
+  {
+    "nom": "le détail ne montre plus le temps de chaque visite",
+    "fichier": "js/admin-suivi.js",
+    "de": "const temps=visite.length?' · ⏱ '+suiviDuree(visite.reduce((n,v)=>n+v.ms,0)):'';",
+    "vers": "const temps='';"
+  },
+  {
+    "nom": "le détail montre le temps même sans visite",
+    "fichier": "js/admin-suivi.js",
+    "de": "const temps=visite.length?' · ⏱ '+suiviDuree(visite.reduce((n,v)=>n+v.ms,0)):'';",
+    "vers": "const temps=' · ⏱ '+suiviDuree(visite.reduce((n,v)=>n+v.ms,0));"
+  },
+  {
+    "nom": "le détail compte 1 minute par visite",
+    "fichier": "js/admin-suivi.js",
+    "de": "suiviDuree(visite.reduce((n,v)=>n+v.ms,0))",
+    "vers": "suiviDuree(visite.reduce((n,v)=>n+60000,0))"
+  },
+  {
+    "nom": "le détail ne dit plus « automatique »",
+    "fichier": "js/admin-suivi.js",
+    "de": "+(x.mode==='auto'?' · automatique':'')",
+    "vers": "+''"
+  },
+  {
+    "nom": "le détail dit « automatique » pour tous les « Complété »",
+    "fichier": "js/admin-suivi.js",
+    "de": "+(x.mode==='auto'?' · automatique':'')",
+    "vers": "+' · automatique'"
+  },
+  {
+    "nom": "le détail dit « automatique » pour un « Complété » à la main",
+    "fichier": "js/admin-suivi.js",
+    "de": "(x.mode==='auto'?' · automatique':'')",
+    "vers": "(x.mode==='manuel'?' · automatique':'')"
+  },
+  {
+    "nom": "la règle de style du temps passé est effacée",
+    "fichier": "css/style.css",
+    "de": ".su-temps{font-size:12px;color:#93c5fd;margin-top:3px;}\n",
+    "vers": ""
+  },
+  {
+    "nom": "le temps passé prend la couleur grise de l’adresse",
+    "fichier": "css/style.css",
+    "de": ".su-temps{font-size:12px;color:#93c5fd;",
+    "vers": ".su-temps{font-size:12px;color:#6b7a8d;"
   }
 ]

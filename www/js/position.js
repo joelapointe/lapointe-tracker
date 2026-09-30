@@ -39,6 +39,8 @@ function noterPosition(lat,lon,precision,quand){
   // Le point vert de la carte (et la carte, si elle le suit) glisse jusqu'à cette lecture, d'où qu'elle vienne : suivi de la carte, service de position du téléphone
   // pendant ma passe (une par seconde), lecture fraîche du punch (suivi-carte.js). Sans ce fichier (les tests de ce fichier seul), rien ne se passe.
   if(typeof majPointVert==='function') majPointVert(lat,lon,lastPosInfo.precision,t);
+  // Le camion est-il dans la zone d'un client de MA passe ? (presence.js, demande 6 : zone bleue, chrono, « Complété » automatique, temps passé). Ne lève jamais d'erreur.
+  if(typeof presenceLecture==='function') presenceLecture(lat,lon,lastPosInfo.precision,t);
 }
 // La dernière lecture connue, si elle a moins de maxS secondes
 function positionConnue(maxS){

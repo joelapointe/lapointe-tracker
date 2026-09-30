@@ -210,7 +210,10 @@ function texteTour(s){
   if(!t) return 'Aucune passe en cours pour ce type de service';
   const attente=arretEnAttente(s)?' · ⏳ en attente d’envoi':'';   // un geste sur cet arrêt attend le retour du signal (étape 16c)
   if(!tourEnCours(t)) return 'Passe n° '+numeroPasse(t)+' terminée · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+attente;
-  return 'Passe n° '+numeroPasse(t)+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)?' · 🚜 camion sur place':'')+attente;
+  // Mon propre camion dans la zone (presence.js, demande 6) : « 🚜 camion sur place » même une fois le client fait, et le chrono « ⏱ 3 min 12 s » (chez le chauffeur seulement)
+  const ici=typeof presenceEstIci==='function'&&presenceEstIci(s);
+  const chrono=typeof presenceTexteFiche==='function'?presenceTexteFiche(s):'';
+  return 'Passe n° '+numeroPasse(t)+' · '+t.faits+'/'+t.total+' ('+t.pourcentage+' %)'+(estEnCours(s)||ici?' · 🚜 camion sur place':'')+chrono+attente;
 }
 
 // ── CLIENT « EN COURS » (étape 13c) ────────────────────
@@ -256,15 +259,20 @@ function positionCompte(p,maintenant){
   return true;
 }
 
+// La zone d'un client (son polygone dessiné, à la marge de précision près ; sans zone, le cercle de RAYON_EN_COURS_M autour de son point) : presence.js (demande 6). Sans ce fichier
+// (les tests de celui-ci seul), le cercle de RAYON_EN_COURS_M.
+function positionDansZone(s,p){
+  return typeof presenceDansArret==='function'?presenceDansArret(s,p.lat,p.lon,p.precision_m):distanceMetres(p.lat,p.lon,s.lat,s.lon)<=RAYON_EN_COURS_M;
+}
 function estEnCours(s){
   if(!s.lat||!s.lon) return false;
   if(estFait(s)) return false;
   const t=tourDe(s);
   if(!tourEnCours(t)) return false;   // pas de tour, ou tour terminé : aucun camion n'y travaille
+  if(typeof presenceEstIci==='function'&&presenceEstIci(s)) return true;   // MON camion : ma propre lecture du GPS, sans attendre le serveur (presence.js)
   const passes=t.passes.map(p=>p.passe_id);
   const maintenant=Date.now();
-  return positionsVehicules.some(p=>passes.includes(p.passe_id)&&positionCompte(p,maintenant)
-    &&distanceMetres(p.lat,p.lon,s.lat,s.lon)<=RAYON_EN_COURS_M);
+  return positionsVehicules.some(p=>passes.includes(p.passe_id)&&positionCompte(p,maintenant)&&positionDansZone(s,p));
 }
 
 // UNE seule règle de couleur pour les marqueurs ET les zones : problème (orange) > en cours (bleu) > fait (vert) > à faire (jaune)

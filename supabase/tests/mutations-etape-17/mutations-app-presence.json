@@ -1,0 +1,1580 @@
+[
+  {
+    "nom": "la sortie se fait après 30 s dehors au lieu de 45",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_SORTIE_S=45;",
+    "vers": "const PRESENCE_SORTIE_S=30;"
+  },
+  {
+    "nom": "la sortie se fait après 60 s dehors au lieu de 45",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_SORTIE_S=45;",
+    "vers": "const PRESENCE_SORTIE_S=60;"
+  },
+  {
+    "nom": "une visite de 10 s est déjà notée (minimum 20 s)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MIN_S=20;",
+    "vers": "const PRESENCE_MIN_S=10;"
+  },
+  {
+    "nom": "une visite de 20 s n'est plus notée (minimum 30 s)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MIN_S=20;",
+    "vers": "const PRESENCE_MIN_S=30;"
+  },
+  {
+    "nom": "le complété automatique accepte un GPS à 30 m (au lieu de 20)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_PRECISION_AUTO_M=20;",
+    "vers": "const PRESENCE_PRECISION_AUTO_M=30;"
+  },
+  {
+    "nom": "le complété automatique exige un GPS à 10 m (au lieu de 20)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_PRECISION_AUTO_M=20;",
+    "vers": "const PRESENCE_PRECISION_AUTO_M=10;"
+  },
+  {
+    "nom": "la marge minimale passe de 4 m à 2 m",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MARGE_MIN_M=4;",
+    "vers": "const PRESENCE_MARGE_MIN_M=2;"
+  },
+  {
+    "nom": "la marge minimale passe de 4 m à 6 m",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MARGE_MIN_M=4;",
+    "vers": "const PRESENCE_MARGE_MIN_M=6;"
+  },
+  {
+    "nom": "la marge maximale passe de 12 m à 8 m",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MARGE_MAX_M=12;",
+    "vers": "const PRESENCE_MARGE_MAX_M=8;"
+  },
+  {
+    "nom": "la marge maximale passe de 12 m à 20 m",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MARGE_MAX_M=12;",
+    "vers": "const PRESENCE_MARGE_MAX_M=20;"
+  },
+  {
+    "nom": "un trou entre deux lectures compte pour 5 s au plus (au lieu de 15)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_PAS_MAX_S=15;",
+    "vers": "const PRESENCE_PAS_MAX_S=5;"
+  },
+  {
+    "nom": "un trou entre deux lectures compte pour 30 s au plus (au lieu de 15)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_PAS_MAX_S=15;",
+    "vers": "const PRESENCE_PAS_MAX_S=30;"
+  },
+  {
+    "nom": "le délai de départ du complété automatique est 30 s (au lieu de 60)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_DELAI_AUTO_DEFAUT_S=60;",
+    "vers": "const PRESENCE_DELAI_AUTO_DEFAUT_S=30;"
+  },
+  {
+    "nom": "le délai de départ du complété automatique est 120 s (au lieu de 60)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_DELAI_AUTO_DEFAUT_S=60;",
+    "vers": "const PRESENCE_DELAI_AUTO_DEFAUT_S=120;"
+  },
+  {
+    "nom": "le délai maximal est 1800 s (au lieu de 3600)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_DELAI_AUTO_MAX_S=3600;",
+    "vers": "const PRESENCE_DELAI_AUTO_MAX_S=1800;"
+  },
+  {
+    "nom": "le délai maximal est 7200 s (au lieu de 3600)",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_DELAI_AUTO_MAX_S=3600;",
+    "vers": "const PRESENCE_DELAI_AUTO_MAX_S=7200;"
+  },
+  {
+    "nom": "la clé de la mémoire du téléphone change de nom",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_MEMO='lp_presence:';",
+    "vers": "const PRESENCE_MEMO='lp_visite:';"
+  },
+  {
+    "nom": "le réglage lu porte un autre nom",
+    "fichier": "js/presence.js",
+    "de": "const PRESENCE_CLE_REGLAGE='presence_complete_auto_s';",
+    "vers": "const PRESENCE_CLE_REGLAGE='presence_delai';"
+  },
+  {
+    "nom": "la projection oublie le cosinus de la latitude (est-ouest trop long)",
+    "fichier": "js/presence.js",
+    "de": "x:(lon-refLon)*k*6371000*Math.cos(refLat*k)",
+    "vers": "x:(lon-refLon)*k*6371000"
+  },
+  {
+    "nom": "la projection étire le nord-sud de 5 %",
+    "fichier": "js/presence.js",
+    "de": "y:(lat-refLat)*k*6371000}",
+    "vers": "y:(lat-refLat)*k*6371000*1.05}"
+  },
+  {
+    "nom": "la projection double les angles",
+    "fichier": "js/presence.js",
+    "de": "const k=Math.PI/180;",
+    "vers": "const k=Math.PI/90;"
+  },
+  {
+    "nom": "deux coins suffisent pour une zone",
+    "fichier": "js/presence.js",
+    "de": "if(!Array.isArray(z)||z.length<3) return null;",
+    "vers": "if(!Array.isArray(z)||z.length<2) return null;"
+  },
+  {
+    "nom": "il faut quatre coins pour une zone",
+    "fichier": "js/presence.js",
+    "de": "if(!Array.isArray(z)||z.length<3) return null;",
+    "vers": "if(!Array.isArray(z)||z.length<4) return null;"
+  },
+  {
+    "nom": "la zone n'est plus vérifiée comme une liste",
+    "fichier": "js/presence.js",
+    "de": "if(!Array.isArray(z)||z.length<3) return null;",
+    "vers": "if(z.length<3) return null;"
+  },
+  {
+    "nom": "un coin en texte ou vide est accepté (plus de contrôle « nombre »)",
+    "fichier": "js/presence.js",
+    "de": "z.every(p=>Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='number'&&isFinite(p[0])&&isFinite(p[1]))",
+    "vers": "z.every(p=>Array.isArray(p)&&isFinite(p[0])&&isFinite(p[1]))"
+  },
+  {
+    "nom": "un coin NaN ou infini est accepté",
+    "fichier": "js/presence.js",
+    "de": "z.every(p=>Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='number'&&isFinite(p[0])&&isFinite(p[1]))",
+    "vers": "z.every(p=>Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='number')"
+  },
+  {
+    "nom": "un coin qui n'est pas une paire fait planter",
+    "fichier": "js/presence.js",
+    "de": "z.every(p=>Array.isArray(p)&&typeof p[0]==='number'",
+    "vers": "z.every(p=>typeof p[0]==='number'"
+  },
+  {
+    "nom": "la zone lue n'est plus une copie",
+    "fichier": "js/presence.js",
+    "de": "?z.map(p=>[p[0],p[1]]):null",
+    "vers": "?z:null"
+  },
+  {
+    "nom": "presenceZoneDessinee dit toujours oui",
+    "fichier": "js/presence.js",
+    "de": "function presenceZoneDessinee(s){return !!presenceZoneDe(s);}",
+    "vers": "function presenceZoneDessinee(s){return true;}"
+  },
+  {
+    "nom": "un côté de longueur zéro donne « pas un nombre »",
+    "fichier": "js/presence.js",
+    "de": "let t=l2>0?-(a.x*dx+a.y*dy)/l2:0;",
+    "vers": "let t=-(a.x*dx+a.y*dy)/l2;"
+  },
+  {
+    "nom": "le sens de la projection sur le segment est inversé",
+    "fichier": "js/presence.js",
+    "de": "let t=l2>0?-(a.x*dx+a.y*dy)/l2:0;",
+    "vers": "let t=l2>0?(a.x*dx+a.y*dy)/l2:0;"
+  },
+  {
+    "nom": "la projection sur le segment n'est plus bornée",
+    "fichier": "js/presence.js",
+    "de": "t=Math.max(0,Math.min(1,t));",
+    "vers": "t=t;"
+  },
+  {
+    "nom": "la projection sur le segment n'est plus bornée en bas",
+    "fichier": "js/presence.js",
+    "de": "t=Math.max(0,Math.min(1,t));",
+    "vers": "t=Math.min(1,t);"
+  },
+  {
+    "nom": "la projection sur le segment n'est plus bornée en haut",
+    "fichier": "js/presence.js",
+    "de": "t=Math.max(0,Math.min(1,t));",
+    "vers": "t=Math.max(0,t);"
+  },
+  {
+    "nom": "la distance au segment ignore le décalage vertical",
+    "fichier": "js/presence.js",
+    "de": "Math.hypot(a.x+t*dx,a.y+t*dy)",
+    "vers": "Math.hypot(a.x+t*dx,a.y)"
+  },
+  {
+    "nom": "le rayon compte les bords qui ne croisent PAS la ligne",
+    "fichier": "js/presence.js",
+    "de": "(a.y>0)!==(b.y>0)&&",
+    "vers": "(a.y>0)===(b.y>0)&&"
+  },
+  {
+    "nom": "le rayon ne trouve plus jamais l'intérieur",
+    "fichier": "js/presence.js",
+    "de": "+a.x>0) dedans=!dedans;",
+    "vers": "+a.x>1000) dedans=!dedans;"
+  },
+  {
+    "nom": "un seul bord croisé suffit pour être « dedans »",
+    "fichier": "js/presence.js",
+    "de": "dedans=!dedans;",
+    "vers": "dedans=true;"
+  },
+  {
+    "nom": "« dedans » ne donne plus 0",
+    "fichier": "js/presence.js",
+    "de": "if(dedans) return 0;",
+    "vers": "if(dedans) return 1;"
+  },
+  {
+    "nom": "la distance au bord ne regarde qu'un seul côté",
+    "fichier": "js/presence.js",
+    "de": "presenceDistanceSegment(P[j],P[i])",
+    "vers": "presenceDistanceSegment(P[0],P[1])"
+  },
+  {
+    "nom": "le cercle sans zone oublie de retirer les 20 m",
+    "fichier": "js/presence.js",
+    "de": "return Math.max(0,distanceMetres(lat,lon,s.lat,s.lon)-RAYON_EN_COURS_M);",
+    "vers": "return distanceMetres(lat,lon,s.lat,s.lon);"
+  },
+  {
+    "nom": "le cercle sans zone ajoute 20 m au lieu de les retirer",
+    "fichier": "js/presence.js",
+    "de": "return Math.max(0,distanceMetres(lat,lon,s.lat,s.lon)-RAYON_EN_COURS_M);",
+    "vers": "return Math.max(0,distanceMetres(lat,lon,s.lat,s.lon)+RAYON_EN_COURS_M);"
+  },
+  {
+    "nom": "la distance d'une zone dessinée n'est plus utilisée pour classer",
+    "fichier": "js/presence.js",
+    "de": "if(pts) return presenceDistanceZoneM(lat,lon,pts);",
+    "vers": "if(false) return presenceDistanceZoneM(lat,lon,pts);"
+  },
+  {
+    "nom": "une précision de 0 m n'est plus une précision (marge 10 m)",
+    "fichier": "js/presence.js",
+    "de": "const p=(typeof precision==='number'&&precision>=0)?precision:10;",
+    "vers": "const p=(typeof precision==='number'&&precision>0)?precision:10;"
+  },
+  {
+    "nom": "la précision inconnue donne 6 m de marge",
+    "fichier": "js/presence.js",
+    "de": "const p=(typeof precision==='number'&&precision>=0)?precision:10;",
+    "vers": "const p=(typeof precision==='number'&&precision>=0)?precision:6;"
+  },
+  {
+    "nom": "la précision inconnue devient 0 m (marge minimale)",
+    "fichier": "js/presence.js",
+    "de": "const p=(typeof precision==='number'&&precision>=0)?precision:10;",
+    "vers": "const p=(precision>=0)?precision:10;"
+  },
+  {
+    "nom": "la marge n'a plus de minimum",
+    "fichier": "js/presence.js",
+    "de": "return Math.max(PRESENCE_MARGE_MIN_M,Math.min(p,PRESENCE_MARGE_MAX_M));",
+    "vers": "return Math.min(p,PRESENCE_MARGE_MAX_M);"
+  },
+  {
+    "nom": "la marge n'a plus de maximum",
+    "fichier": "js/presence.js",
+    "de": "return Math.max(PRESENCE_MARGE_MIN_M,Math.min(p,PRESENCE_MARGE_MAX_M));",
+    "vers": "return Math.max(PRESENCE_MARGE_MIN_M,p);"
+  },
+  {
+    "nom": "un arrêt absent fait planter presenceDansArret",
+    "fichier": "js/presence.js",
+    "de": "if(!s||!s.lat||!s.lon) return false;",
+    "vers": "if(!s.lat||!s.lon) return false;"
+  },
+  {
+    "nom": "une zone dessinée n'est plus utilisée pour « dedans »",
+    "fichier": "js/presence.js",
+    "de": "if(pts) return presenceDistanceZoneM(lat,lon,pts)<=presenceMarge(precision);",
+    "vers": "if(false) return presenceDistanceZoneM(lat,lon,pts)<=presenceMarge(precision);"
+  },
+  {
+    "nom": "la marge d'une zone est fixe à 20 m",
+    "fichier": "js/presence.js",
+    "de": "return presenceDistanceZoneM(lat,lon,pts)<=presenceMarge(precision);",
+    "vers": "return presenceDistanceZoneM(lat,lon,pts)<=RAYON_EN_COURS_M;"
+  },
+  {
+    "nom": "une zone dessinée n'a plus de marge",
+    "fichier": "js/presence.js",
+    "de": "return presenceDistanceZoneM(lat,lon,pts)<=presenceMarge(precision);",
+    "vers": "return presenceDistanceZoneM(lat,lon,pts)<=0;"
+  },
+  {
+    "nom": "la marge d'une zone est doublée",
+    "fichier": "js/presence.js",
+    "de": "return presenceDistanceZoneM(lat,lon,pts)<=presenceMarge(precision);",
+    "vers": "return presenceDistanceZoneM(lat,lon,pts)<=presenceMarge(precision)*2;"
+  },
+  {
+    "nom": "le cercle sans zone reçoit la marge du GPS",
+    "fichier": "js/presence.js",
+    "de": "return distanceMetres(lat,lon,s.lat,s.lon)<=RAYON_EN_COURS_M;",
+    "vers": "return distanceMetres(lat,lon,s.lat,s.lon)<=RAYON_EN_COURS_M+presenceMarge(precision);"
+  },
+  {
+    "nom": "le cercle sans zone double son rayon",
+    "fichier": "js/presence.js",
+    "de": "return distanceMetres(lat,lon,s.lat,s.lon)<=RAYON_EN_COURS_M;",
+    "vers": "return distanceMetres(lat,lon,s.lat,s.lon)<=RAYON_EN_COURS_M*2;"
+  },
+  {
+    "nom": "le délai lit toujours un nombre, même « null » (0)",
+    "fichier": "js/presence.js",
+    "de": "const n=typeof valeur==='number'?valeur:(typeof valeur==='string'&&valeur.trim()!==''?Number(valeur):NaN);",
+    "vers": "const n=Number(valeur);"
+  },
+  {
+    "nom": "un texte vide devient 0 (jamais)",
+    "fichier": "js/presence.js",
+    "de": "typeof valeur==='string'&&valeur.trim()!==''?Number(valeur):NaN",
+    "vers": "typeof valeur==='string'?Number(valeur):NaN"
+  },
+  {
+    "nom": "le délai 0 (jamais) devient 60",
+    "fichier": "js/presence.js",
+    "de": "return (isFinite(n)&&n>=0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):PRESENCE_DELAI_AUTO_DEFAUT_S;",
+    "vers": "return (isFinite(n)&&n>0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):PRESENCE_DELAI_AUTO_DEFAUT_S;"
+  },
+  {
+    "nom": "un délai infini devient 3600",
+    "fichier": "js/presence.js",
+    "de": "return (isFinite(n)&&n>=0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):PRESENCE_DELAI_AUTO_DEFAUT_S;",
+    "vers": "return (n>=0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):PRESENCE_DELAI_AUTO_DEFAUT_S;"
+  },
+  {
+    "nom": "le délai n'a plus de maximum",
+    "fichier": "js/presence.js",
+    "de": "return (isFinite(n)&&n>=0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):PRESENCE_DELAI_AUTO_DEFAUT_S;",
+    "vers": "return (isFinite(n)&&n>=0)?n:PRESENCE_DELAI_AUTO_DEFAUT_S;"
+  },
+  {
+    "nom": "un délai illisible devient 0 (jamais)",
+    "fichier": "js/presence.js",
+    "de": "return (isFinite(n)&&n>=0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):PRESENCE_DELAI_AUTO_DEFAUT_S;",
+    "vers": "return (isFinite(n)&&n>=0)?Math.min(n,PRESENCE_DELAI_AUTO_MAX_S):0;"
+  },
+  {
+    "nom": "les lignes du réglage ne sont plus vérifiées comme une liste",
+    "fichier": "js/presence.js",
+    "de": "const l=(Array.isArray(lignes)?lignes:[]).find(x=>x&&x.cle===PRESENCE_CLE_REGLAGE);",
+    "vers": "const l=lignes.find(x=>x&&x.cle===PRESENCE_CLE_REGLAGE);"
+  },
+  {
+    "nom": "une ligne vide dans la liste des réglages fait planter",
+    "fichier": "js/presence.js",
+    "de": "x=>x&&x.cle===PRESENCE_CLE_REGLAGE",
+    "vers": "x=>x.cle===PRESENCE_CLE_REGLAGE"
+  },
+  {
+    "nom": "un réglage absent garde l'ancien délai",
+    "fichier": "js/presence.js",
+    "de": "presenceDelaiAutoS=l?presenceDelaiDe(l.valeur):PRESENCE_DELAI_AUTO_DEFAUT_S;",
+    "vers": "presenceDelaiAutoS=l?presenceDelaiDe(l.valeur):presenceDelaiAutoS;"
+  },
+  {
+    "nom": "le réglage lu n'est plus nettoyé",
+    "fichier": "js/presence.js",
+    "de": "presenceDelaiAutoS=l?presenceDelaiDe(l.valeur):PRESENCE_DELAI_AUTO_DEFAUT_S;",
+    "vers": "presenceDelaiAutoS=l?l.valeur:PRESENCE_DELAI_AUTO_DEFAUT_S;"
+  },
+  {
+    "nom": "le réglage est lu même sans personne de connecté",
+    "fichier": "js/presence.js",
+    "de": "if(!currentUser) return false;",
+    "vers": "if(false) return false;"
+  },
+  {
+    "nom": "le réglage lu demande une autre ligne",
+    "fichier": "js/presence.js",
+    "de": ".in('cle',[PRESENCE_CLE_REGLAGE])",
+    "vers": ".in('cle',['x'])"
+  },
+  {
+    "nom": "une erreur du serveur sur le réglage n'est plus vue",
+    "fichier": "js/presence.js",
+    "de": "if(error) throw error;",
+    "vers": ""
+  },
+  {
+    "nom": "la copie du réglage n'est plus gardée",
+    "fichier": "js/presence.js",
+    "de": "lectureReussie('reglagesPresence',lignes);",
+    "vers": ""
+  },
+  {
+    "nom": "la copie du réglage porte un autre nom",
+    "fichier": "js/presence.js",
+    "de": "lectureReussie('reglagesPresence',lignes);",
+    "vers": "lectureReussie('reglagesPresenceX',lignes);"
+  },
+  {
+    "nom": "une panne de réseau sur le réglage n'est plus signalée",
+    "fichier": "js/presence.js",
+    "de": "signalerEchecReseau(e);",
+    "vers": ""
+  },
+  {
+    "nom": "sans réseau, la dernière valeur du réglage n'est plus reprise",
+    "fichier": "js/presence.js",
+    "de": "await restaurerReglagesPresence();",
+    "vers": ""
+  },
+  {
+    "nom": "la copie du réglage est cherchée sous un autre nom",
+    "fichier": "js/presence.js",
+    "de": "cacheLire('reglagesPresence')",
+    "vers": "cacheLire('reglagesPresenceX')"
+  },
+  {
+    "nom": "la copie du réglage n'est plus installée",
+    "fichier": "js/presence.js",
+    "de": "if(c&&Array.isArray(c.data)) installerReglagesPresence(c.data);",
+    "vers": "if(false) installerReglagesPresence(c.data);"
+  },
+  {
+    "nom": "le chrono n'est plus borné à zéro",
+    "fichier": "js/presence.js",
+    "de": "const s=Math.max(0,Math.floor(ms/1000));",
+    "vers": "const s=Math.floor(ms/1000);"
+  },
+  {
+    "nom": "60 secondes s'écrivent « 60 s »",
+    "fichier": "js/presence.js",
+    "de": "if(s<60) return s+' s';",
+    "vers": "if(s<=60) return s+' s';"
+  },
+  {
+    "nom": "60 minutes s'écrivent « 60 min »",
+    "fichier": "js/presence.js",
+    "de": "if(m<60) return m+' min '",
+    "vers": "if(m<=60) return m+' min '"
+  },
+  {
+    "nom": "les secondes s'écrivent sur un chiffre",
+    "fichier": "js/presence.js",
+    "de": "String(s%60).padStart(2,'0')+' s'",
+    "vers": "String(s%60).padStart(1,'0')+' s'"
+  },
+  {
+    "nom": "les secondes ne sont plus « modulo 60 »",
+    "fichier": "js/presence.js",
+    "de": "String(s%60).padStart(2,'0')+' s'",
+    "vers": "String(s).padStart(2,'0')+' s'"
+  },
+  {
+    "nom": "les heures sont arrondies",
+    "fichier": "js/presence.js",
+    "de": "return Math.floor(m/60)+' h '",
+    "vers": "return Math.round(m/60)+' h '"
+  },
+  {
+    "nom": "les minutes des heures s'écrivent sur un chiffre",
+    "fichier": "js/presence.js",
+    "de": "String(m%60).padStart(2,'0')+' min'",
+    "vers": "String(m%60).padStart(1,'0')+' min'"
+  },
+  {
+    "nom": "les minutes des heures ne sont plus « modulo 60 »",
+    "fichier": "js/presence.js",
+    "de": "String(m%60).padStart(2,'0')+' min'",
+    "vers": "String(m).padStart(2,'0')+' min'"
+  },
+  {
+    "nom": "« mon camion est ici » est vrai pour un autre client",
+    "fichier": "js/presence.js",
+    "de": "return !!(_presence&&s&&_presence.stopId===s.id);",
+    "vers": "return !!(_presence&&s&&_presence.stopId!==s.id);"
+  },
+  {
+    "nom": "« mon camion est ici » plante sans visite",
+    "fichier": "js/presence.js",
+    "de": "return !!(_presence&&s&&_presence.stopId===s.id);",
+    "vers": "return !!(_presence.stopId===s.id);"
+  },
+  {
+    "nom": "le chrono de la fiche part de maintenant",
+    "fichier": "js/presence.js",
+    "de": "presenceFormaterDuree(Date.now()-_presence.arrivee)",
+    "vers": "presenceFormaterDuree(Date.now())"
+  },
+  {
+    "nom": "le chrono de la fiche perd son point",
+    "fichier": "js/presence.js",
+    "de": "' · ⏱ '+presenceFormaterDuree",
+    "vers": "' ⏱ '+presenceFormaterDuree"
+  },
+  {
+    "nom": "le chrono s'affiche pour tous les clients",
+    "fichier": "js/presence.js",
+    "de": "return presenceEstIci(s)?' · ⏱ '",
+    "vers": "return true?' · ⏱ '"
+  },
+  {
+    "nom": "la fiche n'affiche plus le chrono qui avance",
+    "fichier": "js/presence.js",
+    "de": "if(el) el.textContent=texteTour(s);",
+    "vers": "if(el) el.textContent='';"
+  },
+  {
+    "nom": "la fiche cherche un autre élément pour le chrono",
+    "fichier": "js/presence.js",
+    "de": "document.getElementById('sc-tour');\n    if(el)",
+    "vers": "document.getElementById('sc-x');\n    if(el)"
+  },
+  {
+    "nom": "la carte est redessinée à chaque changement",
+    "fichier": "js/presence.js",
+    "de": "if(signatureEnCours()!==_sigEnCours) renderAll();",
+    "vers": "renderAll();"
+  },
+  {
+    "nom": "la carte n'est plus redessinée à un changement",
+    "fichier": "js/presence.js",
+    "de": "if(signatureEnCours()!==_sigEnCours) renderAll();",
+    "vers": "if(false) renderAll();"
+  },
+  {
+    "nom": "la fiche n'est plus mise à jour à un changement",
+    "fichier": "js/presence.js",
+    "de": "majCarte();   // la fiche ouverte gagne",
+    "vers": "void 0;   // la fiche ouverte gagne"
+  },
+  {
+    "nom": "la mémoire n'est plus propre à chaque employé",
+    "fichier": "js/presence.js",
+    "de": "return PRESENCE_MEMO+(currentUser?currentUser.id:'?');",
+    "vers": "return PRESENCE_MEMO+'?';"
+  },
+  {
+    "nom": "la mémoire est lue sous une autre clé",
+    "fichier": "js/presence.js",
+    "de": "localStorage.getItem(presenceCleMemo())",
+    "vers": "localStorage.getItem(presenceCleMemo()+'x')"
+  },
+  {
+    "nom": "la mémoire est écrite sous une autre clé",
+    "fichier": "js/presence.js",
+    "de": "localStorage.setItem(presenceCleMemo(),v)",
+    "vers": "localStorage.setItem(presenceCleMemo()+'x',v)"
+  },
+  {
+    "nom": "la mémoire n'est plus effacée",
+    "fichier": "js/presence.js",
+    "de": "localStorage.removeItem(presenceCleMemo())",
+    "vers": "localStorage.removeItem(presenceCleMemo()+'x')"
+  },
+  {
+    "nom": "une écriture forcée attend quand même 10 s",
+    "fichier": "js/presence.js",
+    "de": "if(!forcer&&maintenant-_presenceSauveLe<10000) return;",
+    "vers": "if(maintenant-_presenceSauveLe<10000) return;"
+  },
+  {
+    "nom": "la mémoire s'écrit toutes les 5 s (au lieu de 10)",
+    "fichier": "js/presence.js",
+    "de": "if(!forcer&&maintenant-_presenceSauveLe<10000) return;",
+    "vers": "if(!forcer&&maintenant-_presenceSauveLe<5000) return;"
+  },
+  {
+    "nom": "la mémoire s'écrit toutes les 20 s (au lieu de 10)",
+    "fichier": "js/presence.js",
+    "de": "if(!forcer&&maintenant-_presenceSauveLe<10000) return;",
+    "vers": "if(!forcer&&maintenant-_presenceSauveLe<20000) return;"
+  },
+  {
+    "nom": "la mémoire s'écrit à chaque lecture",
+    "fichier": "js/presence.js",
+    "de": "_presenceSauveLe=maintenant;",
+    "vers": ""
+  },
+  {
+    "nom": "la mémoire garde un objet vide",
+    "fichier": "js/presence.js",
+    "de": "presenceEcrireMemo(JSON.stringify(_presence));",
+    "vers": "presenceEcrireMemo(JSON.stringify({}));"
+  },
+  {
+    "nom": "la visite s'ouvre à l'heure du traitement, pas de la lecture",
+    "fichier": "js/presence.js",
+    "de": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:false}",
+    "vers": "arrivee:Date.now(),derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:false}"
+  },
+  {
+    "nom": "la visite s'ouvre avec une dernière vue à 0",
+    "fichier": "js/presence.js",
+    "de": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:false}",
+    "vers": "arrivee:t,derniereVue:0,derniereLecture:t,dedansMs:0,autoTente:false}"
+  },
+  {
+    "nom": "la visite s'ouvre avec une dernière lecture à 0",
+    "fichier": "js/presence.js",
+    "de": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:false}",
+    "vers": "arrivee:t,derniereVue:t,derniereLecture:0,dedansMs:0,autoTente:false}"
+  },
+  {
+    "nom": "la visite s'ouvre avec 1 s déjà comptée",
+    "fichier": "js/presence.js",
+    "de": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:false}",
+    "vers": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:1000,autoTente:false}"
+  },
+  {
+    "nom": "la visite s'ouvre déjà « tentée »",
+    "fichier": "js/presence.js",
+    "de": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:false}",
+    "vers": "arrivee:t,derniereVue:t,derniereLecture:t,dedansMs:0,autoTente:true}"
+  },
+  {
+    "nom": "la visite s'ouvre sur un autre client",
+    "fichier": "js/presence.js",
+    "de": "_presence={stopId:s.id,passeId,",
+    "vers": "_presence={stopId:s.route_id,passeId,"
+  },
+  {
+    "nom": "la visite ouverte n'est plus gardée sur le téléphone",
+    "fichier": "js/presence.js",
+    "de": "presenceSauver(true);\n  presenceDemarrerMinuterie();",
+    "vers": "presenceDemarrerMinuterie();"
+  },
+  {
+    "nom": "la visite ouverte ne démarre pas la minuterie",
+    "fichier": "js/presence.js",
+    "de": "presenceDemarrerMinuterie();\n  presenceChangement();\n}",
+    "vers": "presenceChangement();\n}"
+  },
+  {
+    "nom": "la visite ouverte ne redessine pas la zone",
+    "fichier": "js/presence.js",
+    "de": "presenceDemarrerMinuterie();\n  presenceChangement();\n}",
+    "vers": "presenceDemarrerMinuterie();\n}"
+  },
+  {
+    "nom": "une visite fermée reste ouverte",
+    "fichier": "js/presence.js",
+    "de": "const cur=_presence;\n  if(!cur) return;\n  _presence=null;",
+    "vers": "const cur=_presence;\n  if(!cur) return;\n  "
+  },
+  {
+    "nom": "fermer sans visite fait planter",
+    "fichier": "js/presence.js",
+    "de": "const cur=_presence;\n  if(!cur) return;\n  _presence=null;",
+    "vers": "const cur=_presence;\n  _presence=null;"
+  },
+  {
+    "nom": "une visite fermée reste dans la mémoire",
+    "fichier": "js/presence.js",
+    "de": "_presence=null;\n  presenceEffacerMemo();",
+    "vers": "_presence=null;"
+  },
+  {
+    "nom": "une visite fermée laisse tourner la minuterie",
+    "fichier": "js/presence.js",
+    "de": "presenceEffacerMemo();\n  presenceArreterMinuterie();",
+    "vers": "presenceEffacerMemo();"
+  },
+  {
+    "nom": "une visite fermée n'est plus notée",
+    "fichier": "js/presence.js",
+    "de": "presenceArreterMinuterie();\n  presenceNoter(cur,cur.derniereVue);",
+    "vers": "presenceArreterMinuterie();"
+  },
+  {
+    "nom": "le départ est l'heure de la fermeture, pas la dernière lecture dedans",
+    "fichier": "js/presence.js",
+    "de": "presenceNoter(cur,cur.derniereVue);",
+    "vers": "presenceNoter(cur,Date.now());"
+  },
+  {
+    "nom": "fermer redessine toujours (même quand une autre visite s'ouvre)",
+    "fichier": "js/presence.js",
+    "de": "if(!sansChangement) presenceChangement();",
+    "vers": "presenceChangement();"
+  },
+  {
+    "nom": "fermer ne redessine jamais",
+    "fichier": "js/presence.js",
+    "de": "if(!sansChangement) presenceChangement();",
+    "vers": ""
+  },
+  {
+    "nom": "une visite de 20 s pile n'est plus notée",
+    "fichier": "js/presence.js",
+    "de": "if(depart-cur.arrivee<PRESENCE_MIN_S*1000&&!cur.autoTente) return;",
+    "vers": "if(depart-cur.arrivee<=PRESENCE_MIN_S*1000&&!cur.autoTente) return;"
+  },
+  {
+    "nom": "une visite complétée tout seul mais courte n'est pas notée",
+    "fichier": "js/presence.js",
+    "de": "if(depart-cur.arrivee<PRESENCE_MIN_S*1000&&!cur.autoTente) return;",
+    "vers": "if(depart-cur.arrivee<PRESENCE_MIN_S*1000) return;"
+  },
+  {
+    "nom": "le minimum d'une visite est compté en millisecondes",
+    "fichier": "js/presence.js",
+    "de": "if(depart-cur.arrivee<PRESENCE_MIN_S*1000&&!cur.autoTente) return;",
+    "vers": "if(depart-cur.arrivee<PRESENCE_MIN_S&&!cur.autoTente) return;"
+  },
+  {
+    "nom": "le geste de présence échange la passe et le client",
+    "fichier": "js/presence.js",
+    "de": "{passeId:cur.passeId,stopId:cur.stopId,arrivee:new Date(cur.arrivee)",
+    "vers": "{passeId:cur.stopId,stopId:cur.passeId,arrivee:new Date(cur.arrivee)"
+  },
+  {
+    "nom": "le geste de présence met le départ comme arrivée",
+    "fichier": "js/presence.js",
+    "de": "arrivee:new Date(cur.arrivee).toISOString(),depart:new Date(depart).toISOString()}",
+    "vers": "arrivee:new Date(depart).toISOString(),depart:new Date(depart).toISOString()}"
+  },
+  {
+    "nom": "le geste de présence met l'arrivée comme départ",
+    "fichier": "js/presence.js",
+    "de": "arrivee:new Date(cur.arrivee).toISOString(),depart:new Date(depart).toISOString()}",
+    "vers": "arrivee:new Date(cur.arrivee).toISOString(),depart:new Date(cur.arrivee).toISOString()}"
+  },
+  {
+    "nom": "le geste de présence porte l'heure de l'envoi",
+    "fichier": "js/presence.js",
+    "de": "moment:new Date(depart).toISOString()})",
+    "vers": "moment:new Date().toISOString()})"
+  },
+  {
+    "nom": "le geste de présence perd le nom du client",
+    "fichier": "js/presence.js",
+    "de": "{libelle:'⏱ Temps passé'+(s?' : '+s.adresse:'')",
+    "vers": "{libelle:'⏱ Temps passé'"
+  },
+  {
+    "nom": "l'exclusion ne tient plus compte de la passe",
+    "fichier": "js/presence.js",
+    "de": "function presenceCleExclus(passeId,stopId){return passeId+'|'+stopId;}",
+    "vers": "function presenceCleExclus(passeId,stopId){return stopId;}"
+  },
+  {
+    "nom": "l'exclusion ignore la passe précisée",
+    "fichier": "js/presence.js",
+    "de": "const p=passeId||(m?m.passe.passe_id:null);",
+    "vers": "const p=(m?m.passe.passe_id:null);"
+  },
+  {
+    "nom": "l'exclusion sans aucune passe ajoute quand même",
+    "fichier": "js/presence.js",
+    "de": "if(p) _presenceExclus.add(presenceCleExclus(p,stopId));",
+    "vers": "_presenceExclus.add(presenceCleExclus(p,stopId));"
+  },
+  {
+    "nom": "la déconnexion ne note plus la visite",
+    "fichier": "js/presence.js",
+    "de": "function presenceArreter(){\n  presenceFermer(true);",
+    "vers": "function presenceArreter(){"
+  },
+  {
+    "nom": "la déconnexion garde les exclusions",
+    "fichier": "js/presence.js",
+    "de": "  _presenceExclus=new Set();\n  _presencePasseId=null;\n}",
+    "vers": "  _presencePasseId=null;\n}"
+  },
+  {
+    "nom": "la déconnexion garde la dernière passe",
+    "fichier": "js/presence.js",
+    "de": "  _presenceExclus=new Set();\n  _presencePasseId=null;\n}",
+    "vers": "  _presenceExclus=new Set();\n}"
+  },
+  {
+    "nom": "la minuterie tourne toutes les 2 secondes",
+    "fichier": "js/presence.js",
+    "de": "_presenceMinuterie=setInterval(presenceTic,1000);",
+    "vers": "_presenceMinuterie=setInterval(presenceTic,2000);"
+  },
+  {
+    "nom": "arrêter la minuterie oublie de l'arrêter vraiment",
+    "fichier": "js/presence.js",
+    "de": "clearInterval(_presenceMinuterie);_presenceMinuterie=null;}",
+    "vers": "_presenceMinuterie=null;}"
+  },
+  {
+    "nom": "arrêter la minuterie oublie de le noter",
+    "fichier": "js/presence.js",
+    "de": "clearInterval(_presenceMinuterie);_presenceMinuterie=null;}",
+    "vers": "clearInterval(_presenceMinuterie);}"
+  },
+  {
+    "nom": "un tour « terminé » qui garde une passe compte comme ma passe",
+    "fichier": "js/presence.js",
+    "de": "return (m&&m.passe&&m.tour&&tourEnCours(m.tour))?m:null;",
+    "vers": "return (m&&m.passe&&m.tour)?m:null;"
+  },
+  {
+    "nom": "la minuterie ne regarde plus si la passe est la même",
+    "fichier": "js/presence.js",
+    "de": "const encore=!!m&&m.passe.passe_id===cur.passeId;",
+    "vers": "const encore=!!m;"
+  },
+  {
+    "nom": "la minuterie ferme à plus de 45 s seulement",
+    "fichier": "js/presence.js",
+    "de": "if(!encore||Date.now()-cur.derniereVue>=PRESENCE_SORTIE_S*1000){presenceFermer();return;}",
+    "vers": "if(!encore||Date.now()-cur.derniereVue>PRESENCE_SORTIE_S*1000){presenceFermer();return;}"
+  },
+  {
+    "nom": "la minuterie ne ferme plus quand la passe est finie",
+    "fichier": "js/presence.js",
+    "de": "if(!encore||Date.now()-cur.derniereVue>=PRESENCE_SORTIE_S*1000){presenceFermer();return;}",
+    "vers": "if(Date.now()-cur.derniereVue>=PRESENCE_SORTIE_S*1000){presenceFermer();return;}"
+  },
+  {
+    "nom": "la minuterie ne ferme plus après le silence",
+    "fichier": "js/presence.js",
+    "de": "if(!encore||Date.now()-cur.derniereVue>=PRESENCE_SORTIE_S*1000){presenceFermer();return;}",
+    "vers": "if(!encore){presenceFermer();return;}"
+  },
+  {
+    "nom": "la minuterie ne fait plus avancer le chrono",
+    "fichier": "js/presence.js",
+    "de": "{presenceFermer();return;}\n    presenceMajFiche();",
+    "vers": "{presenceFermer();return;}"
+  },
+  {
+    "nom": "rouvrir l'application remplace une visite déjà en cours",
+    "fichier": "js/presence.js",
+    "de": "if(!currentUser||_presence) return;",
+    "vers": "if(!currentUser) return;"
+  },
+  {
+    "nom": "rouvrir l'application laisse la mémoire en place",
+    "fichier": "js/presence.js",
+    "de": "presenceEffacerMemo();\n    let o=null;",
+    "vers": "let o=null;"
+  },
+  {
+    "nom": "une mémoire sans client est acceptée",
+    "fichier": "js/presence.js",
+    "de": "!o||!o.stopId||!o.passeId",
+    "vers": "!o||!o.passeId"
+  },
+  {
+    "nom": "une mémoire sans passe est acceptée",
+    "fichier": "js/presence.js",
+    "de": "!o||!o.stopId||!o.passeId",
+    "vers": "!o||!o.stopId"
+  },
+  {
+    "nom": "une arrivée illisible est acceptée",
+    "fichier": "js/presence.js",
+    "de": "||!isFinite(o.arrivee)||",
+    "vers": "||"
+  },
+  {
+    "nom": "une dernière vue avant l'arrivée est acceptée",
+    "fichier": "js/presence.js",
+    "de": "||o.derniereVue<o.arrivee) return;",
+    "vers": ") return;"
+  },
+  {
+    "nom": "n'importe quelle passe est « la mienne » au redémarrage",
+    "fichier": "js/presence.js",
+    "de": "const encore=!!m&&m.passe.passe_id===o.passeId;",
+    "vers": "const encore=!!m;"
+  },
+  {
+    "nom": "une visite vue il y a exactement 45 s continue",
+    "fichier": "js/presence.js",
+    "de": "if(encore&&Date.now()-o.derniereVue<PRESENCE_SORTIE_S*1000){",
+    "vers": "if(encore&&Date.now()-o.derniereVue<=PRESENCE_SORTIE_S*1000){"
+  },
+  {
+    "nom": "une visite ancienne continue même si la passe n'est plus la mienne",
+    "fichier": "js/presence.js",
+    "de": "if(encore&&Date.now()-o.derniereVue<PRESENCE_SORTIE_S*1000){",
+    "vers": "if(Date.now()-o.derniereVue<PRESENCE_SORTIE_S*1000){"
+  },
+  {
+    "nom": "la dernière lecture retrouvée n'est plus réparée",
+    "fichier": "js/presence.js",
+    "de": "derniereLecture:isFinite(o.derniereLecture)?o.derniereLecture:o.derniereVue",
+    "vers": "derniereLecture:o.derniereLecture"
+  },
+  {
+    "nom": "le temps dedans retrouvé n'est plus réparé",
+    "fichier": "js/presence.js",
+    "de": "dedansMs:isFinite(o.dedansMs)?o.dedansMs:0",
+    "vers": "dedansMs:o.dedansMs"
+  },
+  {
+    "nom": "« complété tout seul » est oublié au redémarrage",
+    "fichier": "js/presence.js",
+    "de": "autoTente:!!o.autoTente};",
+    "vers": "autoTente:false};"
+  },
+  {
+    "nom": "la passe retrouvée n'est plus retenue",
+    "fichier": "js/presence.js",
+    "de": "      _presencePasseId=o.passeId;\n",
+    "vers": ""
+  },
+  {
+    "nom": "l'exclusion d'une visite déjà complétée est oubliée",
+    "fichier": "js/presence.js",
+    "de": "if(o.autoTente) _presenceExclus.add(presenceCleExclus(o.passeId,o.stopId));",
+    "vers": ""
+  },
+  {
+    "nom": "la visite retrouvée ne redémarre pas la minuterie",
+    "fichier": "js/presence.js",
+    "de": "      presenceDemarrerMinuterie();\n      return;",
+    "vers": "      return;"
+  },
+  {
+    "nom": "la visite ancienne notée oublie « complété tout seul »",
+    "fichier": "js/presence.js",
+    "de": "presenceNoter({stopId:o.stopId,passeId:o.passeId,arrivee:o.arrivee,autoTente:!!o.autoTente},o.derniereVue);",
+    "vers": "presenceNoter({stopId:o.stopId,passeId:o.passeId,arrivee:o.arrivee,autoTente:false},o.derniereVue);"
+  },
+  {
+    "nom": "la visite ancienne est notée avec l'heure du redémarrage",
+    "fichier": "js/presence.js",
+    "de": "autoTente:!!o.autoTente},o.derniereVue);",
+    "vers": "autoTente:!!o.autoTente},Date.now());"
+  },
+  {
+    "nom": "une erreur dans le repérage remonte jusqu'au GPS",
+    "fichier": "js/presence.js",
+    "de": "try{presenceTraiter(lat,lon,precision,t);}catch(e){}",
+    "vers": "presenceTraiter(lat,lon,precision,t);"
+  },
+  {
+    "nom": "sans passe à moi la visite n'est plus fermée",
+    "fichier": "js/presence.js",
+    "de": "if(!m){presenceFermer();return;}",
+    "vers": "if(!m){return;}"
+  },
+  {
+    "nom": "une nouvelle passe ne ferme plus la visite d'avant",
+    "fichier": "js/presence.js",
+    "de": "if(_presencePasseId!==passeId){   // une autre passe que la dernière : la visite d'avant est finie",
+    "vers": "if(false){   // une autre passe que la dernière : la visite d'avant est finie"
+  },
+  {
+    "nom": "une nouvelle passe ne ferme plus la visite (fermer retiré)",
+    "fichier": "js/presence.js",
+    "de": "    presenceFermer(true);\n    _presencePasseId=passeId;",
+    "vers": "    _presencePasseId=passeId;"
+  },
+  {
+    "nom": "la passe des lectures n'est plus retenue",
+    "fichier": "js/presence.js",
+    "de": "    _presencePasseId=passeId;\n  }",
+    "vers": "  }"
+  },
+  {
+    "nom": "un GPS à 30 m pile est ignoré",
+    "fichier": "js/presence.js",
+    "de": "if(typeof precision==='number'&&precision>PRECISION_MAX_M) return;",
+    "vers": "if(typeof precision==='number'&&precision>=PRECISION_MAX_M) return;"
+  },
+  {
+    "nom": "un GPS très imprécis n'est plus ignoré",
+    "fichier": "js/presence.js",
+    "de": "if(typeof precision==='number'&&precision>PRECISION_MAX_M) return;",
+    "vers": "if(false) return;"
+  },
+  {
+    "nom": "une lecture plus vieille que la dernière vue n'est plus ignorée",
+    "fichier": "js/presence.js",
+    "de": "if(cur&&t<cur.derniereVue) return;",
+    "vers": "if(false) return;"
+  },
+  {
+    "nom": "le temps dedans ne compte plus le maximum d'un trou",
+    "fichier": "js/presence.js",
+    "de": "cur.dedansMs+=Math.min(Math.max(0,t-cur.derniereLecture),PRESENCE_PAS_MAX_S*1000);",
+    "vers": "cur.dedansMs+=Math.max(0,t-cur.derniereLecture);"
+  },
+  {
+    "nom": "le temps dedans peut devenir négatif",
+    "fichier": "js/presence.js",
+    "de": "cur.dedansMs+=Math.min(Math.max(0,t-cur.derniereLecture),PRESENCE_PAS_MAX_S*1000);",
+    "vers": "cur.dedansMs+=Math.min(t-cur.derniereLecture,PRESENCE_PAS_MAX_S*1000);"
+  },
+  {
+    "nom": "le temps dedans compte depuis la dernière vue (dehors compris)",
+    "fichier": "js/presence.js",
+    "de": "cur.dedansMs+=Math.min(Math.max(0,t-cur.derniereLecture),PRESENCE_PAS_MAX_S*1000);",
+    "vers": "cur.dedansMs+=Math.min(Math.max(0,t-cur.derniereVue),PRESENCE_PAS_MAX_S*1000);"
+  },
+  {
+    "nom": "la dernière lecture dedans recule avec une lecture en désordre",
+    "fichier": "js/presence.js",
+    "de": "cur.derniereLecture=Math.max(cur.derniereLecture,t);\n    cur.derniereVue=t;",
+    "vers": "cur.derniereLecture=t;\n    cur.derniereVue=t;"
+  },
+  {
+    "nom": "la dernière lecture dedans n'est plus retenue",
+    "fichier": "js/presence.js",
+    "de": "cur.derniereLecture=Math.max(cur.derniereLecture,t);\n    cur.derniereVue=t;",
+    "vers": "cur.derniereVue=t;"
+  },
+  {
+    "nom": "la dernière vue dans la zone n'est plus retenue",
+    "fichier": "js/presence.js",
+    "de": "    cur.derniereVue=t;\n    presenceSauver(false);",
+    "vers": "    presenceSauver(false);"
+  },
+  {
+    "nom": "la mémoire n'est plus mise à jour par les lectures",
+    "fichier": "js/presence.js",
+    "de": "presenceSauver(false);\n    presenceMajFiche();",
+    "vers": "presenceMajFiche();"
+  },
+  {
+    "nom": "le chrono de la fiche n'avance plus avec les lectures",
+    "fichier": "js/presence.js",
+    "de": "presenceMajFiche();\n    presenceVerifierAuto(cur,lat,lon,precision,t);",
+    "vers": "presenceVerifierAuto(cur,lat,lon,precision,t);"
+  },
+  {
+    "nom": "le complété automatique n'est plus jamais vérifié",
+    "fichier": "js/presence.js",
+    "de": "presenceVerifierAuto(cur,lat,lon,precision,t);   // (seulement",
+    "vers": "   // (seulement"
+  },
+  {
+    "nom": "une visite s'ouvre pour un arrêt d'une autre route",
+    "fichier": "js/presence.js",
+    "de": "s.route_id!==m.tour.route_id||s.service!==m.tour.tache",
+    "vers": "s.service!==m.tour.tache"
+  },
+  {
+    "nom": "une visite s'ouvre pour un arrêt d'un autre service",
+    "fichier": "js/presence.js",
+    "de": "s.route_id!==m.tour.route_id||s.service!==m.tour.tache",
+    "vers": "s.route_id!==m.tour.route_id"
+  },
+  {
+    "nom": "une visite s'ouvre pour un arrêt inactif",
+    "fichier": "js/presence.js",
+    "de": "||s.actif===false) return;",
+    "vers": ") return;"
+  },
+  {
+    "nom": "une visite s'ouvre pour un client déjà fait",
+    "fichier": "js/presence.js",
+    "de": "if(estFait(s)) return;   // (un client déjà fait n'ouvre plus de visite",
+    "vers": "if(false) return;   // (un client déjà fait n'ouvre plus de visite"
+  },
+  {
+    "nom": "une visite s'ouvre même hors de toute zone",
+    "fichier": "js/presence.js",
+    "de": "if(!presenceDansArret(s,lat,lon,precision)) return;",
+    "vers": "if(false) return;"
+  },
+  {
+    "nom": "à égalité de zone, le plus loin de son point gagne",
+    "fichier": "js/presence.js",
+    "de": "(d===meilleur.d&&proche<meilleur.proche)",
+    "vers": "(d===meilleur.d&&proche>meilleur.proche)"
+  },
+  {
+    "nom": "le dernier arrêt vu gagne à égalité",
+    "fichier": "js/presence.js",
+    "de": "||d<meilleur.d||(d===meilleur.d",
+    "vers": "||d<=meilleur.d||(d===meilleur.d"
+  },
+  {
+    "nom": "le moins à l'intérieur gagne",
+    "fichier": "js/presence.js",
+    "de": "||d<meilleur.d||(d===meilleur.d",
+    "vers": "||d>meilleur.d||(d===meilleur.d"
+  },
+  {
+    "nom": "aller chez un autre client ne ferme plus la visite d'avant",
+    "fichier": "js/presence.js",
+    "de": "if(cur) presenceFermer(true);   // on est allé ailleurs",
+    "vers": "if(false) presenceFermer(true);   // on est allé ailleurs"
+  },
+  {
+    "nom": "la visite s'ouvre à l'heure du traitement (nouveau client)",
+    "fichier": "js/presence.js",
+    "de": "presenceOuvrir(meilleur.s,passeId,t);",
+    "vers": "presenceOuvrir(meilleur.s,passeId,Date.now());"
+  },
+  {
+    "nom": "le temps dehors compte dans le temps dedans",
+    "fichier": "js/presence.js",
+    "de": "      cur.derniereLecture=Math.max(cur.derniereLecture,t);   // (le temps dehors",
+    "vers": "      // (le temps dehors"
+  },
+  {
+    "nom": "la sortie se fait à plus de 45 s seulement",
+    "fichier": "js/presence.js",
+    "de": "if(t-cur.derniereVue>=PRESENCE_SORTIE_S*1000) presenceFermer();",
+    "vers": "if(t-cur.derniereVue>PRESENCE_SORTIE_S*1000) presenceFermer();"
+  },
+  {
+    "nom": "la sortie ne ferme plus la visite",
+    "fichier": "js/presence.js",
+    "de": "if(t-cur.derniereVue>=PRESENCE_SORTIE_S*1000) presenceFermer();",
+    "vers": ""
+  },
+  {
+    "nom": "le complété automatique peut se déclencher plusieurs fois",
+    "fichier": "js/presence.js",
+    "de": "if(cur.autoTente) return;",
+    "vers": "void 0;"
+  },
+  {
+    "nom": "le complété automatique se déclenche à 60 s + 1 ms",
+    "fichier": "js/presence.js",
+    "de": "if(!(delai>0)||cur.dedansMs<delai*1000) return;",
+    "vers": "if(!(delai>0)||cur.dedansMs<=delai*1000) return;"
+  },
+  {
+    "nom": "le délai 0 (jamais) complète tout de suite",
+    "fichier": "js/presence.js",
+    "de": "if(!(delai>0)||cur.dedansMs<delai*1000) return;",
+    "vers": "if(!(delai>=0)||cur.dedansMs<delai*1000) return;"
+  },
+  {
+    "nom": "le complété automatique n'attend plus le délai",
+    "fichier": "js/presence.js",
+    "de": "if(!(delai>0)||cur.dedansMs<delai*1000) return;",
+    "vers": "if(!(delai>0)) return;"
+  },
+  {
+    "nom": "un GPS à 20 m pile ne complète plus",
+    "fichier": "js/presence.js",
+    "de": "if(typeof precision==='number'&&precision>PRESENCE_PRECISION_AUTO_M) return;",
+    "vers": "if(typeof precision==='number'&&precision>=PRESENCE_PRECISION_AUTO_M) return;"
+  },
+  {
+    "nom": "un GPS imprécis complète quand même",
+    "fichier": "js/presence.js",
+    "de": "if(typeof precision==='number'&&precision>PRESENCE_PRECISION_AUTO_M) return;",
+    "vers": "void 0;"
+  },
+  {
+    "nom": "un arrêt exclu est complété tout seul",
+    "fichier": "js/presence.js",
+    "de": "||_presenceExclus.has(presenceCleExclus(cur.passeId,s.id))||estFait(s)) return;",
+    "vers": "||estFait(s)) return;"
+  },
+  {
+    "nom": "un arrêt déjà fait est complété tout seul",
+    "fichier": "js/presence.js",
+    "de": "||_presenceExclus.has(presenceCleExclus(cur.passeId,s.id))||estFait(s)) return;",
+    "vers": "||_presenceExclus.has(presenceCleExclus(cur.passeId,s.id))) return;"
+  },
+  {
+    "nom": "un client sans zone dessinée est complété tout seul",
+    "fichier": "js/presence.js",
+    "de": "if(!presenceZoneDessinee(s)) return;",
+    "vers": "void 0;"
+  },
+  {
+    "nom": "la visite n'est pas marquée « tentée » avant l'envoi",
+    "fichier": "js/presence.js",
+    "de": "cur.autoTente=true;\n  presenceSauver(true);",
+    "vers": "presenceSauver(true);"
+  },
+  {
+    "nom": "« tentée » n'est pas gardée sur le téléphone",
+    "fichier": "js/presence.js",
+    "de": "cur.autoTente=true;\n  presenceSauver(true);",
+    "vers": "cur.autoTente=true;"
+  },
+  {
+    "nom": "le complété automatique part en mode manuel",
+    "fichier": "js/presence.js",
+    "de": "mode:'auto',lat,lon}",
+    "vers": "mode:'manuel',lat,lon}"
+  },
+  {
+    "nom": "le complété automatique échange latitude et longitude",
+    "fichier": "js/presence.js",
+    "de": "mode:'auto',lat,lon}",
+    "vers": "mode:'auto',lat:lon,lon:lat}"
+  },
+  {
+    "nom": "le complété automatique vise un autre client",
+    "fichier": "js/presence.js",
+    "de": "{passeId:cur.passeId,stopId:s.id,mode:",
+    "vers": "{passeId:cur.passeId,stopId:s.route_id,mode:"
+  },
+  {
+    "nom": "le complété automatique porte l'heure de l'envoi",
+    "fichier": "js/presence.js",
+    "de": "moment:new Date(t).toISOString()});",
+    "vers": "moment:new Date().toISOString()});"
+  },
+  {
+    "nom": "le complété automatique perd son libellé",
+    "fichier": "js/presence.js",
+    "de": "{libelle:'✔ Complété automatiquement : '+s.adresse,",
+    "vers": "{libelle:'✔ Complété',"
+  },
+  {
+    "nom": "un geste refusé par le téléphone laisse « tentée »",
+    "fichier": "js/presence.js",
+    "de": "if(!r||!r.ok){cur.autoTente=false;return;}",
+    "vers": "if(!r||!r.ok){return;}"
+  },
+  {
+    "nom": "un geste refusé par le téléphone compte comme réussi",
+    "fichier": "js/presence.js",
+    "de": "if(!r||!r.ok){cur.autoTente=false;return;}",
+    "vers": "if(!r){cur.autoTente=false;return;}"
+  },
+  {
+    "nom": "un arrêt complété tout seul peut être refait tout seul",
+    "fichier": "js/presence.js",
+    "de": "    _presenceExclus.add(presenceCleExclus(cur.passeId,s.id));   // complété tout seul",
+    "vers": "    // complété tout seul"
+  },
+  {
+    "nom": "le complété automatique ne redessine pas la carte",
+    "fichier": "js/presence.js",
+    "de": "    renderAll();\n    majCarte();\n    const fermee",
+    "vers": "    majCarte();\n    const fermee"
+  },
+  {
+    "nom": "le complété automatique ne met pas la fiche à jour",
+    "fichier": "js/presence.js",
+    "de": "    renderAll();\n    majCarte();\n    const fermee",
+    "vers": "    renderAll();\n    const fermee"
+  },
+  {
+    "nom": "« passe terminée » n'est plus annoncée",
+    "fichier": "js/presence.js",
+    "de": "const fermee=!tourEnCours(tourDe(s));",
+    "vers": "const fermee=false;"
+  },
+  {
+    "nom": "« passe terminée » est toujours annoncée",
+    "fichier": "js/presence.js",
+    "de": "const fermee=!tourEnCours(tourDe(s));",
+    "vers": "const fermee=true;"
+  },
+  {
+    "nom": "le message ne dit plus « Complété automatiquement »",
+    "fichier": "js/presence.js",
+    "de": "'✔ Complété automatiquement : '+s.adresse)+(reseau.enLigne",
+    "vers": "'✔ Complété : '+s.adresse)+(reseau.enLigne"
+  },
+  {
+    "nom": "le message ne dit plus l'attente du signal",
+    "fichier": "js/presence.js",
+    "de": "+(reseau.enLigne?'':TEXTE_ATTENTE));",
+    "vers": "+'');"
+  },
+  {
+    "nom": "le message dit toujours l'attente du signal",
+    "fichier": "js/presence.js",
+    "de": "+(reseau.enLigne?'':TEXTE_ATTENTE));",
+    "vers": "+TEXTE_ATTENTE);"
+  },
+  {
+    "nom": "un plantage du stockage laisse « tentée »",
+    "fichier": "js/presence.js",
+    "de": "}catch(e){cur.autoTente=false;}\n}",
+    "vers": "}catch(e){}\n}"
+  },
+  {
+    "nom": "la zone bleue d'un autre camion ignore la précision de son GPS",
+    "fichier": "js/tours.js",
+    "de": "presenceDansArret(s,p.lat,p.lon,p.precision_m)",
+    "vers": "presenceDansArret(s,p.lat,p.lon,null)"
+  },
+  {
+    "nom": "la zone bleue d'un autre camion échange latitude et longitude",
+    "fichier": "js/tours.js",
+    "de": "presenceDansArret(s,p.lat,p.lon,p.precision_m)",
+    "vers": "presenceDansArret(s,p.lon,p.lat,p.precision_m)"
+  },
+  {
+    "nom": "sans presence.js la règle de zone n'est plus le cercle de 20 m",
+    "fichier": "js/tours.js",
+    "de": ":distanceMetres(p.lat,p.lon,s.lat,s.lon)<=RAYON_EN_COURS_M;",
+    "vers": ":distanceMetres(p.lat,p.lon,s.lat,s.lon)<=RAYON_EN_COURS_M*2;"
+  },
+  {
+    "nom": "la zone bleue ignore toujours presence.js",
+    "fichier": "js/tours.js",
+    "de": "return typeof presenceDansArret==='function'?presenceDansArret",
+    "vers": "return false?presenceDansArret"
+  },
+  {
+    "nom": "mon camion n'est plus bleu sans attendre le serveur",
+    "fichier": "js/tours.js",
+    "de": "if(typeof presenceEstIci==='function'&&presenceEstIci(s)) return true;",
+    "vers": "if(false) return true;"
+  },
+  {
+    "nom": "mon camion rend la zone « pas bleue »",
+    "fichier": "js/tours.js",
+    "de": "if(typeof presenceEstIci==='function'&&presenceEstIci(s)) return true;",
+    "vers": "if(typeof presenceEstIci==='function'&&presenceEstIci(s)) return false;"
+  },
+  {
+    "nom": "la fiche ne dit plus « camion sur place » pour mon camion",
+    "fichier": "js/tours.js",
+    "de": "const ici=typeof presenceEstIci==='function'&&presenceEstIci(s);",
+    "vers": "const ici=false;"
+  },
+  {
+    "nom": "la fiche dit « camion sur place » seulement si la zone est bleue",
+    "fichier": "js/tours.js",
+    "de": "(estEnCours(s)||ici?' · 🚜 camion sur place':'')",
+    "vers": "(estEnCours(s)?' · 🚜 camion sur place':'')"
+  },
+  {
+    "nom": "la fiche n'a plus le chrono",
+    "fichier": "js/tours.js",
+    "de": "const chrono=typeof presenceTexteFiche==='function'?presenceTexteFiche(s):'';",
+    "vers": "const chrono='';"
+  },
+  {
+    "nom": "la fiche perd le chrono (dans la phrase)",
+    "fichier": "js/tours.js",
+    "de": "+chrono+attente;",
+    "vers": "+attente;"
+  },
+  {
+    "nom": "les lectures du GPS ne vont plus au repérage des zones",
+    "fichier": "js/position.js",
+    "de": "if(typeof presenceLecture==='function') presenceLecture(lat,lon,lastPosInfo.precision,t);",
+    "vers": "if(false) presenceLecture(lat,lon,lastPosInfo.precision,t);"
+  },
+  {
+    "nom": "le repérage est appelé sans vérifier qu'il existe",
+    "fichier": "js/position.js",
+    "de": "if(typeof presenceLecture==='function') presenceLecture(",
+    "vers": "presenceLecture("
+  },
+  {
+    "nom": "le repérage reçoit latitude et longitude échangées",
+    "fichier": "js/position.js",
+    "de": "presenceLecture(lat,lon,lastPosInfo.precision,t);",
+    "vers": "presenceLecture(lon,lat,lastPosInfo.precision,t);"
+  },
+  {
+    "nom": "le repérage reçoit la précision brute (pas nettoyée)",
+    "fichier": "js/position.js",
+    "de": "presenceLecture(lat,lon,lastPosInfo.precision,t);",
+    "vers": "presenceLecture(lat,lon,precision,t);"
+  },
+  {
+    "nom": "le repérage reçoit l'heure brute de l'appareil",
+    "fichier": "js/position.js",
+    "de": "presenceLecture(lat,lon,lastPosInfo.precision,t);",
+    "vers": "presenceLecture(lat,lon,lastPosInfo.precision,quand);"
+  },
+  {
+    "nom": "le geste de présence envoie la mauvaise passe",
+    "fichier": "js/file-attente.js",
+    "de": "p_passe_id:i.args.passeId,p_stop_id:i.args.stopId,p_arrivee:i.args.arrivee,p_depart:i.args.depart||null}",
+    "vers": "p_passe_id:i.args.stopId,p_stop_id:i.args.stopId,p_arrivee:i.args.arrivee,p_depart:i.args.depart||null}"
+  },
+  {
+    "nom": "le geste de présence envoie le mauvais client",
+    "fichier": "js/file-attente.js",
+    "de": "p_passe_id:i.args.passeId,p_stop_id:i.args.stopId,p_arrivee:i.args.arrivee,p_depart:i.args.depart||null}",
+    "vers": "p_passe_id:i.args.passeId,p_stop_id:i.args.passeId,p_arrivee:i.args.arrivee,p_depart:i.args.depart||null}"
+  },
+  {
+    "nom": "le geste de présence envoie le départ comme arrivée",
+    "fichier": "js/file-attente.js",
+    "de": "p_arrivee:i.args.arrivee,p_depart:i.args.depart||null}",
+    "vers": "p_arrivee:i.args.depart,p_depart:i.args.depart||null}"
+  },
+  {
+    "nom": "le geste de présence envoie « rien » au lieu de « null »",
+    "fichier": "js/file-attente.js",
+    "de": "p_depart:i.args.depart||null}",
+    "vers": "p_depart:i.args.depart}"
+  },
+  {
+    "nom": "le geste de présence appelle une autre fonction",
+    "fichier": "js/file-attente.js",
+    "de": "db.rpc('arret_presence',",
+    "vers": "db.rpc('arret_presences',"
+  },
+  {
+    "nom": "le geste de présence n'est plus « discret »",
+    "fichier": "js/file-attente.js",
+    "de": "juger:()=>null,\n    discret:true",
+    "vers": "juger:()=>null,\n    discret:false"
+  },
+  {
+    "nom": "le geste de présence a un jugement qui refuse tout",
+    "fichier": "js/file-attente.js",
+    "de": "juger:()=>null,\n    discret:true",
+    "vers": "juger:()=>({raison:'x'}),\n    discret:true"
+  },
+  {
+    "nom": "un refus définitif d'une mesure est montré",
+    "fichier": "js/file-attente.js",
+    "de": "if(c==='definitif'&&ex.discret) return {genre:'ok'};",
+    "vers": ""
+  },
+  {
+    "nom": "toute erreur d'une mesure est avalée dès le premier essai",
+    "fichier": "js/file-attente.js",
+    "de": "if(c==='definitif'&&ex.discret) return {genre:'ok'};",
+    "vers": "if(ex.discret) return {genre:'ok'};"
+  },
+  {
+    "nom": "une mesure inconnue n'est jamais abandonnée",
+    "fichier": "js/file-attente.js",
+    "de": "if(item.essais>=FILE_ESSAIS_INCONNUS&&EXECUTEURS[item.type].discret){",
+    "vers": "if(false){"
+  },
+  {
+    "nom": "une mesure inconnue est abandonnée au 6e essai",
+    "fichier": "js/file-attente.js",
+    "de": "if(item.essais>=FILE_ESSAIS_INCONNUS&&EXECUTEURS[item.type].discret){",
+    "vers": "if(item.essais>FILE_ESSAIS_INCONNUS&&EXECUTEURS[item.type].discret){"
+  },
+  {
+    "nom": "tous les gestes inconnus sont abandonnés en silence",
+    "fichier": "js/file-attente.js",
+    "de": "if(item.essais>=FILE_ESSAIS_INCONNUS&&EXECUTEURS[item.type].discret){",
+    "vers": "if(item.essais>=FILE_ESSAIS_INCONNUS){"
+  },
+  {
+    "nom": "le délai du complété automatique n'est plus lu au chargement",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof chargerReglagesPresence==='function') await chargerReglagesPresence();",
+    "vers": ""
+  },
+  {
+    "nom": "la visite en cours n'est plus reprise au démarrage (en ligne)",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof presenceRestaurer==='function') presenceRestaurer();   // une visite chez un client",
+    "vers": "   // une visite chez un client"
+  },
+  {
+    "nom": "la visite en cours n'est plus reprise au démarrage (sans réseau)",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof presenceRestaurer==='function') presenceRestaurer();   // (la visite en cours avant la fermeture",
+    "vers": "   // (la visite en cours avant la fermeture"
+  },
+  {
+    "nom": "annuler un « Complété » n'exclut plus l'arrêt",
+    "fichier": "js/arrets.js",
+    "de": "if(typeof presenceExclure==='function') presenceExclure(s.id,e.passeId);",
+    "vers": "void 0;"
+  },
+  {
+    "nom": "annuler un « Complété » exclut dans la passe courante seulement",
+    "fichier": "js/arrets.js",
+    "de": "presenceExclure(s.id,e.passeId);",
+    "vers": "presenceExclure(s.id);"
+  },
+  {
+    "nom": "sans signal, le délai du complété automatique n'est plus repris",
+    "fichier": "js/hors-reseau.js",
+    "de": "if(typeof restaurerReglagesPresence==='function') await restaurerReglagesPresence();",
+    "vers": ""
+  },
+  {
+    "nom": "la déconnexion ne note plus la visite en cours",
+    "fichier": "js/tracking.js",
+    "de": "if(typeof presenceArreter==='function') presenceArreter();",
+    "vers": ""
+  },
+  {
+    "nom": "toutes les clés en « s » sont des secondes",
+    "fichier": "js/admin-reglages.js",
+    "de": "return /_s$/.test(String(cle));",
+    "vers": "return /s$/.test(String(cle));"
+  },
+  {
+    "nom": "toute clé qui contient « _s » est en secondes",
+    "fichier": "js/admin-reglages.js",
+    "de": "return /_s$/.test(String(cle));",
+    "vers": "return /_s/.test(String(cle));"
+  },
+  {
+    "nom": "aucun réglage n'est en secondes",
+    "fichier": "js/admin-reglages.js",
+    "de": "return /_s$/.test(String(cle));",
+    "vers": "return false;"
+  },
+  {
+    "nom": "l'unité des secondes et des heures est échangée",
+    "fichier": "js/admin-reglages.js",
+    "de": "return reglageEnSecondes(cle)?'secondes':'heures';",
+    "vers": "return reglageEnSecondes(cle)?'heures':'secondes';"
+  },
+  {
+    "nom": "le message des secondes ne dit plus « jamais »",
+    "fichier": "js/admin-reglages.js",
+    "de": "'⚠ Entre un nombre de secondes valide (0 = jamais, 3600 au plus)'",
+    "vers": "'⚠ Entre un nombre de secondes valide (3600 au plus)'"
+  },
+  {
+    "nom": "les secondes refusent 0",
+    "fichier": "js/admin-reglages.js",
+    "de": "return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>0;",
+    "vers": "return reglageEnSecondes(cle)?(v>0&&v<=3600):v>0;"
+  },
+  {
+    "nom": "les secondes permettent 36000",
+    "fichier": "js/admin-reglages.js",
+    "de": "return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>0;",
+    "vers": "return reglageEnSecondes(cle)?(v>=0&&v<=36000):v>0;"
+  },
+  {
+    "nom": "les secondes permettent les négatifs",
+    "fichier": "js/admin-reglages.js",
+    "de": "return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>0;",
+    "vers": "return reglageEnSecondes(cle)?(v>=-1&&v<=3600):v>0;"
+  },
+  {
+    "nom": "les secondes n'ont plus de maximum",
+    "fichier": "js/admin-reglages.js",
+    "de": "return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>0;",
+    "vers": "return reglageEnSecondes(cle)?(v>=0):v>0;"
+  },
+  {
+    "nom": "les heures permettent 0",
+    "fichier": "js/admin-reglages.js",
+    "de": "return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>0;",
+    "vers": "return reglageEnSecondes(cle)?(v>=0&&v<=3600):v>=0;"
+  },
+  {
+    "nom": "un nombre infini est accepté",
+    "fichier": "js/admin-reglages.js",
+    "de": "if(!Number.isFinite(v)) return false;",
+    "vers": ""
+  },
+  {
+    "nom": "un champ vide devient 0",
+    "fichier": "js/admin-reglages.js",
+    "de": "const v=brut===''?NaN:Number(brut);",
+    "vers": "const v=Number(brut);"
+  },
+  {
+    "nom": "les espaces seuls deviennent 0",
+    "fichier": "js/admin-reglages.js",
+    "de": "const brut=String(input.value).trim();",
+    "vers": "const brut=String(input.value);"
+  },
+  {
+    "nom": "presence.js n'est plus chargé",
+    "fichier": "index.html",
+    "de": "<script src=\"js/presence.js\"></script>\n",
+    "vers": ""
+  }
+]

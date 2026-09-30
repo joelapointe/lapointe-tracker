@@ -2056,7 +2056,13 @@ for (const [nom, statut] of [['annule un ajout fait par erreur', 'annule'], ['n\
 }
 
 log('\n=== LE PASSAGER : « LUC A TERMINÉ TON QUART À 16 H 05 » ===');
-const quartTermineParChauffeur = (o = {}) => rowQuart('q-fini', { debut: iso(300), fin: iso(10), fin_source: 'equipage', fin_par: 'u-marc', ...o });
+// La fin d'un quart « il y a 10 minutes », mais TOUJOURS le jour même : entre minuit et minuit dix, « il y a 10 minutes » tombe la VEILLE et la carte dit « hier à » (le test attend « à », le mot du
+// jour même). Dans ces dix minutes-là, la fin est à mi-chemin entre minuit et maintenant. (« hier à » et « le … à » ont leur propre essai, plus bas : quandQuart.)
+const finAujourdhui = () => {
+  const minuit = new Date(); minuit.setHours(0, 0, 0, 0);
+  return new Date(Math.max(Date.now() - 10 * 60000, (minuit.getTime() + Date.now()) / 2)).toISOString();
+};
+const quartTermineParChauffeur = (o = {}) => rowQuart('q-fini', { debut: iso(300), fin: finAujourdhui(), fin_source: 'equipage', fin_par: 'u-marc', ...o });
 {
   const m = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [] });
   const e = ecranQuart(m);
@@ -2080,7 +2086,27 @@ for (const [nom, o] of [['plus de 24 heures', { fin: iso(60 * 25) }], ['déjà s
   const n = await ouvrir({ quarts: [quartTermineParChauffeur()], tours: [], utilisateurs: [{ id: 'u-luc', nom: 'Luc', actif: true }, { id: 'u-marc', nom: '<b>Marc</b>', actif: true }] });
   eq('le nom du chauffeur (vient de la base) est échappé', [ecranQuart(n).html.includes('&lt;b&gt;Marc&lt;/b&gt; a terminé ton quart'), ecranQuart(n).html.includes('<b>')], [true, false]);
   n.fin();
-  eq('« à » aujourd\'hui, « hier à » hier, « le … à » avant', [n.run('quandQuart(new Date().toISOString())'), n.run('quandQuart(new Date(Date.now()-86400000).toISOString())'), n.run('quandQuart(new Date(Date.now()-5*86400000).toISOString())').startsWith('le ')], ['à', 'hier à', true]);
+  // (« hier » = HIER MIDI sur le calendrier, pas « maintenant moins 24 heures » : le jour d'un changement d'heure a 23 ou 25 heures, et juste après minuit « moins 24 h » est déjà l'avant-veille)
+  const hierMidi = 'new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 1, 12, 0).toISOString()';
+  eq('« à » aujourd\'hui, « hier à » hier, « le … à » avant', [n.run('quandQuart(new Date().toISOString())'), n.run(`quandQuart(${hierMidi})`), n.run('quandQuart(new Date(Date.now()-5*86400000).toISOString())').startsWith('le ')], ['à', 'hier à', true]);
+}
+{
+  // « hier » = la veille sur le CALENDRIER : « maintenant moins 24 heures » se trompe le jour d'un changement d'heure (23 ou 25 heures). Ici l'horloge du bac à sable est FIXÉE :
+  // « maintenant » = la date locale donnée [année, mois (0 = janvier), jour, heure, minute], « fin » = la date locale de la fin du quart.
+  const m = await ouvrir({ quarts: [], tours: [] });
+  const quand = (maintenant, fin) => m.run(`(() => {
+    const Vrai = Date, fixe = new Vrai(${maintenant.join(',')}).getTime();
+    class Faux extends Vrai { constructor(...a) { if (a.length) super(...a); else super(fixe); } static now() { return fixe; } }
+    Date = Faux;
+    try { return quandQuart(new Vrai(${fin.join(',')}).toISOString()); } finally { Date = Vrai; }
+  })()`);
+  eq('le 1er octobre à midi : le matin même « à », la veille « hier à », l’avant-veille « le … à »', [quand([2026, 9, 1, 12, 0], [2026, 9, 1, 8, 0]), quand([2026, 9, 1, 12, 0], [2026, 8, 30, 9, 30]), quand([2026, 9, 1, 12, 0], [2026, 8, 29, 9, 30]).startsWith('le ')], ['à', 'hier à', true]);
+  eq('juste après minuit (00 h 05) : « hier à » pour 23 h 50, « à » pour 00 h 01', [quand([2026, 9, 1, 0, 5], [2026, 8, 30, 23, 50]), quand([2026, 9, 1, 0, 5], [2026, 9, 1, 0, 1])], ['hier à', 'à']);
+  eq('au changement de mois et d’année : « hier à » (30 sept. → 1er oct. ; 31 déc. → 1er janv.)', [quand([2026, 9, 1, 0, 30], [2026, 8, 30, 22, 0]), quand([2027, 0, 1, 0, 10], [2026, 11, 31, 22, 0])], ['hier à', 'hier à']);
+  eq('le lundi qui suit le passage à l’heure d’été (le dimanche n’a que 23 heures ; à Québec, le 15 mars 2027 à 00 h 30) : la veille est « hier à », pas « le 14 mars à »', quand([2027, 2, 15, 0, 30], [2027, 2, 14, 9, 30]), 'hier à');
+  eq('le soir du retour à l’heure normale (le dimanche a 25 heures ; à Québec, le 1er nov. 2026 à 23 h 30) : la veille est « hier à », pas « le 31 octobre à »', quand([2026, 10, 1, 23, 30], [2026, 9, 31, 12, 0]), 'hier à');
+  eq('… et le lendemain de ce dimanche (2 nov. à 00 h 30), le dimanche est « hier à »', quand([2026, 10, 2, 0, 30], [2026, 10, 1, 12, 0]), 'hier à');
+  m.fin();
 }
 {
   // « Ce n'est pas exact »
@@ -2282,7 +2308,7 @@ log('\n=== LES RÉGLAGES DU QUART : RAPPEL, PAUSE, DURÉE MAXIMALE ===');
   eq('la table « reglages » est vide : les valeurs de départ (rappel 12 h, pause 4 h, durée maximale 16 h)', m.run('reglagesQuart'), { rappel: 12, pause: 4, max: 16 });
   eq('l\'application ne demande à la table « reglages » QUE les trois réglages du quart', m.appels.filtresIn.filter((x) => x[0] === 'reglages'), [['reglages', 'cle', ['rappel_en_service_heures', 'suggestion_pause_heures', 'duree_max_quart_heures']]]);
   eq('un « 16 » ou un « 12,5 » s\'écrit comme une personne le lit', [m.run('heuresTexte(16)'), m.run('heuresTexte(12.5)')], ['16 h', '12,5 h']);
-  const auj = m.run('depuisQuart(new Date().toISOString())'), hier = m.run('depuisQuart(new Date(Date.now()-86400000).toISOString())');
+  const auj = m.run('depuisQuart(new Date().toISOString())'), hier = m.run('depuisQuart(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 1, 12, 0).toISOString())');   // (hier midi, sur le calendrier)
   eq('« depuis 06 h 42 » aujourd\'hui (sans « à »), « depuis hier à 06 h 42 » la veille', [/^depuis \d/.test(auj), /^depuis hier à \d/.test(hier)], [true, true]);
   m.run("installerReglagesQuart([{cle:'suggestion_pause_heures',valeur:6},{cle:'un_autre_reglage',valeur:1}])");
   eq('un réglage qui n\'est pas ceux du quart est ignoré, les autres gardent leur valeur de départ', m.run('reglagesQuart'), { rappel: 12, pause: 6, max: 16 });

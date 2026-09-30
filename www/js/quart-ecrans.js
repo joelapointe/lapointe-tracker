@@ -425,7 +425,8 @@ function lignesEquipe(b){
 function quandQuart(iso){
   const d=new Date(iso),a=new Date();
   if(isNaN(d.getTime())||d.toDateString()===a.toDateString()) return 'à';
-  if(d.toDateString()===new Date(a.getTime()-86400000).toDateString()) return 'hier à';
+  // « hier » = la veille sur le CALENDRIER, pas « maintenant moins 24 heures » : le jour d'un changement d'heure a 23 ou 25 heures (le lundi après le passage à l'heure d'été, minuit à 1 h, « hier » devenait « le 14 mars »)
+  if(d.toDateString()===new Date(a.getFullYear(),a.getMonth(),a.getDate()-1).toDateString()) return 'hier à';
   try{return 'le '+d.toLocaleDateString('fr-CA',{day:'numeric',month:'long'})+' à';}catch(e){return 'le '+d.toISOString().slice(0,10)+' à';}
 }
 function htmlAvisFin(){

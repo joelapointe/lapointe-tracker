@@ -38,7 +38,7 @@
   {
     "nom": "un réglage à zéro est maintenant accepté (nonsensique : « rappel après 0 heure »)",
     "fichier": "js/admin-reglages.js",
-    "de": "if(!Number.isFinite(v)||v<=0){toast('⚠ Entre un nombre d’heures valide (plus grand que 0)');return;}",
+    "de": "if(!valeurReglageValide(r.cle,v)){toast(messageValeurReglage(r.cle));return;}",
     "vers": ""
   },
   {

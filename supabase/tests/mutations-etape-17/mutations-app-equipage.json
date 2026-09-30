@@ -194,7 +194,7 @@
   {
     "nom": "« hier à » n'est plus reconnu",
     "fichier": "js/quart-ecrans.js",
-    "de": "  if(d.toDateString()===new Date(a.getTime()-86400000).toDateString()) return 'hier à';",
+    "de": "  if(d.toDateString()===new Date(a.getFullYear(),a.getMonth(),a.getDate()-1).toDateString()) return 'hier à';",
     "vers": "  ;"
   },
   {
@@ -310,5 +310,23 @@
     "fichier": "js/passe.js",
     "de": "lectureReussie('equipeDeFin',{passe_id:(r.data&&r.data.passe_id)||null,",
     "vers": "void ('equipeDeFin',{passe_id:(r.data&&r.data.passe_id)||null,"
+  },
+  {
+    "nom": "« hier » redevient « maintenant moins 24 heures » (faux le jour d'un changement d'heure, qui a 23 ou 25 heures)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "new Date(a.getFullYear(),a.getMonth(),a.getDate()-1).toDateString()) return 'hier à';",
+    "vers": "new Date(a.getTime()-86400000).toDateString()) return 'hier à';"
+  },
+  {
+    "nom": "« hier » est l'avant-veille (jour du mois moins 2)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "new Date(a.getFullYear(),a.getMonth(),a.getDate()-1).toDateString()) return 'hier à';",
+    "vers": "new Date(a.getFullYear(),a.getMonth(),a.getDate()-2).toDateString()) return 'hier à';"
+  },
+  {
+    "nom": "« hier » est le lendemain (jour du mois plus 1)",
+    "fichier": "js/quart-ecrans.js",
+    "de": "new Date(a.getFullYear(),a.getMonth(),a.getDate()-1).toDateString()) return 'hier à';",
+    "vers": "new Date(a.getFullYear(),a.getMonth(),a.getDate()+1).toDateString()) return 'hier à';"
   }
 ]

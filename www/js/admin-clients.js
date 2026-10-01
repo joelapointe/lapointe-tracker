@@ -96,6 +96,13 @@ function clientsEl(balise,classe,texte){
   return e;
 }
 function clientsMessage(texte){return clientsEl('div','su-message',texte);}
+// « 30 sept. 2026, 21:35 » (l'année est écrite : une inscription peut dater de l'an dernier) ; texte vide si la date est illisible
+function clientsDate(iso){
+  const d=new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  try{return d.toLocaleString('fr-CA',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+  catch(e){return d.toISOString().slice(0,16).replace('T',' ');}
+}
 function clientsErreurReseau(e){return typeof estErreurReseau==='function'&&estErreurReseau(e);}
 
 // ── Lecture ──────────────────────────────────────────────────────
@@ -130,6 +137,8 @@ async function clientsOuvrir(){
     return;
   }
   clientsDonnees=fiches;
+  clientsInscriptions=await clientsLireInscriptions();   // (null si la table est absente ou en panne : l'écran « Inscriptions » le dit)
+  if(numero!==_clientsLecture) return;
   renderClientsAdmin();
 }
 
@@ -140,7 +149,7 @@ function renderClientsAdmin(){
   const barre=clientsEl('div','su-barre');
   const filtres=clientsEl('div','su-filtres');
   const nbSansFiche=clientsGrouperArrets(typeof stops!=='undefined'?stops.filter(s=>!s.client_id):[]).length;
-  [['tous','Tous'],['sansarret','Sans arrêt'],['sanscontact','Sans contact'],['archives','Archivés'],['arrets','Arrêts sans fiche ('+nbSansFiche+')']].forEach(([id,texte])=>{
+  [['tous','Tous'],['sansarret','Sans arrêt'],['sanscontact','Sans contact'],['archives','Archivés'],['arrets','Arrêts sans fiche ('+nbSansFiche+')'],['inscriptions','Inscriptions'+(clientsInscriptions?' ('+clientsInscNouvelles(clientsInscriptions).length+')':'')]].forEach(([id,texte])=>{
     const b=clientsEl('button','su-puce'+(clientsFiltre===id?' on':''),texte);
     b.type='button';
     b.dataset.filtre=id;
@@ -164,6 +173,7 @@ function renderClientsListe(){
   if(!zone) return;
   zone.innerHTML='';
   if(clientsFiltre==='arrets'){clientsListeArrets(zone);return;}
+  if(clientsFiltre==='inscriptions'){clientsListeInscriptions(zone);return;}
   const fiches=clientsDonnees||[];
   const parArret=clientsCompterArrets(typeof stops!=='undefined'?stops:[]);
   const r=clientsResume(fiches,parArret);
@@ -214,8 +224,9 @@ function clientsChamp(corps,id,libelle,type,valeur,extra){
   corps.appendChild(c);
   return i;
 }
-function clientsOuvrirFeuille(f,prerempli,aLier){
+function clientsOuvrirFeuille(f,prerempli,aLier,inscALier){
   _clientsFiche=f;
+  _clientsInscALier=f?null:(inscALier||null);   // créer une fiche À PARTIR d'une inscription : elle y sera reliée après la création
   _clientsALier=f?null:(aLier||null);   // créer une fiche À PARTIR d'un arrêt : l'arrêt y sera relié après la création
   const corps=document.getElementById('clients-feuille-corps');
   corps.innerHTML='';
@@ -245,6 +256,7 @@ function clientsOuvrirFeuille(f,prerempli,aLier){
   corps.appendChild(caseAvis);
   const etatTexto=f?(f.desabonne_texto_le?'Désabonné des textos (a répondu ARRET).':f.avis_texto?'Inscrit aux avis par texto.':'Pas inscrit aux avis par texto : le client s’inscrit lui-même sur la page web.'):'Pas inscrit aux avis par texto : le client s’inscrit lui-même sur la page web.';
   corps.appendChild(clientsEl('div','su-adresse cl-etat-texto',etatTexto+(f&&f.desabonne_courriel_le?' Désabonné des courriels.':'')));
+  if(_clientsInscALier) corps.appendChild(clientsEl('div','su-adresse cl-lier-info','L’inscription de « '+_clientsInscALier.nom+' » sera reliée à cette fiche : son cellulaire ('+clientsTelAffiche(_clientsInscALier.cellulaire)+') y sera ajouté et elle sera inscrite aux avis par texto.'));
   if(_clientsALier) corps.appendChild(clientsEl('div','su-adresse cl-lier-info','L’arrêt « '+_clientsALier.adresse+' » ('+_clientsALier.ids.length+' arrêt'+(_clientsALier.ids.length>1?'s':'')+') sera relié à cette fiche.'));
   if(f){
     const reliees=clientsArretsDeFiche(f.id);
@@ -280,6 +292,7 @@ function clientsFermerFeuille(){
   document.getElementById('clients-feuille-overlay').classList.remove('open');
   _clientsFiche=null;
   _clientsALier=null;
+  _clientsInscALier=null;
 }
 function clientsBgFeuille(e){
   if(e.target===document.getElementById('clients-feuille-overlay')) clientsFermerFeuille();
@@ -357,9 +370,18 @@ async function clientsEnregistrer(){
     if(lien.partiel) clientsMajArretsLocaux([...lien.partiel],nouvelle.id);
     if(lien.ok) clientsMajArretsLocaux(groupe.ids,nouvelle.id);
   }
+  let rel=null;
+  const inscALier=f?null:_clientsInscALier;
+  if(inscALier){
+    _clientsOccupe=true;
+    rel=await clientsAppelerRelier(inscALier,nouvelle.id);
+    _clientsOccupe=false;
+    if(rel.ok||/deja_traitee/.test(rel.code||'')) await clientsRecharger();
+  }
   clientsFermerFeuille();
-  toast(lien&&lien.erreur?'⚠ Fiche créée, mais l’arrêt n’a pas pu être relié : '+lien.erreur.replace(/^❌ /,''):lien&&lien.ok?'✔ Fiche créée et arrêt relié':f?'✔ Fiche enregistrée':'✔ Fiche créée');
-  if(clientsFiltre==='arrets') renderClientsAdmin(); else renderClientsListe();
+  if(rel) toast(rel.ok?'✔ Fiche créée et inscription reliée.'+clientsMessagePromo(rel.promo):'⚠ Fiche créée, mais l’inscription n’a pas pu être reliée : '+rel.erreur.replace(/^❌ /,''));
+  else toast(lien&&lien.erreur?'⚠ Fiche créée, mais l’arrêt n’a pas pu être relié : '+lien.erreur.replace(/^❌ /,''):lien&&lien.ok?'✔ Fiche créée et arrêt relié':f?'✔ Fiche enregistrée':'✔ Fiche créée');
+  if(clientsFiltre==='arrets'||clientsFiltre==='inscriptions') renderClientsAdmin(); else renderClientsListe();
 }
 async function clientsArchiver(f){
   if(_clientsOccupe) return;
@@ -552,5 +574,231 @@ async function clientsDelier(groupe,f){
   clientsMajArretsLocaux(groupe.ids,null);
   toast('✔ Arrêt délié');
   clientsOuvrirFeuille(f);
+  renderClientsAdmin();
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ÉTAPE 3 : LES INSCRIPTIONS REÇUES DE LA PAGE PUBLIQUE (entretienlapointe.ca/avis.html)
+// ═════════════════════════════════════════════════════════════════
+// Un client qui s'inscrit sur la page publique n'est PAS encore relié à une fiche : son inscription (table inscriptions_avis, fonction inscrire_avis) attend ici. Joé la RELIE à une fiche du
+// répertoire (admin_relier_inscription : le cellulaire de l'inscription devient celui de la fiche, la fiche est inscrite aux avis par texto, la preuve du consentement est liée à la fiche, et le
+// consentement exprès aux offres par courriel est noté si la personne l'a coché et si rien ne s'y oppose), l'IGNORE (admin_ignorer_inscription : numéro erroné, essai…) ou crée une NOUVELLE fiche
+// à partir d'elle. Tout passe par ces fonctions serveur : l'application n'écrit JAMAIS elle-même un consentement. Une inscription traitée ne se retraite pas (le serveur le refuse).
+const CLIENTS_INSC_COLONNES='id,nom,adresse,cellulaire,courriel,promo_accepte,statut,client_id,cree_le,traitee_le';
+let clientsInscriptions=null;     // les inscriptions lues (tableau) ; null = pas lues (table absente, panne…)
+let clientsInscFiltre='nouvelle'; // 'nouvelle' | 'traitees'
+let _clientsInscALier=null;       // l'inscription à relier à la fiche qu'on est en train de CRÉER (null sinon)
+
+// ── Fonctions pures ──────────────────────────────────────────────
+function clientsInscNouvelles(liste){return (liste||[]).filter(i=>i.statut==='nouvelle');}
+function clientsInscTraitees(liste){return (liste||[]).filter(i=>i.statut!=='nouvelle');}
+// Les 10 chiffres d'un numéro (« +18195551234 » → « 8195551234 ») pour les comparer, quelle que soit l'écriture
+function clientsChiffres10(texte){
+  const d=String(texte||'').replace(/\D/g,'');
+  return d.length>=10?d.slice(-10):'';
+}
+// Les fiches les plus probables pour une inscription : même cellulaire ou même téléphone (6 points), même courriel (5), même numéro civique ET même rue (4), même nom (3). Jamais une fiche archivée.
+function clientsSuggestionsInscription(insc,fiches,max){
+  const cel=clientsChiffres10(insc.cellulaire),mail=String(insc.courriel||'').trim().toLowerCase();
+  const civ=clientsNumeroCivique(insc.adresse),mot=clientsMotRue(insc.adresse),nom=clientsCle(insc.nom);
+  const scores=[];
+  (fiches||[]).forEach(f=>{
+    if(f.actif===false) return;
+    let pts=0;
+    if(cel&&(clientsChiffres10(f.cellulaire)===cel||clientsChiffres10(f.telephone)===cel)) pts+=6;
+    if(mail&&String(f.courriel||'').trim().toLowerCase()===mail) pts+=5;
+    if(civ&&mot&&clientsNumeroCivique(f.adresse)===civ&&clientsMotRue(f.adresse)===mot) pts+=4;
+    const cles=[clientsCle(f.nom),clientsCle(f.nom_entreprise)].filter(Boolean);
+    if(nom&&cles.some(c=>c===nom||(nom.length>=5&&c.includes(nom))||(c.length>=5&&nom.includes(c)))) pts+=3;
+    if(pts) scores.push({f,pts});
+  });
+  scores.sort((a,b)=>b.pts-a.pts||String(a.f.nom).localeCompare(String(b.f.nom),'fr'));
+  return scores.slice(0,max||6).map(x=>x.f);
+}
+// Ce que le serveur répond à « relier » à propos des offres par courriel
+function clientsMessagePromo(code){
+  return {
+    appliquee:' Il accepte aussi les offres par courriel : c’est noté.',
+    desabonne_des_courriels:' Il accepte les offres par courriel, mais il s’était désabonné des courriels : rien n’a été activé.',
+    courriel_different:' Il accepte les offres par courriel, mais le courriel de la fiche est différent de celui de l’inscription : rien n’a été activé.',
+    retire_depuis:' Il accepte les offres par courriel, mais il les a retirées depuis : rien n’a été activé.',
+  }[code]||'';
+}
+function clientsMessageErreurInscription(e){
+  if(clientsErreurReseau(e)) return '📴 Pas de réseau : rien n’a été changé.';
+  const m=String((e&&e.message)||'');
+  if(/inscription_deja_traitee/.test(m)) return '❌ Cette inscription a déjà été traitée (la liste va se rafraîchir).';
+  if(/inscription_introuvable/.test(m)) return '❌ Cette inscription n’existe plus (la liste va se rafraîchir).';
+  if(/client_introuvable/.test(m)) return '❌ Cette fiche n’existe plus ou est archivée.';
+  if(/non_autorise/.test(m)) return '❌ Réservé à l’administrateur.';
+  if(/Could not find the function|PGRST202|42883/.test(m+String((e&&e.code)||''))) return '❌ La fonction n’est pas installée sur Supabase (fichier SQL 30).';
+  return '❌ L’opération a échoué'+(m?' : '+m:'')+'.';
+}
+
+// ── Lecture ──────────────────────────────────────────────────────
+async function clientsLireInscriptions(){
+  try{
+    const r=await db.from('inscriptions_avis').select(CLIENTS_INSC_COLONNES).order('cree_le',{ascending:false}).order('id',{ascending:true}).range(0,CLIENTS_PAGE-1);
+    if(r.error) return null;
+    return Array.isArray(r.data)?r.data:[];
+  }catch(e){return null;}
+}
+// Relit les fiches ET les inscriptions sans vider l'écran (après une opération du serveur qui change les deux)
+async function clientsRecharger(){
+  try{
+    const fiches=await clientsLireTout();
+    clientsDonnees=fiches;
+  }catch(e){}
+  const i=await clientsLireInscriptions();
+  if(i) clientsInscriptions=i;
+}
+
+// ── L'écran « Inscriptions » ─────────────────────────────────────
+function clientsListeInscriptions(zone){
+  if(clientsInscriptions===null){
+    zone.appendChild(clientsMessage('Les inscriptions n’ont pas pu être lues (ou le fichier SQL 30 n’est pas encore activé).'));
+    const bMaj=clientsEl('button','lf-btn','↻ Réessayer');bMaj.type='button';bMaj.onclick=()=>clientsOuvrir();
+    const a=clientsEl('div','su-actions');a.appendChild(bMaj);zone.appendChild(a);
+    return;
+  }
+  const nouvelles=clientsInscNouvelles(clientsInscriptions),traitees=clientsInscTraitees(clientsInscriptions);
+  const barre=clientsEl('div','su-puces');
+  [['nouvelle','Nouvelles ('+nouvelles.length+')'],['traitees','Traitées ('+traitees.length+')']].forEach(([id,texte])=>{
+    const b=clientsEl('button','su-puce'+(clientsInscFiltre===id?' on':''),texte);
+    b.type='button';b.dataset.inscfiltre=id;
+    b.onclick=()=>{clientsInscFiltre=id;renderClientsListe();};
+    barre.appendChild(b);
+  });
+  const enveloppe=clientsEl('div','su-barre');   // (la marge de 16 px des autres puces)
+  enveloppe.appendChild(barre);
+  zone.appendChild(enveloppe);
+  const liste=clientsInscFiltre==='nouvelle'?nouvelles:traitees;
+  if(!liste.length) zone.appendChild(clientsMessage(clientsInscFiltre==='nouvelle'?'✔ Aucune nouvelle inscription à traiter.':'Aucune inscription traitée.'));
+  liste.forEach(i=>{
+    const div=clientsEl('div','su-ligne cl-insc');
+    const haut=clientsEl('div','su-haut');
+    const nom=clientsEl('button','su-nom',i.nom);
+    nom.type='button';
+    nom.onclick=()=>clientsOuvrirInscription(i);
+    haut.appendChild(nom);
+    const droite=clientsEl('div','su-droite');
+    if(i.statut==='reliee'){const f=(clientsDonnees||[]).find(x=>x.id===i.client_id);droite.appendChild(clientsEl('span','su-badge ok','Reliée'+(f?' à '+f.nom:'')));}
+    else if(i.statut==='ignoree') droite.appendChild(clientsEl('span','su-badge retard','Ignorée'));
+    else droite.appendChild(clientsEl('span','su-badge afaire','Nouvelle'));
+    if(i.promo_accepte) droite.appendChild(clientsEl('span','su-n','✉ offres par courriel'));
+    haut.appendChild(droite);
+    div.appendChild(haut);
+    div.appendChild(clientsEl('div','su-adresse',i.adresse));
+    div.appendChild(clientsEl('div','su-temps','📱 '+clientsTelAffiche(i.cellulaire)+(i.courriel?' · ✉ '+i.courriel:'')));
+    div.appendChild(clientsEl('div','su-n',clientsDate(i.cree_le)));
+    zone.appendChild(div);
+  });
+  const a=clientsEl('div','su-actions');
+  const bMaj=clientsEl('button','lf-btn','↻ Actualiser');bMaj.type='button';bMaj.onclick=()=>clientsOuvrir();
+  a.appendChild(bMaj);zone.appendChild(a);
+}
+
+// La feuille d'une inscription : ses renseignements, les fiches probables, une recherche, « Ignorer » et « Nouvelle fiche »
+function clientsOuvrirInscription(insc){
+  _clientsFiche=null;_clientsALier=null;_clientsInscALier=null;
+  const corps=document.getElementById('clients-feuille-corps');
+  corps.innerHTML='';
+  document.getElementById('clients-feuille-titre').textContent=insc.nom;
+  const ligne=(texte,classe)=>corps.appendChild(clientsEl('div',classe||'su-cible',texte));
+  ligne(insc.adresse);
+  ligne('📱 '+clientsTelAffiche(insc.cellulaire)+(insc.courriel?'  ✉ '+insc.courriel:''),'su-adresse');
+  ligne('Reçue le '+clientsDate(insc.cree_le)+(insc.promo_accepte?' · accepte aussi les offres par courriel':''),'su-adresse');
+  if(insc.statut!=='nouvelle'){
+    const f=(clientsDonnees||[]).find(x=>x.id===insc.client_id);
+    ligne(insc.statut==='reliee'?'Reliée'+(f?' à la fiche « '+f.nom+' »':'')+(insc.traitee_le?' le '+clientsDate(insc.traitee_le):'')+'.':'Ignorée'+(insc.traitee_le?' le '+clientsDate(insc.traitee_le):'')+'.','su-adresse cl-insc-statut');
+    const b=clientsEl('div','su-boutons');
+    const bF=clientsEl('button','lf-btn fermer','Fermer');bF.type='button';bF.onclick=()=>clientsFermerFeuille();
+    b.appendChild(bF);corps.appendChild(b);
+    document.getElementById('clients-feuille-overlay').classList.add('open');
+    return;
+  }
+  const cRech=clientsEl('div','su-champ cl-champ');
+  cRech.appendChild(clientsEl('label','','Relier à une fiche (les plus probables sont proposées)'));
+  const iRech=clientsEl('input','');
+  iRech.type='text';iRech.id='cl-insc-rech';iRech.placeholder='Chercher une fiche : nom, adresse, courriel…';
+  cRech.appendChild(iRech);
+  corps.appendChild(cRech);
+  const liste=clientsEl('div','su-cases');
+  liste.id='cl-insc-liste';
+  corps.appendChild(liste);
+  const dessiner=()=>{
+    liste.innerHTML='';
+    const fiches=clientsDonnees||[];
+    const tape=iRech.value.trim();
+    const choix=tape?clientsFiltrer(fiches,new Map(),'tous',tape).slice(0,30):clientsSuggestionsInscription(insc,fiches,6);
+    if(!choix.length){liste.appendChild(clientsMessage(tape?'Aucune fiche ne correspond.':'Aucune fiche probable : cherche par nom, ou crée une nouvelle fiche.'));return;}
+    choix.forEach(f=>{
+      const b=clientsEl('button','su-case cl-choix',f.nom+(clientsTexteAdresse(f)?' — '+clientsTexteAdresse(f):''));
+      b.type='button';
+      b.onclick=()=>clientsRelierInscription(insc,f);
+      liste.appendChild(b);
+    });
+  };
+  iRech.oninput=dessiner;
+  dessiner();
+  const boutons=clientsEl('div','su-boutons');
+  const bAnn=clientsEl('button','lf-btn fermer','Annuler');bAnn.type='button';bAnn.onclick=()=>clientsFermerFeuille();
+  const bIgn=clientsEl('button','lf-btn','Ignorer');bIgn.type='button';bIgn.id='cl-insc-ignorer';bIgn.onclick=()=>clientsIgnorerInscription(insc);
+  const bNouv=clientsEl('button','lf-btn nouveau','＋ Nouvelle fiche');bNouv.type='button';bNouv.id='cl-insc-nouvelle';
+  bNouv.onclick=()=>clientsOuvrirFeuille(null,{nom:insc.nom,adresse:insc.adresse,courriel:insc.courriel||''},null,insc);
+  boutons.appendChild(bAnn);boutons.appendChild(bIgn);boutons.appendChild(bNouv);
+  corps.appendChild(boutons);
+  document.getElementById('clients-feuille-overlay').classList.add('open');
+}
+
+// Appelle la fonction serveur « relier » (sans confirmation : l'appelant l'a déjà demandée) ; rend {ok:true, promo} ou {erreur}
+async function clientsAppelerRelier(insc,clientId){
+  let r;
+  try{r=await db.rpc('admin_relier_inscription',{p_inscription_id:insc.id,p_client_id:clientId});}catch(e){r={data:null,error:e};}
+  if(r.error) return {erreur:clientsMessageErreurInscription(r.error),code:String((r.error&&r.error.message)||'')};
+  const d=r.data||{};
+  if(d.statut!=='reliee') return {erreur:'❌ Réponse inattendue du serveur : rien n’est sûr, actualise la liste.',code:''};
+  return {ok:true,promo:d.promo||'non_demandee'};
+}
+async function clientsRelierInscription(insc,f){
+  if(_clientsOccupe) return;
+  const ancien=clientsChiffres10(f.cellulaire),nouveau=clientsChiffres10(insc.cellulaire);
+  const texte='Le cellulaire de la fiche deviendra le '+clientsTelAffiche(insc.cellulaire)+' et « '+f.nom+' » sera inscrit aux avis par texto (consentement du '+clientsDate(insc.cree_le)+').'
+    +(ancien&&ancien!==nouveau?' Son cellulaire actuel ('+clientsTelAffiche(f.cellulaire)+') sera remplacé.':'')
+    +(insc.promo_accepte?' Elle a aussi coché les offres par courriel.':'');
+  if(!(await confirmer('Relier cette inscription à « '+f.nom+' » ?',texte,'Relier','Annuler'))) return;
+  _clientsOccupe=true;
+  showSync(true);
+  const r=await clientsAppelerRelier(insc,f.id);
+  showSync(false);
+  _clientsOccupe=false;
+  if(r.erreur){
+    toast(r.erreur);
+    if(/inscription_deja_traitee|inscription_introuvable/.test(r.code)){await clientsRecharger();clientsFermerFeuille();renderClientsAdmin();}
+    return;
+  }
+  await clientsRecharger();
+  clientsFermerFeuille();
+  toast('✔ Inscription reliée à '+f.nom+'.'+clientsMessagePromo(r.promo));
+  renderClientsAdmin();
+}
+async function clientsIgnorerInscription(insc){
+  if(_clientsOccupe) return;
+  if(!(await confirmer('Ignorer cette inscription ?','« '+insc.nom+' » ne sera reliée à aucune fiche et ne recevra aucun avis. Elle reste dans la liste « Traitées ».','Ignorer','Annuler'))) return;
+  _clientsOccupe=true;
+  showSync(true);
+  let r;
+  try{r=await db.rpc('admin_ignorer_inscription',{p_inscription_id:insc.id});}catch(e){r={data:null,error:e};}
+  showSync(false);
+  _clientsOccupe=false;
+  if(r.error){
+    toast(clientsMessageErreurInscription(r.error));
+    if(/inscription_deja_traitee|inscription_introuvable/.test(String(r.error.message||''))){await clientsRecharger();clientsFermerFeuille();renderClientsAdmin();}
+    return;
+  }
+  if(!r.data||r.data.statut!=='ignoree'){toast('❌ Réponse inattendue du serveur : actualise la liste.');return;}
+  await clientsRecharger();
+  clientsFermerFeuille();
+  toast('✔ Inscription ignorée');
   renderClientsAdmin();
 }

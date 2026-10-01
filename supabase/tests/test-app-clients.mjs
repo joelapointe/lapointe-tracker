@@ -43,6 +43,13 @@ const ARRETS = () => [
   { id: 's10', adresse: '8 rue Seule, Ville', client: '', service: 'Coupe de gazon', actif: true, client_id: null },
 ];
 
+const INSC = () => [
+  { id: 'i1', nom: 'Claude Lafreniere', adresse: '100 rue Boisjoli, Saint-Boniface', cellulaire: '+18195353086', courriel: null, promo_accepte: false, statut: 'nouvelle', client_id: null, cree_le: '2026-09-30T12:00:00Z', traitee_le: null },
+  { id: 'i2', nom: 'Nouvelle Personne', adresse: '55 rue Nouvelle, Charette', cellulaire: '+18195550000', courriel: 'np@exemple.ca', promo_accepte: true, statut: 'nouvelle', client_id: null, cree_le: '2026-09-30T13:00:00Z', traitee_le: null },
+  { id: 'i3', nom: 'Marie Inscrite', adresse: '1 rue A, Charette', cellulaire: '+18195551234', courriel: 'm@x.ca', promo_accepte: false, statut: 'reliee', client_id: 'c5', cree_le: '2026-09-29T12:00:00Z', traitee_le: '2026-09-29T15:00:00Z' },
+  { id: 'i4', nom: 'Test Robot', adresse: '9 rue Faux, Ville', cellulaire: '+18195559998', courriel: null, promo_accepte: false, statut: 'ignoree', client_id: null, cree_le: '2026-09-28T12:00:00Z', traitee_le: '2026-09-28T15:00:00Z' },
+];
+
 function monde(o = {}) {
   const statiques = {};
   const creer = (id, balise = '') => {
@@ -64,8 +71,8 @@ function monde(o = {}) {
   const getElementById = (id) => { if (statiques[id]) return statiques[id]; for (const r of Object.values(statiques)) { const t = trouverDans(r, id); if (t) return t; } return el(id); };
 
   const arretsDeDepart = o.arrets ?? ARRETS();
-  const donnees = { clients: o.fiches ?? FICHES(), stops: JSON.parse(JSON.stringify(arretsDeDepart)) };
-  const appels = { requetes: [], toasts: [], confirmations: [], sync: [] };
+  const donnees = { clients: o.fiches ?? FICHES(), inscriptions_avis: o.inscriptions ?? INSC(), stops: JSON.parse(JSON.stringify(arretsDeDepart)) };
+  const appels = { requetes: [], toasts: [], confirmations: [], sync: [], rpc: [] };
   let compteur = 0;
   const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
   const executer = async (q) => {
@@ -77,6 +84,7 @@ function monde(o = {}) {
     if (o.erreurs?.[cle]) { const e = typeof o.erreurs[cle] === 'function' ? o.erreurs[cle](q) : o.erreurs[cle]; if (e) return { data: null, error: e }; }
     const filtrer = (l) => q.filtres.every(([f, c, v]) => (f === 'eq' ? l[c] === v : f === 'in' ? v.includes(l[c]) : true));
     if (q.op === 'select') {
+      if (q.table === 'inscriptions_avis' && o.sansTableInsc) return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.inscriptions_avis' in the schema cache" } };
       let r = lignes.filter(filtrer).map((l) => ({ ...l }));
       r.sort((x, y) => { for (const [c, sens] of q.ordres) { const d = cmp(x[c], y[c]); if (d) return (sens === 'desc' ? -1 : 1) * d; } return 0; });   // tous les critères ensemble, dans l'ordre demandé
       if (q.plage) r = r.slice(q.plage[0], q.plage[1] + 1);
@@ -99,7 +107,24 @@ function monde(o = {}) {
   };
   const fauxDb = {
     channel() { const c = { on() { return c; }, subscribe() { return c; } }; return c; },
-    rpc: async () => ({ data: null, error: null }),
+    rpc: async (nom, args) => {
+      appels.rpc.push({ nom, args });
+      if (o.rpcPanne?.(nom)) throw new TypeError('Failed to fetch');
+      if (o.rpcErreurs?.[nom]) return { data: null, error: o.rpcErreurs[nom] };
+      if (o.rpcReponse) return o.rpcReponse;
+      const insc = donnees.inscriptions_avis.find((x) => x.id === args.p_inscription_id);
+      if (!insc) return { data: null, error: { message: 'inscription_introuvable' } };
+      if (insc.statut !== 'nouvelle') return { data: null, error: { message: 'inscription_deja_traitee' } };
+      if (nom === 'admin_relier_inscription') {
+        const c = donnees.clients.find((x) => x.id === args.p_client_id);
+        if (!c || c.actif === false) return { data: null, error: { message: 'client_introuvable' } };
+        c.cellulaire = insc.cellulaire; c.avis_texto = true; c.desabonne_texto_le = null; c.courriel = c.courriel ?? insc.courriel;
+        insc.statut = 'reliee'; insc.client_id = c.id; insc.traitee_le = '2026-10-01T15:00:00Z';
+        return { data: { statut: 'reliee', client_id: c.id, promo: o.promoReponse ?? (insc.promo_accepte ? 'appliquee' : 'non_demandee') }, error: null };
+      }
+      if (nom === 'admin_ignorer_inscription') { insc.statut = 'ignoree'; insc.traitee_le = '2026-10-01T15:00:00Z'; return { data: { statut: 'ignoree' }, error: null }; }
+      return { data: null, error: null };
+    },
     from: (table) => {
       const q = { table, op: 'select', cols: null, filtres: [], ordres: [], plage: null, valeur: null, retour: null };
       q.select = (c) => { if (q.op === 'select') q.cols = c; else q.retour = c ?? '*'; return q; };
@@ -230,7 +255,7 @@ log('=== LES FILTRES ET LA RECHERCHE À L\'ÉCRAN ===');
   const puce = (t) => m.filtres().find((b) => b.textContent === t);
   await cliquer(puce('Sans arrêt'));
   eq('« Sans arrêt » : la liste change', m.noms().sort(), ['Côme Garceau', 'Hubert Kamdem', 'Marie Inscrite', 'Paul Parti']);
-  eq('… la puce choisie est marquée, les autres non', m.filtres().map((b) => b.className), ['su-puce', 'su-puce on', 'su-puce', 'su-puce', 'su-puce']);
+  eq('… la puce choisie est marquée, les autres non', m.filtres().map((b) => b.className), ['su-puce', 'su-puce on', 'su-puce', 'su-puce', 'su-puce', 'su-puce']);
   await cliquer(puce('Sans contact'));
   eq('« Sans contact »', m.noms(), ['Côme Garceau']);
   await cliquer(puce('Archivés'));
@@ -643,6 +668,240 @@ log('=== ÉTAPE 2 : COPIER UN CLIENT VERS UNE AUTRE ROUTE COPIE AUSSI SA FICHE =
   await m.run('copierClientsAdmin()');
   const ins = m.requetes('stops', 'insert');
   eq('copier vers une autre route : la copie garde la MÊME fiche du répertoire (ou aucune)', [ins.length, ins[0].valeur.map((c) => c.client_id)], [1, ['c1', null]]);
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ÉTAPE 3 : LES INSCRIPTIONS REÇUES DE LA PAGE PUBLIQUE
+// ═════════════════════════════════════════════════════════════════
+log('=== ÉTAPE 3 : LES FONCTIONS PURES ===');
+{
+  const m = monde();
+  const ch = (x) => m.run(`clientsChiffres10(${JSON.stringify(x)})`);
+  eq('les 10 derniers chiffres d’un numéro, quelle que soit l’écriture', [ch('+18195551234'), ch('(819) 555-1234'), ch('819-555-1234'), ch('555-1234'), ch(''), m.run('clientsChiffres10(null)')], ['8195551234', '8195551234', '8195551234', '', '', '']);
+  const sug = (insc, max) => m.run(`clientsSuggestionsInscription(${JSON.stringify(insc)}, ${JSON.stringify(FICHES())}, ${max ?? 6})`).map((f) => f.id);
+  const base = { nom: 'Inconnu Total', adresse: '9 rue Nulle part', cellulaire: '+18190000000', courriel: null };
+  eq('suggestion : même cellulaire que le TÉLÉPHONE de la fiche (QuickBooks), écrit autrement', sug({ ...base, cellulaire: '+18195353086' }), ['c1']);
+  eq('… même cellulaire que le cellulaire de la fiche', sug({ ...base, cellulaire: '+18195551234' }), ['c5']);
+  eq('… même courriel (majuscules ignorées)', sug({ ...base, courriel: 'KAMTCHOM@yahoo.fr' }), ['c2']);
+  eq('… même courriel même si la fiche l’écrit avec des majuscules', m.run(`clientsSuggestionsInscription({nom:'Z', adresse:'', cellulaire:'', courriel:'np@exemple.ca'}, [{id:'x', nom:'Autre', courriel:'Np@Exemple.CA', actif:true}], 6)`).map((f) => f.id), ['x']);
+  eq('… même numéro civique ET même rue', sug({ ...base, adresse: '5352 rue Burrill, Shawinigan' }), ['c4']);
+  eq('… même nom (accents et majuscules ignorés)', sug({ ...base, nom: 'COME garceau' }), ['c3']);
+  eq('… un nom trop court (moins de 5 lettres) ne suggère rien par « contenu »', sug({ ...base, nom: 'Zed' }), []);
+  eq('… une fiche archivée n’est jamais suggérée', sug({ ...base, cellulaire: '+18195550000', nom: 'Vieille Fiche', adresse: '3 rue C, Charette' }), []);
+  eq('… plusieurs indices : la fiche la plus sûre d’abord (cellulaire 6 > courriel 5 > adresse 4 > nom 3)', sug({ nom: 'Zedbed', adresse: '5352 rue Burrill', cellulaire: '+18195391112', courriel: 'kamtchom@yahoo.fr' }), ['c4', 'c2']);
+  eq('… au plus « max »', sug({ nom: 'Zedbed', adresse: '5352 rue Burrill', cellulaire: '+18195391112', courriel: 'kamtchom@yahoo.fr' }, 1), ['c4']);
+  eq('… une inscription sans rien d’utilisable : aucune suggestion', sug({ nom: '', adresse: '', cellulaire: '', courriel: '' }), []);
+  const p = (c) => m.run(`clientsMessagePromo(${JSON.stringify(c)})`);
+  eq('le message sur les offres par courriel selon la réponse du serveur', [p('appliquee'), p('non_demandee'), p('inconnu'), p(undefined)], [' Il accepte aussi les offres par courriel : c’est noté.', '', '', '']);
+  eq('… les trois cas où RIEN n’est activé le disent', [/rien n’a été activé/.test(p('desabonne_des_courriels')), /courriel de la fiche est différent/.test(p('courriel_different')), /retirées depuis/.test(p('retire_depuis'))], [true, true, true]);
+  const e = (x) => m.run(`clientsMessageErreurInscription(${JSON.stringify(x)})`);
+  eq('les messages d’erreur du serveur sont précis', [e({ message: 'inscription_deja_traitee' }), e({ message: 'inscription_introuvable' }), e({ message: 'client_introuvable' }), e({ message: 'non_autorise' })],
+    ['❌ Cette inscription a déjà été traitée (la liste va se rafraîchir).', '❌ Cette inscription n’existe plus (la liste va se rafraîchir).', '❌ Cette fiche n’existe plus ou est archivée.', '❌ Réservé à l’administrateur.']);
+  eq('… fonction absente, ou erreur inconnue', [e({ message: 'Could not find the function public.admin_relier_inscription', code: 'PGRST202' }), e({ message: 'boum' })], ['❌ La fonction n’est pas installée sur Supabase (fichier SQL 30).', '❌ L’opération a échoué : boum.']);
+  eq('nouvelles et traitées : séparées selon le statut', [m.run(`clientsInscNouvelles(${JSON.stringify(INSC())}).map(i => i.id)`), m.run(`clientsInscTraitees(${JSON.stringify(INSC())}).map(i => i.id)`)], [['i1', 'i2'], ['i3', 'i4']]);
+}
+
+log('=== ÉTAPE 3 : L’ÉCRAN « INSCRIPTIONS » ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  const puce = (t) => m.filtres().find((b) => b.textContent.startsWith(t));
+  eq('la puce « Inscriptions (N) » compte les NOUVELLES seulement', puce('Inscriptions').textContent, 'Inscriptions (2)');
+  const lect = m.requetes('inscriptions_avis');
+  eq('une seule lecture des inscriptions, la plus récente d’abord', [lect.length, lect[0].ordres[0]], [1, ['cree_le', 'desc']]);
+  vrai('… sans JAMAIS demander l’empreinte de l’adresse IP ni le navigateur', !/ip_hash|agent/.test(lect[0].cols), lect[0].cols);
+  await cliquer(puce('Inscriptions'));
+  eq('la liste montre les nouvelles inscriptions, la plus récente d’abord', m.noms(), ['Nouvelle Personne', 'Claude Lafreniere']);
+  const l = m.lignes();
+  eq('… chacune avec son adresse, son cellulaire en 10 chiffres et son courriel', [l[0].adresses[0], l[0].contact], ['55 rue Nouvelle, Charette', '📱 819 555-0000 · ✉ np@exemple.ca']);
+  eq('… « Nouvelle » en badge ; « ✉ offres par courriel » seulement pour qui l’a coché', [l[0].badges, parClasse(l[0].noeud, 'su-n').some((x) => /offres par courriel/.test(x.textContent)), parClasse(l[1].noeud, 'su-n').some((x) => /offres par courriel/.test(x.textContent))], [['Nouvelle'], true, false]);
+  const sous = parClasse(m.corps(), 'su-puces')[0].children.map((b) => b.textContent);
+  eq('deux sous-puces : Nouvelles et Traitées avec leur nombre', sous, ['Nouvelles (2)', 'Traitées (2)']);
+  await cliquer(parClasse(m.corps(), 'su-puces')[0].children[1]);
+  eq('« Traitées » : la reliée et l’ignorée, chacune avec son état', m.lignes().map((x) => [x.nom, x.badges[0]]), [['Marie Inscrite', 'Reliée à Marie Inscrite'], ['Test Robot', 'Ignorée']]);
+  eq('aucune écriture en regardant les inscriptions', [m.appels.rpc.length, m.requetes('clients', 'update').length], [0, 0]);
+  // aucune nouvelle
+  const m2 = monde({ inscriptions: INSC().filter((i) => i.statut !== 'nouvelle') });
+  await m2.ouvrir();
+  await cliquer(m2.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  eq('aucune nouvelle inscription : un message de réussite', [m2.filtres().find((b) => b.textContent.startsWith('Inscriptions')).textContent, m2.messages()], ['Inscriptions (0)', ['✔ Aucune nouvelle inscription à traiter.']]);
+  // la table absente
+  const m3 = monde({ sansTableInsc: true });
+  await m3.ouvrir();
+  await cliquer(m3.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  eq('table absente ou en panne : le dit (jamais « aucune inscription ») ; le reste du répertoire fonctionne', [m3.filtres().find((b) => b.textContent.startsWith('Inscriptions')).textContent, m3.messages(), !!m3.bouton('↻ Réessayer')], ['Inscriptions', ['Les inscriptions n’ont pas pu être lues (ou le fichier SQL 30 n’est pas encore activé).'], true]);
+  await cliquer(m3.filtres()[0]);
+  eq('… la liste des fiches s’affiche quand même', m3.noms().length, 6);
+}
+
+log('=== ÉTAPE 3 : RELIER UNE INSCRIPTION À UNE FICHE ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  const ouvrir = async (nom) => cliquer(m.lignes().find((x) => x.nom === nom).noeud.children[0].children[0]);
+  const choix = () => parClasse(m.feuille(), 'cl-choix').map((b) => b.textContent);
+  await ouvrir('Claude Lafreniere');
+  vrai('toucher une inscription ouvre sa feuille (titre = le nom)', m.feuilleOuverte() && m.el('clients-feuille-titre').textContent === 'Claude Lafreniere');
+  eq('… la fiche la plus probable est proposée (même numéro de téléphone)', choix(), ['Claude Lafreniere — 100 rue Boisjoli, Saint-Boniface']);
+  m.repondre(false);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  const conf = m.appels.confirmations.at(-1);
+  eq('relier demande une confirmation qui dit CE QUI VA ARRIVER (numéro, inscription aux textos, date)', [conf[0], /819 535-3086/.test(conf[1]), /inscrit aux avis par texto/.test(conf[1]), /sera remplacé/.test(conf[1])], ['Relier cette inscription à « Claude Lafreniere » ?', true, true, false]);
+  eq('… « Annuler » : aucun appel au serveur', m.appels.rpc.length, 0);
+  m.repondre(true);
+  const lecturesAvant = m.requetes('clients').length;
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  eq('« Relier » : UN appel à admin_relier_inscription avec la bonne inscription et la bonne fiche', m.appels.rpc, [{ nom: 'admin_relier_inscription', args: { p_inscription_id: 'i1', p_client_id: 'c1' } }]);
+  eq('… les fiches ET les inscriptions sont relues (le serveur change les deux)', [m.requetes('clients').length - lecturesAvant, m.requetes('inscriptions_avis').length], [1, 2]);
+  vrai('… la feuille se ferme, le message le dit', !m.feuilleOuverte() && m.toasts.at(-1) === '✔ Inscription reliée à Claude Lafreniere.');
+  eq('… l’inscription quitte les nouvelles ; la puce compte une de moins', [m.noms(), m.filtres().find((b) => b.textContent.startsWith('Inscriptions')).textContent], [['Nouvelle Personne'], 'Inscriptions (1)']);
+  eq('… la fiche est maintenant inscrite aux textos (lu depuis la base)', m.donnees.clients.find((c) => c.id === 'c1').avis_texto, true);
+  eq('l’application n’écrit JAMAIS elle-même un consentement (aucune écriture directe dans clients ni dans le registre)', [m.requetes('clients', 'update').length, m.requetes('clients', 'insert').length, m.requetes('consentements', 'insert').length], [0, 0, 0]);
+  // le cellulaire de la fiche sera remplacé ; les offres par courriel
+  await ouvrir('Nouvelle Personne');
+  taper(m.champ('cl-insc-rech'), 'inscrite');
+  eq('une recherche remplace les propositions', choix(), ['Marie Inscrite — 1 rue A, Charette']);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  const c2 = m.appels.confirmations.at(-1);
+  eq('la confirmation dit que le cellulaire actuel de la fiche sera REMPLACÉ, et que les offres par courriel sont cochées', [/sera remplacé/.test(c2[1]), /819 555-1234/.test(c2[1]), /offres par courriel/.test(c2[1])], [true, true, true]);
+  eq('… la réponse « appliquee » est annoncée', m.toasts.at(-1), '✔ Inscription reliée à Marie Inscrite. Il accepte aussi les offres par courriel : c’est noté.');
+}
+
+log('=== ÉTAPE 3 : LE MÊME NUMÉRO, ET UNE CRÉATION LAISSÉE DE CÔTÉ ===');
+{
+  const m = monde({ fiches: [...FICHES(), F('c9', 'Même Numéro', { adresse: '77 rue Neuve', ville: 'Charette', cellulaire: '+18195550000', courriel: 'mn@x.ca' })] });
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(m.lignes().find((x) => x.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  const conf = m.appels.confirmations.at(-1);
+  eq('la fiche a DÉJÀ ce cellulaire (écrit autrement) : la confirmation ne parle PAS de le remplacer', [conf[0], /sera remplacé/.test(conf[1])], ['Relier cette inscription à « Même Numéro » ?', false]);
+  // une création commencée à partir d'une inscription, jamais fermée, puis une autre fiche ouverte par le code
+  await cliquer(m.champ('cl-insc-nouvelle') ?? m.champ('cl-enregistrer'));
+  const x = monde();
+  await x.ouvrir();
+  await cliquer(x.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(x.lignes().find((l) => l.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(x.champ('cl-insc-nouvelle'));
+  x.run('clientsOuvrirFeuille(null)');
+  eq('ouvrir ensuite une fiche libre sans fermer la précédente : aucune inscription n’y reste attachée', x.run('_clientsInscALier'), null);
+}
+
+log('=== ÉTAPE 3 : LES RÉPONSES DU SERVEUR SUR LES OFFRES PAR COURRIEL ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(m.lignes().find((x) => x.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  taper(m.champ('cl-insc-rech'), 'zedbed');
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  eq('offres acceptées et appliquées : « c’est noté »', m.toasts.at(-1), '✔ Inscription reliée à Zedbed. Il accepte aussi les offres par courriel : c’est noté.');
+  for (const [code, motif] of [['courriel_different', /courriel de la fiche est différent/], ['desabonne_des_courriels', /s’était désabonné/], ['retire_depuis', /retirées depuis/]]) {
+    const x = monde({ promoReponse: code });
+    await x.ouvrir();
+    await cliquer(x.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+    await cliquer(x.lignes().find((l) => l.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+    taper(x.champ('cl-insc-rech'), 'zedbed');
+    await cliquer(parClasse(x.feuille(), 'cl-choix')[0]);
+    vrai('réponse « ' + code + ' » : le message dit pourquoi et que RIEN n’a été activé', motif.test(x.toasts.at(-1)) && /rien n’a été activé/.test(x.toasts.at(-1)), x.toasts.at(-1));
+  }
+}
+
+log('=== ÉTAPE 3 : LES REFUS DU SERVEUR ===');
+{
+  const ouvrirPremiere = async (m) => {
+    await m.ouvrir();
+    await cliquer(m.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+    await cliquer(m.lignes().find((x) => x.nom === 'Claude Lafreniere').noeud.children[0].children[0]);
+    await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  };
+  let m = monde({ rpcErreurs: { admin_relier_inscription: { message: 'inscription_deja_traitee' } } });
+  await ouvrirPremiere(m);
+  eq('une inscription déjà traitée ailleurs : le dit, relit la liste, ferme la feuille', [m.toasts.at(-1), m.feuilleOuverte(), m.requetes('inscriptions_avis').length], ['❌ Cette inscription a déjà été traitée (la liste va se rafraîchir).', false, 2]);
+  m = monde({ rpcErreurs: { admin_relier_inscription: { message: 'client_introuvable' } } });
+  await ouvrirPremiere(m);
+  eq('une fiche archivée entre-temps : message clair, la feuille reste ouverte (on peut choisir une autre fiche)', [m.toasts.at(-1), m.feuilleOuverte()], ['❌ Cette fiche n’existe plus ou est archivée.', true]);
+  m = monde({ rpcPanne: () => true });
+  await ouvrirPremiere(m);
+  eq('pas de réseau : « rien n’a été changé », la feuille reste ouverte, le bouton n’est pas bloqué', [m.toasts.at(-1), m.feuilleOuverte(), m.run('_clientsOccupe')], ['📴 Pas de réseau : rien n’a été changé.', true, false]);
+  eq('… l’indicateur de synchronisation est éteint', m.appels.sync.at(-1), false);
+  m = monde({ rpcReponse: { data: null, error: null } });
+  await ouvrirPremiere(m);
+  eq('une réponse inattendue du serveur n’est JAMAIS annoncée comme réussie', [/Réponse inattendue/.test(m.toasts.at(-1)), m.feuilleOuverte()], [true, true]);
+}
+
+log('=== ÉTAPE 3 : IGNORER UNE INSCRIPTION ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(m.lignes().find((x) => x.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  m.repondre(false);
+  await cliquer(m.champ('cl-insc-ignorer'));
+  eq('ignorer demande confirmation ; « Annuler » n’appelle rien', [m.appels.confirmations.at(-1)[0], m.appels.rpc.length], ['Ignorer cette inscription ?', 0]);
+  m.repondre(true);
+  await cliquer(m.champ('cl-insc-ignorer'));
+  eq('« Ignorer » : UN appel à admin_ignorer_inscription', m.appels.rpc, [{ nom: 'admin_ignorer_inscription', args: { p_inscription_id: 'i2' } }]);
+  vrai('… le message, la feuille fermée, l’inscription passe dans « Traitées »', m.toasts.at(-1) === '✔ Inscription ignorée' && !m.feuilleOuverte() && m.noms().join() === 'Claude Lafreniere' && m.filtres().find((b) => b.textContent.startsWith('Inscriptions')).textContent === 'Inscriptions (1)');
+  eq('ignorer ne crée ni ne modifie jamais une fiche', [m.requetes('clients', 'update').length, m.requetes('clients', 'insert').length], [0, 0]);
+  // refus
+  const x = monde({ rpcErreurs: { admin_ignorer_inscription: { message: 'inscription_deja_traitee' } } });
+  await x.ouvrir();
+  await cliquer(x.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(x.lignes().find((l) => l.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(x.champ('cl-insc-ignorer'));
+  eq('une inscription déjà traitée : le dit et relit la liste', [x.toasts.at(-1), x.feuilleOuverte()], ['❌ Cette inscription a déjà été traitée (la liste va se rafraîchir).', false]);
+  const y = monde({ rpcReponse: { data: { statut: 'autre' }, error: null } });
+  await y.ouvrir();
+  await cliquer(y.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(y.lignes().find((l) => l.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(y.champ('cl-insc-ignorer'));
+  eq('une réponse inattendue n’est jamais annoncée comme réussie', [/Réponse inattendue/.test(y.toasts.at(-1)), y.feuilleOuverte()], [true, true]);
+  // une inscription traitée : consultation seulement
+  await cliquer(y.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(parClasse(y.corps(), 'su-puces')[0].children[1]);
+  await cliquer(y.lignes().find((l) => l.nom === 'Marie Inscrite').noeud.children[0].children[0]);
+  eq('une inscription déjà traitée s’ouvre en consultation seulement (ni relier ni ignorer)', [parClasse(y.feuille(), 'cl-insc-statut')[0].textContent.startsWith('Reliée à la fiche « Marie Inscrite »'), y.champ('cl-insc-ignorer'), parClasse(y.feuille(), 'cl-choix').length], [true, undefined, 0]);
+}
+
+log('=== ÉTAPE 3 : CRÉER UNE FICHE À PARTIR D’UNE INSCRIPTION ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(m.lignes().find((x) => x.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(m.champ('cl-insc-nouvelle'));
+  eq('la fiche s’ouvre avec le nom, l’adresse et le courriel de l’inscription', [m.el('clients-feuille-titre').textContent, m.champ('cl-nom').value, m.champ('cl-adresse').value, m.champ('cl-courriel').value, m.champ('cl-cell').value], ['Nouveau client', 'Nouvelle Personne', '55 rue Nouvelle, Charette', 'np@exemple.ca', '']);
+  vrai('… et dit que l’inscription lui sera reliée (cellulaire ajouté, inscription aux textos)', /sera reliée à cette fiche/.test(parClasse(m.feuille(), 'cl-lier-info')[0].textContent) && /819 555-0000/.test(parClasse(m.feuille(), 'cl-lier-info')[0].textContent));
+  await cliquer(m.champ('cl-enregistrer'));
+  const ins = m.requetes('clients', 'insert');
+  eq('enregistrer : la fiche est créée SANS cellulaire ni avis (c’est le serveur qui les ajoute en reliant)', [ins.length, ins[0].valeur[0].cellulaire, ins[0].valeur[0].avis_courriel], [1, null, false]);
+  eq('… PUIS l’inscription est reliée à la NOUVELLE fiche', [m.appels.rpc.length, m.appels.rpc[0].nom, m.appels.rpc[0].args.p_inscription_id, m.appels.rpc[0].args.p_client_id === m.donnees.clients.find((c) => c.nom === 'Nouvelle Personne').id], [1, 'admin_relier_inscription', 'i2', true]);
+  vrai('… un message : fiche créée et inscription reliée (+ les offres par courriel)', m.toasts.at(-1) === '✔ Fiche créée et inscription reliée. Il accepte aussi les offres par courriel : c’est noté.' && !m.feuilleOuverte());
+  eq('… la fiche est inscrite aux textos avec le cellulaire de l’inscription (lu depuis la base)', [m.donnees.clients.find((c) => c.nom === 'Nouvelle Personne').cellulaire, m.donnees.clients.find((c) => c.nom === 'Nouvelle Personne').avis_texto], ['+18195550000', true]);
+  eq('… l’inscription quitte les nouvelles', m.noms(), ['Claude Lafreniere']);
+  // le lien est refusé après la création
+  const x = monde({ rpcErreurs: { admin_relier_inscription: { message: 'inscription_deja_traitee' } } });
+  await x.ouvrir();
+  await cliquer(x.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(x.lignes().find((l) => l.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(x.champ('cl-insc-nouvelle'));
+  await cliquer(x.champ('cl-enregistrer'));
+  eq('la fiche est créée mais le serveur refuse le lien : un message qui dit les DEUX choses', [x.toasts.at(-1), x.donnees.clients.some((c) => c.nom === 'Nouvelle Personne')], ['⚠ Fiche créée, mais l’inscription n’a pas pu être reliée : Cette inscription a déjà été traitée (la liste va se rafraîchir).', true]);
+  // abandonner la création
+  const z = monde();
+  await z.ouvrir();
+  await cliquer(z.filtres().find((b) => b.textContent.startsWith('Inscriptions')));
+  await cliquer(z.lignes().find((l) => l.nom === 'Nouvelle Personne').noeud.children[0].children[0]);
+  await cliquer(z.champ('cl-insc-nouvelle'));
+  z.run('clientsFermerFeuille()');
+  eq('abandonner la création vide l’inscription à relier (aucun reste en mémoire)', z.run('_clientsInscALier'), null);
+  await cliquer(z.filtres()[0]);
+  await cliquer(z.bouton('＋ Nouveau client'));
+  regler(z, 'cl-nom', 'Fiche Libre');
+  await cliquer(z.champ('cl-enregistrer'));
+  eq('une fiche créée ensuite par « ＋ Nouveau client » ne relie AUCUNE inscription', z.appels.rpc.length, 0);
 }
 
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);

@@ -709,3 +709,5 @@
 .su-case.cl-choix{width:100%;background:#161c24;border:none;border-bottom:1px solid rgba(37,45,58,.8);color:#f0f4f8;text-align:left;font-family:'Barlow',sans-serif;line-height:1.3;}
 .su-case.cl-choix:active{filter:brightness(1.3);}
 .cl-arret{align-items:center;}
+#clients-feuille .lf-btn:not(.fermer):not(.nouveau){background:#161c24;border:1px solid var(--border);color:var(--text);}
+#clients-feuille #cl-insc-ignorer{color:#ef4444;border-color:rgba(239,68,68,.4);}

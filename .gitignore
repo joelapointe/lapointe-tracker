@@ -33,3 +33,9 @@ CAHIER-PROJET.md
 
 # Configuration locale de l'aperçu de l'application (serveur d'essai) : propre à cet ordinateur
 .claude/
+
+# Données personnelles de clients (export QuickBooks et SQL d'import) : jamais dans Git
+Clients*.xls
+Clients*.xlsx
+clients*.csv
+import-clients*.sql

@@ -621,7 +621,7 @@ m('la vérification dit que desabonner_contact est réservée au service même s
 m('la vérification dit que le consentement ne s\'écrit pas directement même si c\'est faux', `  'connecte_peut_ecrire_le_consentement', has_column_privilege('authenticated', 'public.clients', 'avis_texto', 'update') or has_column_privilege('authenticated', 'public.clients', 'desabonne_texto_le', 'update') or has_table_privilege('authenticated', 'public.consentements', 'insert'),`, `  'connecte_peut_ecrire_le_consentement', false,`);
 
 // ── la 2ᵉ case : les offres par courriel
-const PT = `  $t$J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.$t$)`;
+const PT = `  $t$J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0, 819 268-8069.$t$)`;
 m('le texte des offres est rangé sous le canal « texto »', `  'promo-2026-10-v1', 'courriel_promo',`, `  'promo-2026-10-v1', 'texto',`);
 m('le texte des offres change de nom de version', `  'promo-2026-10-v1', 'courriel_promo',`, `  'promo-2026-10-v2', 'courriel_promo',`);
 m('le texte des offres n\'est plus ajouté', `insert into public.textes_consentement (version, canal, texte) values (\n  'promo-2026-10-v1', 'courriel_promo',\n${PT}\non conflict (version) do nothing;\n`, ``);
@@ -632,8 +632,10 @@ m('le texte des offres ne dit plus comment se désabonner', `Je peux me désabon
 m('le texte des offres ne donne plus le lien de désabonnement', `avec le lien au bas de chaque courriel ou en écrivant`, `en écrivant`);
 m('le texte des offres ne dit plus que la case est facultative', `Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. `, ``);
 m('le texte des offres ne dit plus que ça n\'a aucun effet sur les services', `elle n'a aucun effet sur mes services ni sur mes avis de passage`, `elle compte`);
-m('le texte des offres ne donne plus l\'adresse postale', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.$t$)`, `Entretien Lapointe, 819 268-8069.$t$)`);
-m('le texte des offres ne donne plus le téléphone', `Charette (Québec), 819 268-8069.$t$)`, `Charette (Québec).$t$)`);
+m('le texte des offres ne donne plus l\'adresse postale', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0, 819 268-8069.$t$)`, `Entretien Lapointe, 819 268-8069.$t$)`);
+m('le texte des offres ne donne plus le code postal', `Charette (Québec) G0X 1E0, 819 268-8069.$t$)`, `Charette (Québec), 819 268-8069.$t$)`);
+m('le texte des offres donne un mauvais code postal', `Charette (Québec) G0X 1E0, 819 268-8069.$t$)`, `Charette (Québec) G0X 1E1, 819 268-8069.$t$)`);
+m('le texte des offres ne donne plus le téléphone', `Charette (Québec) G0X 1E0, 819 268-8069.$t$)`, `Charette (Québec) G0X 1E0.$t$)`);
 m('le texte des offres donne un mauvais courriel', `en écrivant à info@entretienlapointe.ca.`, `en écrivant à info@exemple.ca.`);
 
 // les inscriptions : l'accord aux offres

@@ -125,7 +125,7 @@ on conflict (version) do nothing;
 -- Le texte de la 2ᵉ case de la page (facultative, décochée au départ) : les offres et les nouvelles PAR COURRIEL, jamais par texto
 insert into public.textes_consentement (version, canal, texte) values (
   'promo-2026-10-v1', 'courriel_promo',
-  $t$J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.$t$)
+  $t$J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0, 819 268-8069.$t$)
 on conflict (version) do nothing;
 
 -- Le « sel » des empreintes d'adresses IP (un secret propre à cette base ; personne n'y a accès, sauf les fonctions ci-dessous)

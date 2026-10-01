@@ -20,7 +20,8 @@ const FILES = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.sql
   '16-etape14e-photo-probleme.sql', '17-etape15-equipage-precedent.sql', '18-etape16d-heure-des-gestes-sans-reseau.sql', '19-etape16d-annulation-ignoree-precisee.sql'];
 const SQL29 = fs.readFileSync(process.env.SQL29_TEST || (SQL_DIR + '29-presence-et-temps-passe.sql'), 'utf8');
 const GAZON = 'Coupe de gazon', SEL = 'Épandage de sel';
-const at = (minAgo) => new Date(Date.now() - minAgo * 60000).toISOString();
+const T0 = Date.now();   // UNE seule heure de référence : « at » (ce qu'on écrit) et « hms » (ce qu'on vérifie) donnent ainsi toujours la même seconde (avant : deux lectures de l'horloge, et le test échouait d'une seconde quand la seconde changeait entre les deux)
+const at = (minAgo) => new Date(T0 - minAgo * 60000).toISOString();
 
 const db = await prepare(FILES);
 const q = async (sql, p) => (await db.query(sql, p)).rows;
@@ -59,7 +60,7 @@ await debuter(nina, P1, rA, 120);   // la passe de Nina a débuté il y a 2 heur
 const presence = (uid, passe, arret, arrivee, depart = null, role = 'authenticated') =>
   fn(uid, `arret_presence($1::uuid,$2::uuid,$3::timestamptz,$4::timestamptz)`, [passe, arret, arrivee, depart], role);
 const lignes = (passe, arret) => q(`select to_char(arrivee_le at time zone 'UTC', 'HH24:MI:SS') a, to_char(depart_le at time zone 'UTC', 'HH24:MI:SS') d, signale_par from arret_presences where passe_id = $1 and stop_id = $2 order by arrivee_le`, [passe, arret]);
-const hms = (minAgo) => new Date(Date.now() - minAgo * 60000).toISOString().slice(11, 19);
+const hms = (minAgo) => new Date(T0 - minAgo * 60000).toISOString().slice(11, 19);
 const tableExiste = async () => (await q(`select to_regclass('public.arret_presences') is not null as r`))[0].r;
 const fonctionExiste = async () => (await q(`select to_regprocedure('public.arret_presence(uuid, uuid, timestamptz, timestamptz)') is not null as r`))[0].r;
 const defCompleter = async () => (await q(`select pg_get_functiondef('public.completer_arret(uuid,uuid,timestamptz,text,double precision,double precision)'::regprocedure) d`))[0].d;

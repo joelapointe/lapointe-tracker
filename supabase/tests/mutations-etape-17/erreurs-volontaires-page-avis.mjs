@@ -262,9 +262,9 @@ html('le « merci » ne peut pas recevoir le curseur', `hidden id="avis-merci" r
 html('le « merci » ne parle plus du dossier client', `Nous allons la relier à votre dossier client. `, ``);
 html('le « merci » ne parle plus du désabonnement', `Vous pouvez vous désabonner en tout temps en répondant ARRET (ou STOP) à l'un de nos textos. `, ``);
 html('plus aucun lien « tel: » vers le numéro de Joé dans la page (il n\'est plus joignable d\'un toucher)', [[`href="tel:18192688069"`, `href="#"`, 'tous']]);
-html('la page ne donne plus l\'adresse postale à côté de la case', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · `, `Entretien Lapointe · `);
+html('la page ne donne plus l\'adresse postale à côté de la case', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0 · `, `Entretien Lapointe · `);
 html('la page ne donne plus le nom de l\'entreprise à côté de la case', `id="avis-identification">Entretien Lapointe, 331,`, `id="avis-identification">331,`);
-html('le téléphone n\'est plus un lien à côté de la case', `Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">`, `Charette (Québec) · 819 268-8069 · <a href="mailto:info@entretienlapointe.ca">`);
+html('le téléphone n\'est plus un lien à côté de la case', `Charette (Québec) G0X 1E0 · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">`, `Charette (Québec) G0X 1E0 · 819 268-8069 · <a href="mailto:info@entretienlapointe.ca">`);
 html('le courriel n\'est plus un lien à côté de la case', `<a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>\n</div>\n\n<input id="avis-version"`, `info@entretienlapointe.ca</p>\n</div>\n\n<input id="avis-version"`);
 html('la page ne dit plus que les textos viennent d\'un numéro automatisé', `Les textos viennent d'un numéro automatisé qui ne lit pas les réponses (sauf ARRET et AIDE). `, ``);
 
@@ -323,9 +323,9 @@ css('une règle du style touche toute la page (plus limitée à #avis)', `#avis 
 css('le style d\'une balise touche tout le site', `#avis label { display: block;`, `label { display: block;`);
 
 // =================== la 2ᵉ case : les offres par courriel ===================
-const PROMO_TEXTE = `J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.`;
+const PROMO_TEXTE = `J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0, 819 268-8069.`;
 const PROMO_BLOC = `<div class="av-consentement av-promo">\n<label class="av-case" for="avis-promo">\n<input id="avis-promo" name="promo" type="checkbox" value="oui" />\n<span id="avis-promo-texte">${PROMO_TEXTE}</span>\n</label>\n</div>\n\n`;
-const IDENTIFICATION = `<p class="av-aide" id="avis-identification">Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>`;
+const IDENTIFICATION = `<p class="av-aide" id="avis-identification">Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0 · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>`;
 
 // ---- avis.js
 js('la 2ᵉ case est lue comme toujours cochée', `promo: champ.promo.checked === true,`, `promo: true,`);
@@ -384,8 +384,14 @@ html('le texte des offres ne dit plus comment se désabonner', `Je peux me désa
 html('le texte des offres ne parle plus du lien de désabonnement', `avec le lien au bas de chaque courriel ou en écrivant`, `en écrivant`);
 html('le texte des offres ne dit plus que la case est facultative', `Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. `, ``);
 html('le texte des offres ne dit plus qu\'il n\'y a aucun effet sur les services', `elle n'a aucun effet sur mes services ni sur mes avis de passage`, `elle compte`);
-html('le texte des offres ne donne plus l\'adresse postale', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.</span>`, `Entretien Lapointe, 819 268-8069.</span>`);
-html('le texte des offres ne donne plus le téléphone', `Charette (Québec), 819 268-8069.</span>`, `Charette (Québec).</span>`);
+html('le texte des offres ne donne plus l\'adresse postale', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) G0X 1E0, 819 268-8069.</span>`, `Entretien Lapointe, 819 268-8069.</span>`);
+html('le texte des offres ne donne plus le code postal', `Charette (Québec) G0X 1E0, 819 268-8069.</span>`, `Charette (Québec), 819 268-8069.</span>`);
+html('le texte des offres donne un mauvais code postal', `Charette (Québec) G0X 1E0, 819 268-8069.</span>`, `Charette (Québec) G0X 1E1, 819 268-8069.</span>`);
+html('la ligne d\'identification ne donne plus le code postal', `Charette (Québec) G0X 1E0 · <a href="tel:18192688069">819 268-8069</a>`, `Charette (Québec) · <a href="tel:18192688069">819 268-8069</a>`);
+html('la ligne d\'identification donne un mauvais code postal', `Charette (Québec) G0X 1E0 · <a href="tel:18192688069">819 268-8069</a>`, `Charette (Québec) G0X 1E1 · <a href="tel:18192688069">819 268-8069</a>`);
+conf('la section 1 ne donne plus le code postal', `Charette (Québec) G0X 1E0.</p>`, `Charette (Québec).</p>`);
+conf('la section 1 donne un mauvais code postal', `Charette (Québec) G0X 1E0.</p>`, `Charette (Québec) G0X 1E1.</p>`);
+html('le texte des offres ne donne plus le téléphone', `Charette (Québec) G0X 1E0, 819 268-8069.</span>`, `Charette (Québec) G0X 1E0.</span>`);
 html('le texte des offres donne un mauvais courriel', `en écrivant à info@entretienlapointe.ca.`, `en écrivant à info@exemple.ca.`);
 html('le texte des offres change d\'un seul mot', `les offres et les nouvelles d'Entretien Lapointe`, `les offres et les nouvelles de Lapointe`);
 html('le « merci » montre la mention des offres dès le départ', `<p hidden id="avis-merci-promo">`, `<p id="avis-merci-promo">`);

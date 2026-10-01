@@ -139,7 +139,8 @@ function renderClientsAdmin(){
   body.innerHTML='';
   const barre=clientsEl('div','su-barre');
   const filtres=clientsEl('div','su-filtres');
-  [['tous','Tous'],['sansarret','Sans arrêt'],['sanscontact','Sans contact'],['archives','Archivés']].forEach(([id,texte])=>{
+  const nbSansFiche=clientsGrouperArrets(typeof stops!=='undefined'?stops.filter(s=>!s.client_id):[]).length;
+  [['tous','Tous'],['sansarret','Sans arrêt'],['sanscontact','Sans contact'],['archives','Archivés'],['arrets','Arrêts sans fiche ('+nbSansFiche+')']].forEach(([id,texte])=>{
     const b=clientsEl('button','su-puce'+(clientsFiltre===id?' on':''),texte);
     b.type='button';
     b.dataset.filtre=id;
@@ -162,6 +163,7 @@ function renderClientsListe(){
   const zone=document.getElementById('cl-liste');
   if(!zone) return;
   zone.innerHTML='';
+  if(clientsFiltre==='arrets'){clientsListeArrets(zone);return;}
   const fiches=clientsDonnees||[];
   const parArret=clientsCompterArrets(typeof stops!=='undefined'?stops:[]);
   const r=clientsResume(fiches,parArret);
@@ -212,12 +214,13 @@ function clientsChamp(corps,id,libelle,type,valeur,extra){
   corps.appendChild(c);
   return i;
 }
-function clientsOuvrirFeuille(f){
+function clientsOuvrirFeuille(f,prerempli,aLier){
   _clientsFiche=f;
+  _clientsALier=f?null:(aLier||null);   // créer une fiche À PARTIR d'un arrêt : l'arrêt y sera relié après la création
   const corps=document.getElementById('clients-feuille-corps');
   corps.innerHTML='';
   document.getElementById('clients-feuille-titre').textContent=f?f.nom:'Nouveau client';
-  const v=f||{};
+  const v=f||prerempli||{};
   clientsChamp(corps,'cl-nom','Nom','text',v.nom,{maxLength:150,placeholder:'Nom du client'});
   clientsChamp(corps,'cl-entreprise','Entreprise (facultatif)','text',v.nom_entreprise,{maxLength:150});
   const cType=clientsEl('div','su-champ cl-champ');
@@ -242,6 +245,18 @@ function clientsOuvrirFeuille(f){
   corps.appendChild(caseAvis);
   const etatTexto=f?(f.desabonne_texto_le?'Désabonné des textos (a répondu ARRET).':f.avis_texto?'Inscrit aux avis par texto.':'Pas inscrit aux avis par texto : le client s’inscrit lui-même sur la page web.'):'Pas inscrit aux avis par texto : le client s’inscrit lui-même sur la page web.';
   corps.appendChild(clientsEl('div','su-adresse cl-etat-texto',etatTexto+(f&&f.desabonne_courriel_le?' Désabonné des courriels.':'')));
+  if(_clientsALier) corps.appendChild(clientsEl('div','su-adresse cl-lier-info','L’arrêt « '+_clientsALier.adresse+' » ('+_clientsALier.ids.length+' arrêt'+(_clientsALier.ids.length>1?'s':'')+') sera relié à cette fiche.'));
+  if(f){
+    const reliees=clientsArretsDeFiche(f.id);
+    corps.appendChild(clientsEl('div','su-adresse cl-arrets-titre',reliees.length?'Arrêts reliés à cette fiche ('+reliees.reduce((n,g)=>n+g.ids.length,0)+') :':'Aucun arrêt relié à cette fiche (voir « Arrêts sans fiche »).'));
+    reliees.forEach(g=>{
+      const ligne=clientsEl('div','su-detail cl-arret');
+      ligne.appendChild(clientsEl('span','',g.adresse+(g.services.length?' · '+g.services.join(', '):'')));
+      const bD=clientsEl('button','emp-btn','Délier');bD.type='button';bD.onclick=()=>clientsDelier(g,f);
+      ligne.appendChild(bD);
+      corps.appendChild(ligne);
+    });
+  }
   const cNotes=clientsEl('div','su-champ cl-champ');
   cNotes.appendChild(clientsEl('label','','Notes (facultatif)'));
   const ta=clientsEl('textarea','');
@@ -264,6 +279,7 @@ function clientsOuvrirFeuille(f){
 function clientsFermerFeuille(){
   document.getElementById('clients-feuille-overlay').classList.remove('open');
   _clientsFiche=null;
+  _clientsALier=null;
 }
 function clientsBgFeuille(e){
   if(e.target===document.getElementById('clients-feuille-overlay')) clientsFermerFeuille();
@@ -334,9 +350,16 @@ async function clientsEnregistrer(){
   const nouvelle=r.data[0];
   if(f){const i=clientsDonnees.findIndex(x=>x.id===f.id);if(i>=0) clientsDonnees[i]=nouvelle;}
   else{clientsDonnees.push(nouvelle);clientsDonnees.sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr'));}
+  let lien=null;
+  if(!f&&_clientsALier){
+    const groupe=_clientsALier;
+    lien=await clientsEcrireLien(groupe.ids,nouvelle.id);
+    if(lien.partiel) clientsMajArretsLocaux([...lien.partiel],nouvelle.id);
+    if(lien.ok) clientsMajArretsLocaux(groupe.ids,nouvelle.id);
+  }
   clientsFermerFeuille();
-  toast(f?'✔ Fiche enregistrée':'✔ Fiche créée');
-  renderClientsListe();
+  toast(lien&&lien.erreur?'⚠ Fiche créée, mais l’arrêt n’a pas pu être relié : '+lien.erreur.replace(/^❌ /,''):lien&&lien.ok?'✔ Fiche créée et arrêt relié':f?'✔ Fiche enregistrée':'✔ Fiche créée');
+  if(clientsFiltre==='arrets') renderClientsAdmin(); else renderClientsListe();
 }
 async function clientsArchiver(f){
   if(_clientsOccupe) return;
@@ -355,4 +378,179 @@ async function clientsArchiver(f){
   clientsFermerFeuille();
   toast(archiver?'🗄 Fiche archivée':'↩ Fiche réactivée');
   renderClientsListe();
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ÉTAPE 2 : RELIER LES ARRÊTS QUI N'ONT PAS ENCORE DE FICHE (stops.client_id)
+// ═════════════════════════════════════════════════════════════════
+// Un « arrêt » est une ligne de route (une adresse + un service) ; la même adresse a souvent deux arrêts (tonte, déneigement). L'écran groupe les arrêts ACTIFS sans fiche par ADRESSE
+// et propose, pour chacune, les fiches les plus probables (même numéro civique et même rue, ou même nom) ; Joé choisit, ou crée une nouvelle fiche à partir de l'arrêt.
+// Relier = écrire client_id sur TOUS les arrêts de l'adresse (règle d'accès de l'étape 8 : l'administrateur peut modifier stops). Délier (depuis la fiche) remet client_id à vide.
+// Rien d'autre n'est jamais modifié sur l'arrêt, et aucun avis n'est activé.
+const CLIENTS_MOTS_VOIE=['rue','ch','chemin','boul','boulevard','avenue','av','route','rte','rang','place','pl','de','du','des','la','le','l','d','et','est','ouest','nord','sud','n','s','e','o'];
+let _clientsALier=null;       // le groupe d'arrêts à relier à la fiche qu'on est en train de CRÉER (null sinon)
+
+function clientsNumeroCivique(adresse){
+  const m=/^\s*(\d+)/.exec(String(adresse||''));
+  return m?m[1]:null;
+}
+// Le premier mot « utile » de la rue (sans « rue », « de la »… ; « st » et « ste » deviennent « saint » et « sainte »)
+function clientsMotRue(adresse){
+  const sans=clientsCle(String(adresse||'').replace(/^\s*\d+[\s-]*/,'')).replace(/\bst\b/g,'saint').replace(/\bste\b/g,'sainte');
+  return sans.split(' ').find(w=>w&&!/^\d+$/.test(w)&&!CLIENTS_MOTS_VOIE.includes(w))||'';
+}
+// Les arrêts actifs, groupés par adresse : [{cle, adresse, noms:[…], services:[…], ids:[…]}], dans l'ordre de l'adresse
+function clientsGrouperArrets(arrets){
+  const g=new Map();
+  (arrets||[]).forEach(s=>{
+    if(!s||s.actif===false) return;
+    const cle=clientsCle(s.adresse)||('id:'+s.id);
+    if(!g.has(cle)) g.set(cle,{cle,adresse:String(s.adresse||'').trim(),noms:[],services:[],ids:[]});
+    const x=g.get(cle);
+    const nom=String(s.client||'').trim();
+    if(nom&&!x.noms.includes(nom)) x.noms.push(nom);
+    const sv=String(s.service||'').trim();
+    if(sv&&!x.services.includes(sv)) x.services.push(sv);
+    x.ids.push(s.id);
+  });
+  return [...g.values()].sort((a,b)=>a.cle.localeCompare(b.cle,'fr'));
+}
+// Les fiches les plus probables pour un groupe d'arrêts : même numéro civique ET même rue (4 points) ; même nom, ou l'un contenu dans l'autre (3 points)
+function clientsSuggestions(groupe,fiches,max){
+  const civ=clientsNumeroCivique(groupe.adresse),mot=clientsMotRue(groupe.adresse);
+  const noms=groupe.noms.map(clientsCle).filter(Boolean);
+  const scores=[];
+  (fiches||[]).forEach(f=>{
+    if(f.actif===false) return;
+    let pts=0;
+    if(civ&&mot&&clientsNumeroCivique(f.adresse)===civ&&clientsMotRue(f.adresse)===mot) pts+=4;
+    const cles=[clientsCle(f.nom),clientsCle(f.nom_entreprise)].filter(Boolean);
+    if(noms.some(n=>cles.some(c=>c===n||(n.length>=5&&c.includes(n))||(c.length>=5&&n.includes(c))))) pts+=3;
+    if(pts) scores.push({f,pts});
+  });
+  scores.sort((a,b)=>b.pts-a.pts||String(a.f.nom).localeCompare(String(b.f.nom),'fr'));
+  return scores.slice(0,max||6).map(x=>x.f);
+}
+// Les groupes d'arrêts qui passent la recherche (chaque mot dans l'adresse, un nom ou un service)
+function clientsFiltrerGroupes(groupes,recherche){
+  const mots=clientsCle(recherche).split(' ').filter(Boolean);
+  return (groupes||[]).filter(g=>{
+    if(!mots.length) return true;
+    const cle=clientsCle(g.adresse+' '+g.noms.join(' ')+' '+g.services.join(' '));
+    return mots.every(m=>cle.includes(m));
+  });
+}
+
+// Écrit (ou efface) client_id sur ces arrêts ; vérifie que TOUTES les lignes ont changé (les règles d'accès peuvent refuser sans erreur). Rend {ok:true} ou {erreur:'…', partiel:Set}
+async function clientsEcrireLien(ids,clientId){
+  let r;
+  try{r=await db.from('stops').update({client_id:clientId}).in('id',ids).select('id');}catch(e){r={data:null,error:e};}
+  if(r.error) return {erreur:clientsMessageErreur(r.error)};
+  const touches=new Set((r.data||[]).map(x=>x.id));
+  if(touches.size!==ids.length) return {erreur:'❌ '+(touches.size?'Seulement '+touches.size+' arrêt'+(touches.size>1?'s':'')+' sur '+ids.length+' ont changé':'Rien n’a été changé (accès refusé ?)')+'.',partiel:touches};
+  return {ok:true};
+}
+function clientsMajArretsLocaux(ids,clientId){
+  if(typeof stops==='undefined') return;
+  const s=new Set(ids);
+  stops.forEach(a=>{if(s.has(a.id)) a.client_id=clientId;});
+}
+
+// L'écran « Arrêts sans fiche » (la 5ᵉ puce de la barre)
+function clientsListeArrets(zone){
+  const tous=clientsGrouperArrets(typeof stops!=='undefined'?stops.filter(s=>!s.client_id):[]);
+  const groupes=clientsFiltrerGroupes(tous,clientsRecherche);
+  const nbArrets=tous.reduce((n,g)=>n+g.ids.length,0);
+  zone.appendChild(clientsEl('div','su-resume',tous.length+' adresse'+(tous.length>1?'s':'')+' sans fiche ('+nbArrets+' arrêt'+(nbArrets>1?'s':'')+')'));
+  if(!groupes.length) zone.appendChild(clientsMessage(tous.length?'Aucune adresse ne correspond.':'✔ Tous les arrêts sont reliés à une fiche.'));
+  groupes.forEach(g=>{
+    const div=clientsEl('div','su-ligne');
+    const haut=clientsEl('div','su-haut');
+    const nom=clientsEl('button','su-nom',g.adresse||'(adresse vide)');
+    nom.type='button';
+    nom.onclick=()=>clientsOuvrirRelier(g);
+    haut.appendChild(nom);
+    const droite=clientsEl('div','su-droite');
+    droite.appendChild(clientsEl('span','su-n','🛑 '+g.ids.length+' arrêt'+(g.ids.length>1?'s':'')));
+    haut.appendChild(droite);
+    div.appendChild(haut);
+    div.appendChild(clientsEl('div','su-adresse',g.noms.length?'Nom sur l’arrêt : '+g.noms.join(' / '):'Aucun nom sur l’arrêt'));
+    if(g.services.length) div.appendChild(clientsEl('div','su-temps',g.services.join(' · ')));
+    zone.appendChild(div);
+  });
+}
+
+// La feuille « Relier » : les fiches proposées, une recherche, et « créer une nouvelle fiche »
+function clientsOuvrirRelier(groupe){
+  _clientsFiche=null;_clientsALier=null;
+  const corps=document.getElementById('clients-feuille-corps');
+  corps.innerHTML='';
+  document.getElementById('clients-feuille-titre').textContent='Relier cet arrêt à une fiche';
+  corps.appendChild(clientsEl('div','su-cible',groupe.adresse||'(adresse vide)'));
+  corps.appendChild(clientsEl('div','su-adresse',(groupe.noms.length?'Nom sur l’arrêt : '+groupe.noms.join(' / '):'Aucun nom sur l’arrêt')+' · '+groupe.ids.length+' arrêt'+(groupe.ids.length>1?'s':'')+(groupe.services.length?' ('+groupe.services.join(', ')+')':'')));
+  const cRech=clientsEl('div','su-champ cl-champ');
+  cRech.appendChild(clientsEl('label','','Chercher une fiche (sinon, les plus probables sont proposées)'));
+  const iRech=clientsEl('input','');
+  iRech.type='text';iRech.id='cl-relier-rech';iRech.placeholder='Nom, adresse, courriel…';
+  cRech.appendChild(iRech);
+  corps.appendChild(cRech);
+  const liste=clientsEl('div','su-cases');
+  liste.id='cl-relier-liste';
+  corps.appendChild(liste);
+  const dessiner=()=>{
+    liste.innerHTML='';
+    const fiches=clientsDonnees||[];
+    const tape=iRech.value.trim();
+    const choix=tape?clientsFiltrer(fiches,new Map(),'tous',tape).slice(0,30):clientsSuggestions(groupe,fiches,6);
+    if(!choix.length){liste.appendChild(clientsMessage(tape?'Aucune fiche ne correspond.':'Aucune fiche probable : cherche par nom, ou crée une nouvelle fiche.'));return;}
+    choix.forEach(f=>{
+      const b=clientsEl('button','su-case cl-choix',f.nom+(clientsTexteAdresse(f)?' — '+clientsTexteAdresse(f):''));
+      b.type='button';
+      b.onclick=()=>clientsRelier(groupe,f);
+      liste.appendChild(b);
+    });
+  };
+  iRech.oninput=dessiner;
+  dessiner();
+  const boutons=clientsEl('div','su-boutons');
+  const bAnn=clientsEl('button','lf-btn fermer','Annuler');bAnn.type='button';bAnn.onclick=()=>clientsFermerFeuille();
+  const bNouv=clientsEl('button','lf-btn nouveau','＋ Nouvelle fiche');bNouv.type='button';bNouv.id='cl-relier-nouvelle';
+  bNouv.onclick=()=>clientsOuvrirFeuille(null,{nom:groupe.noms[0]||'',adresse:groupe.adresse},groupe);
+  boutons.appendChild(bAnn);boutons.appendChild(bNouv);
+  corps.appendChild(boutons);
+  document.getElementById('clients-feuille-overlay').classList.add('open');
+}
+async function clientsRelier(groupe,f){
+  if(_clientsOccupe) return;
+  if(!(await confirmer('Relier cet arrêt ?',groupe.ids.length+' arrêt'+(groupe.ids.length>1?'s':'')+' à l’adresse « '+groupe.adresse+' » seront reliés à la fiche « '+f.nom+' ».','Relier','Annuler'))) return;
+  _clientsOccupe=true;
+  showSync(true);
+  const r=await clientsEcrireLien(groupe.ids,f.id);
+  showSync(false);
+  _clientsOccupe=false;
+  if(r.partiel) clientsMajArretsLocaux([...r.partiel],f.id);
+  if(r.erreur){toast(r.erreur);if(r.partiel) renderClientsAdmin();return;}
+  clientsMajArretsLocaux(groupe.ids,f.id);
+  clientsFermerFeuille();
+  toast('✔ '+groupe.ids.length+' arrêt'+(groupe.ids.length>1?'s':'')+' relié'+(groupe.ids.length>1?'s':'')+' à '+f.nom);
+  renderClientsAdmin();
+}
+// Les arrêts reliés à une fiche, groupés par adresse (pour la feuille de la fiche)
+function clientsArretsDeFiche(clientId){
+  return clientsGrouperArrets((typeof stops!=='undefined'?stops:[]).filter(s=>s.client_id===clientId));
+}
+async function clientsDelier(groupe,f){
+  if(_clientsOccupe) return;
+  if(!(await confirmer('Délier cet arrêt ?','« '+groupe.adresse+' » ne sera plus relié à la fiche « '+f.nom+' ». L’arrêt lui-même ne change pas.','Délier','Annuler'))) return;
+  _clientsOccupe=true;
+  showSync(true);
+  const r=await clientsEcrireLien(groupe.ids,null);
+  showSync(false);
+  _clientsOccupe=false;
+  if(r.partiel) clientsMajArretsLocaux([...r.partiel],null);
+  if(r.erreur){toast(r.erreur);if(r.partiel) renderClientsAdmin();return;}
+  clientsMajArretsLocaux(groupe.ids,null);
+  toast('✔ Arrêt délié');
+  clientsOuvrirFeuille(f);
+  renderClientsAdmin();
 }

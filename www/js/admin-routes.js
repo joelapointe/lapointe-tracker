@@ -345,7 +345,8 @@ async function copierClientsAdmin(){
   const serviceChoisi=(coches.length===1&&routesAdminServiceOverride)?routesAdminServiceOverride:null;
   const copies=coches.map((s,i)=>({
     adresse:s.adresse,client:s.client,service:serviceChoisi||s.service,lat:s.lat,lon:s.lon,zone_points:s.zone_points||null,   // la zone dessinée suit la copie (demande 3 de Joé)
-    actif:true,route_id:destinationId,ordre:stops.length+i
+    actif:true,route_id:destinationId,ordre:stops.length+i,
+    client_id:s.client_id||null   // la copie reste reliée à la MÊME fiche du répertoire (demande 5)
   }));
   let data=null,error=null;
   try{const r=await db.from('stops').insert(copies).select();data=r.data;error=r.error;}

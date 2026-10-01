@@ -35,6 +35,12 @@ const ARRETS = () => [
   { id: 's3', adresse: '5352 rue burrill, shawinigan', client: 'ZedBed', service: 'Coupe de gazon', actif: true, client_id: 'c4' },
   { id: 's4', adresse: 'sans fiche', client: 'X', service: 'Coupe de gazon', actif: true, client_id: null },
   { id: 's5', adresse: '2 rue B, charette', client: 'Paul', service: 'Coupe de gazon', actif: false, client_id: 'c6' },   // un arrêt archivé ne compte pas
+  // les arrêts SANS fiche (étape 2) : une adresse à deux services, une rue écrite « st-boniface », un nom seul, rien du tout
+  { id: 's6', adresse: '930 ch. Bellevue, saint-boniface', client: 'Côme Garceau', service: 'Coupe de gazon', actif: true, client_id: null },
+  { id: 's7', adresse: '930 ch. Bellevue, saint-boniface', client: 'Côme Garceau', service: 'Déneigement', actif: true, client_id: null },
+  { id: 's8', adresse: '100 rue boisjoli, st-boniface', client: 'Voisin Test', service: 'Coupe de gazon', actif: true, client_id: null },
+  { id: 's9', adresse: '7 rue Inconnue, Ville', client: 'Zedbed', service: 'Coupe de gazon', actif: true, client_id: null },
+  { id: 's10', adresse: '8 rue Seule, Ville', client: '', service: 'Coupe de gazon', actif: true, client_id: null },
 ];
 
 function monde(o = {}) {
@@ -57,7 +63,8 @@ function monde(o = {}) {
   const el = (id) => (statiques[id] ??= creer(id, 'div'));
   const getElementById = (id) => { if (statiques[id]) return statiques[id]; for (const r of Object.values(statiques)) { const t = trouverDans(r, id); if (t) return t; } return el(id); };
 
-  const donnees = { clients: o.fiches ?? FICHES() };
+  const arretsDeDepart = o.arrets ?? ARRETS();
+  const donnees = { clients: o.fiches ?? FICHES(), stops: JSON.parse(JSON.stringify(arretsDeDepart)) };
   const appels = { requetes: [], toasts: [], confirmations: [], sync: [] };
   let compteur = 0;
   const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -68,7 +75,7 @@ function monde(o = {}) {
     if (o.panne?.(q)) throw new TypeError('Failed to fetch');
     const cle = q.table + '.' + q.op;
     if (o.erreurs?.[cle]) { const e = typeof o.erreurs[cle] === 'function' ? o.erreurs[cle](q) : o.erreurs[cle]; if (e) return { data: null, error: e }; }
-    const filtrer = (l) => q.filtres.every(([f, c, v]) => (f === 'eq' ? l[c] === v : true));
+    const filtrer = (l) => q.filtres.every(([f, c, v]) => (f === 'eq' ? l[c] === v : f === 'in' ? v.includes(l[c]) : true));
     if (q.op === 'select') {
       let r = lignes.filter(filtrer).map((l) => ({ ...l }));
       r.sort((x, y) => { for (const [c, sens] of q.ordres) { const d = cmp(x[c], y[c]); if (d) return (sens === 'desc' ? -1 : 1) * d; } return 0; });   // tous les critères ensemble, dans l'ordre demandé
@@ -76,14 +83,15 @@ function monde(o = {}) {
       return { data: r, error: null };
     }
     if (q.op === 'update') {
-      if (o.refus) return { data: [], error: null };   // les règles d'accès refusent SANS erreur : aucune ligne changée
-      const touches = lignes.filter(filtrer);
+      if (o.refus || (q.table === 'stops' && o.refusStops)) return { data: [], error: null };   // les règles d'accès refusent SANS erreur : aucune ligne changée
+      let touches = lignes.filter(filtrer);
+      if (q.table === 'stops' && o.partielStops) touches = touches.slice(0, o.partielStops);   // une partie seulement des lignes change
       touches.forEach((l) => Object.assign(l, q.valeur, o.serveurNormalise ? o.serveurNormalise(q.valeur, l) : {}));
       return { data: touches.map((l) => ({ ...l })), error: null };
     }
     if (q.op === 'insert') {
-      if (o.refus) return { data: [], error: null };
-      const ajoutes = q.valeur.map((v) => ({ ...F('c-nouveau-' + (++compteur), v.nom), ...v }));
+      if (o.refus || (q.table === 'stops' && o.refusStops)) return { data: [], error: null };
+      const ajoutes = q.valeur.map((v) => (q.table === 'stops' ? { id: 's-nouveau-' + (++compteur), ...v } : { ...F('c-nouveau-' + (++compteur), v.nom), ...v }));
       ajoutes.forEach((a) => lignes.push(a));
       return { data: ajoutes.map((a) => ({ ...a })), error: null };
     }
@@ -96,6 +104,7 @@ function monde(o = {}) {
       const q = { table, op: 'select', cols: null, filtres: [], ordres: [], plage: null, valeur: null, retour: null };
       q.select = (c) => { if (q.op === 'select') q.cols = c; else q.retour = c ?? '*'; return q; };
       q.eq = (c, v) => { q.filtres.push(['eq', c, v]); return q; };
+      q.in = (c, l) => { q.filtres.push(['in', c, l]); return q; };
       q.order = (c, opt) => { q.ordres.push([c, opt && opt.ascending === false ? 'desc' : 'asc']); return q; };
       q.range = (a, b) => { q.plage = [a, b]; return q; };
       q.update = (v) => { q.op = 'update'; q.valeur = v; return q; };
@@ -113,7 +122,7 @@ function monde(o = {}) {
   };
   const ctx = vm.createContext(sandbox);
   for (const f of ['js/config.js', 'js/utilitaires.js', 'js/hors-reseau.js', 'js/routes.js', 'js/admin.js', 'js/admin-clients.js']) vm.runInContext(lire(f), ctx, { filename: f });
-  vm.runInContext(`db = __db; stops = ${JSON.stringify(o.arrets ?? ARRETS())}; currentUser = ${JSON.stringify(JOE)}; _adminOnglet = 'clients';
+  vm.runInContext(`db = __db; stops = ${JSON.stringify(arretsDeDepart)}; currentUser = ${JSON.stringify(JOE)}; _adminOnglet = 'clients';
     toast = (m) => { __toasts.push(m); }; confirmer = async (...a) => { __confirmations.push(a); return __reponse.oui; }; showSync = (b) => { __sync.push(b); };`, ctx);
   const corps = () => el('admin-body');
   return { ctx, el, donnees, appels, toasts: appels.toasts, corps,
@@ -221,7 +230,7 @@ log('=== LES FILTRES ET LA RECHERCHE À L\'ÉCRAN ===');
   const puce = (t) => m.filtres().find((b) => b.textContent === t);
   await cliquer(puce('Sans arrêt'));
   eq('« Sans arrêt » : la liste change', m.noms().sort(), ['Côme Garceau', 'Hubert Kamdem', 'Marie Inscrite', 'Paul Parti']);
-  eq('… la puce choisie est marquée, les autres non', m.filtres().map((b) => b.className), ['su-puce', 'su-puce on', 'su-puce', 'su-puce']);
+  eq('… la puce choisie est marquée, les autres non', m.filtres().map((b) => b.className), ['su-puce', 'su-puce on', 'su-puce', 'su-puce', 'su-puce']);
   await cliquer(puce('Sans contact'));
   eq('« Sans contact »', m.noms(), ['Côme Garceau']);
   await cliquer(puce('Archivés'));
@@ -434,6 +443,206 @@ log('=== DEUX LECTURES QUI SE CROISENT ===');
   m.donnees.clients.splice(5, 1);   // (la base change entre les deux : une fiche active de moins)
   lacher1(); await p1;
   eq('… une réponse plus vieille arrivée après est IGNORÉE', m.noms().length, 6);
+}
+
+// ═════════════════════════════════════════════════════════════════
+// ÉTAPE 2 : RELIER LES ARRÊTS QUI N'ONT PAS ENCORE DE FICHE
+// ═════════════════════════════════════════════════════════════════
+log('=== ÉTAPE 2 : LES FONCTIONS PURES (adresses, groupes, suggestions) ===');
+{
+  const m = monde();
+  const civ = (a) => m.run(`clientsNumeroCivique(${JSON.stringify(a)})`);
+  eq('le numéro civique : le nombre au début de l\'adresse', [civ('930 ch. Bellevue'), civ('  12 rue A'), civ('Rue Laflèche, Saint-Paulin'), civ(''), m.run('clientsNumeroCivique(null)')], ['930', '12', null, null, null]);
+  const mot = (a) => m.run(`clientsMotRue(${JSON.stringify(a)})`);
+  eq('le mot de la rue : sans « rue », « de la », « ch. », « du »…', [mot('100 rue Boisjoli, saint-boniface'), mot('195 Rue de la Station, Charette'), mot('221 ch. du Lac Bell'), mot('5800 gene h kruger')], ['boisjoli', 'station', 'lac', 'gene']);
+  eq('… « St » et « Saint » donnent le même mot (« rue St-Jean » = « rue Saint-Jean »)', [mot('85 rue St-Jean'), mot('85 rue Saint-Jean')], ['saint', 'saint']);
+  eq('… une adresse sans rue : vide', [mot('46.314371,-72.799514'), mot('')], ['', '']);
+  const g = m.run(`clientsGrouperArrets([
+    {id:'a', adresse:'10 rue des Pins, Louiseville', client:'Tremblay', service:'Coupe de gazon', actif:true},
+    {id:'b', adresse:'10 RUE DES PINS, LOUISEVILLE', client:'', service:'Déneigement', actif:true},
+    {id:'c', adresse:'10 rue des pins, louiseville', client:'Tremblay', service:'Coupe de gazon', actif:true},
+    {id:'d', adresse:'2 av. Zéro', client:'Z', service:'Sel', actif:false},
+    {id:'e', adresse:'1 rue Avant', client:'Autre', service:'Sel', actif:true}])`);
+  eq('les arrêts sont groupés par adresse (accents et majuscules ignorés), les archivés écartés, triés par adresse', g.map((x) => [x.adresse, x.ids]), [['1 rue Avant', ['e']], ['10 rue des Pins, Louiseville', ['a', 'b', 'c']]]);
+  eq('… un groupe réunit les noms et les services SANS doublon', [g.find((x) => x.ids.includes('a')).noms, g.find((x) => x.ids.includes('a')).services], [['Tremblay'], ['Coupe de gazon', 'Déneigement']]);
+  const sug = (groupe, max) => m.run(`clientsSuggestions(${JSON.stringify(groupe)}, ${JSON.stringify(FICHES())}, ${max ?? 6})`).map((f) => f.id);
+  eq('suggestion : même numéro civique ET même rue', sug({ adresse: '100 Rue Boisjoli, St-Boniface', noms: [], services: [], ids: [] }), ['c1']);
+  eq('… le même numéro sur une AUTRE rue : aucune suggestion', sug({ adresse: '100 rue Lafontaine, Ville', noms: [], services: [], ids: [] }), []);
+  eq('… la même rue avec un AUTRE numéro : aucune suggestion', sug({ adresse: '101 rue Boisjoli, Saint-Boniface', noms: [], services: [], ids: [] }), []);
+  eq('… même nom (accents et majuscules ignorés), adresse différente', sug({ adresse: '7 rue Inconnue', noms: ['ZEDBED'], services: [], ids: [] }), ['c4']);
+  eq('… l\'entreprise de la fiche compte aussi comme nom', sug({ adresse: '7 rue Inconnue', noms: ['zedbed inc.'], services: [], ids: [] }), ['c4']);
+  eq('… l’entreprise d’une fiche suffit à elle seule (le nom de la fiche est différent)', m.run(`clientsSuggestions({adresse:'7 rue Inconnue', noms:['Garage Exemple inc.'], services:[], ids:[]}, [{id:'x1', nom:'Jean Dupont', nom_entreprise:'Garage Exemple inc.', actif:true}, {id:'x2', nom:'Autre', nom_entreprise:null, actif:true}], 6)`).map((f) => f.id), ['x1']);
+  eq('… un nom trop court (moins de 5 lettres) ne suggère rien par « contenu »', sug({ adresse: '7 rue Inconnue', noms: ['Zed'], services: [], ids: [] }), []);
+  eq('… adresse ET nom : la fiche la plus probable passe en premier', sug({ adresse: '5352 rue Burrill', noms: ['Hubert Kamdem'], services: [], ids: [] }), ['c4', 'c2']);
+  eq('… une fiche archivée n\'est jamais suggérée', sug({ adresse: '3 rue C, Charette', noms: ['Vieille Fiche'], services: [], ids: [] }), []);
+  eq('… au plus « max » suggestions', sug({ adresse: '5352 rue Burrill', noms: ['Hubert Kamdem'], services: [], ids: [] }, 1), ['c4']);
+  eq('… aucun nom ni adresse utilisable : rien', sug({ adresse: '', noms: [], services: [], ids: [] }), []);
+  const fg = (r) => m.run(`clientsFiltrerGroupes(${JSON.stringify(g)}, ${JSON.stringify(r)})`).map((x) => x.ids[0]);
+  eq('chercher parmi les adresses sans fiche : dans l’adresse, le nom ou le service ; chaque mot compte', [fg(''), fg('pins'), fg('treMblay gazon'), fg('sel'), fg('zzz')], [['e', 'a'], ['a'], ['a'], ['e'], []]);
+}
+
+log('=== ÉTAPE 2 : L\'ÉCRAN « ARRÊTS SANS FICHE » ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  const puce = (t) => m.filtres().find((b) => b.textContent.startsWith(t));
+  eq('une 5ᵉ puce « Arrêts sans fiche (N) » : N adresses, pas N arrêts', puce('Arrêts sans fiche').textContent, 'Arrêts sans fiche (5)');
+  await cliquer(puce('Arrêts sans fiche'));
+  eq('le résumé : adresses et arrêts', m.resume(), '5 adresses sans fiche (6 arrêts)');
+  eq('une ligne par ADRESSE (la même adresse avec 2 services = une ligne), dans l\'ordre', m.noms(), ['100 rue boisjoli, st-boniface', '7 rue Inconnue, Ville', '8 rue Seule, Ville', '930 ch. Bellevue, saint-boniface', 'sans fiche']);
+  const l = m.lignes();
+  eq('… « 🛑 2 arrêts » pour l\'adresse à deux services, « 🛑 1 arrêt » sinon', [l[3].n, l[0].n], ['🛑 2 arrêts', '🛑 1 arrêt']);
+  eq('… le nom écrit sur l\'arrêt, ou « Aucun nom »', [l[3].adresses[0], l[2].adresses[0]], ['Nom sur l’arrêt : Côme Garceau', 'Aucun nom sur l’arrêt']);
+  eq('… les services', l[3].contact, 'Coupe de gazon · Déneigement');
+  eq('l\'arrêt archivé (s5, relié) et les arrêts déjà reliés n\'y sont pas', m.noms().some((x) => /2 rue B|burrill|boisjoli, saint/.test(x)), false);
+  taper(m.recherche(), 'bellevue');
+  eq('la recherche s\'applique aux adresses', m.noms(), ['930 ch. Bellevue, saint-boniface']);
+  taper(m.recherche(), 'zzz');
+  eq('… aucune : un message', m.messages(), ['Aucune adresse ne correspond.']);
+  taper(m.recherche(), '');
+  eq('aucune écriture en regardant la liste', [m.requetes('stops', 'update').length, m.requetes('clients', 'update').length], [0, 0]);
+  // tous reliés
+  const m2 = monde({ arrets: ARRETS().filter((s) => s.client_id) });
+  await m2.ouvrir();
+  await cliquer(m2.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  eq('tous les arrêts reliés : un message de réussite, jamais une liste vide muette', m2.messages(), ['✔ Tous les arrêts sont reliés à une fiche.']);
+}
+
+log('=== ÉTAPE 2 : RELIER UN ARRÊT À UNE FICHE ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  const ouvrir = async (adresse) => cliquer(m.lignes().find((x) => x.nom === adresse).noeud.children[0].children[0]);
+  const choix = () => parClasse(m.feuille(), 'cl-choix').map((b) => b.textContent);
+  await ouvrir('930 ch. Bellevue, saint-boniface');
+  vrai('toucher une adresse ouvre la feuille « Relier »', m.feuilleOuverte() && m.el('clients-feuille-titre').textContent === 'Relier cet arrêt à une fiche');
+  eq('… la fiche la plus probable est proposée (même numéro et même rue)', choix(), ['Côme Garceau — 930 Chemin Bellevue, Saint-Boniface']);
+  const rech = m.champ('cl-relier-rech');
+  taper(rech, 'zedbed');
+  eq('… une recherche remplace les propositions', choix(), ['Zedbed — 5352 Rue Burrill, Shawinigan']);
+  taper(rech, 'zzz');
+  eq('… aucune fiche : un message', parClasse(m.feuille(), 'su-message').map((x) => x.textContent), ['Aucune fiche ne correspond.']);
+  taper(rech, '');
+  m.repondre(false);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  eq('relier demande une confirmation qui nomme l\'adresse et la fiche ; « Annuler » n\'écrit rien', [m.appels.confirmations.at(-1)[0], /930 ch\. Bellevue/.test(m.appels.confirmations.at(-1)[1]), /Côme Garceau/.test(m.appels.confirmations.at(-1)[1]), m.requetes('stops', 'update').length], ['Relier cet arrêt ?', true, true, 0]);
+  m.repondre(true);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  const u = m.requetes('stops', 'update');
+  eq('« Relier » : UNE mise à jour de stops, client_id seulement, sur les DEUX arrêts de l\'adresse', [u.length, u[0].valeur, u[0].filtres], [1, { client_id: 'c3' }, [['in', 'id', ['s6', 's7']]]]);
+  eq('… les arrêts de l\'application sont mis à jour sans relire la base', m.run(`stops.filter(s => s.client_id === 'c3').map(s => s.id)`), ['s6', 's7']);
+  vrai('… la feuille se ferme, un message, la liste se redessine', !m.feuilleOuverte() && m.toasts.at(-1) === '✔ 2 arrêts reliés à Côme Garceau' && !m.noms().includes('930 ch. Bellevue, saint-boniface'));
+  eq('… la puce compte une adresse de moins', m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')).textContent, 'Arrêts sans fiche (4)');
+  eq('… la fiche affiche maintenant ses arrêts (🛑 2) dans « Tous »', (await cliquer(m.filtres()[0]), m.lignes().find((x) => x.nom === 'Côme Garceau').n), '🛑 2 arrêts');
+  eq('aucune requête n\'écrit dans « clients » en reliant', m.requetes('clients', 'update').length + m.requetes('clients', 'insert').length, 0);
+}
+
+log('=== ÉTAPE 2 : LES REFUS DE LA BASE EN RELIANT ===');
+{
+  // les règles d'accès refusent sans erreur (aucune ligne changée)
+  let m = monde({ refusStops: true });
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  await cliquer(m.lignes().find((x) => x.nom === '930 ch. Bellevue, saint-boniface').noeud.children[0].children[0]);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  eq('aucune ligne changée : jamais « relié », rien n\'est modifié à l\'écran', [m.toasts.at(-1), m.run(`stops.filter(s => s.client_id === 'c3').length`), m.feuilleOuverte()], ['❌ Rien n’a été changé (accès refusé ?).', 0, true]);
+  eq('… le bouton redevient utilisable', m.run('_clientsOccupe'), false);
+  // une partie seulement
+  m = monde({ partielStops: 1 });
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  await cliquer(m.lignes().find((x) => x.nom === '930 ch. Bellevue, saint-boniface').noeud.children[0].children[0]);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  eq('une partie seulement des arrêts a changé : le dit, et l\'écran montre ce qui a VRAIMENT changé', [m.toasts.at(-1), m.run(`stops.filter(s => s.client_id === 'c3').length`)], ['❌ Seulement 1 arrêt sur 2 ont changé.', 1]);
+  // pas de réseau
+  m = monde({ panne: (q) => q.table === 'stops' && q.op === 'update' });
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  await cliquer(m.lignes().find((x) => x.nom === '930 ch. Bellevue, saint-boniface').noeud.children[0].children[0]);
+  await cliquer(parClasse(m.feuille(), 'cl-choix')[0]);
+  eq('pas de réseau : « rien n\'a été changé », la feuille reste ouverte', [m.toasts.at(-1), m.feuilleOuverte(), m.run(`stops.filter(s => s.client_id === 'c3').length`)], ['📴 Pas de réseau : rien n’a été changé.', true, 0]);
+}
+
+log('=== ÉTAPE 2 : CRÉER UNE FICHE À PARTIR D\'UN ARRÊT ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  await cliquer(m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  await cliquer(m.lignes().find((x) => x.nom === '8 rue Seule, Ville').noeud.children[0].children[0]);
+  eq('aucune fiche probable : le dit et propose de créer', [parClasse(m.feuille(), 'cl-choix').length, parClasse(m.feuille(), 'su-message').map((x) => x.textContent)], [0, ['Aucune fiche probable : cherche par nom, ou crée une nouvelle fiche.']]);
+  await cliquer(m.champ('cl-relier-nouvelle'));
+  eq('« ＋ Nouvelle fiche » ouvre la fiche avec l\'adresse de l\'arrêt', [m.el('clients-feuille-titre').textContent, m.champ('cl-nom').value, m.champ('cl-adresse').value], ['Nouveau client', '', '8 rue Seule, Ville']);
+  vrai('… et dit que l\'arrêt sera relié', parClasse(m.feuille(), 'cl-lier-info')[0].textContent === 'L’arrêt « 8 rue Seule, Ville » (1 arrêt) sera relié à cette fiche.');
+  regler(m, 'cl-nom', 'Nouveau Voisin');
+  await cliquer(m.champ('cl-enregistrer'));
+  const ins = m.requetes('clients', 'insert');
+  const u = m.requetes('stops', 'update');
+  eq('enregistrer : la fiche est créée PUIS l\'arrêt est relié à la NOUVELLE fiche', [ins.length, u.length, u[0].valeur.client_id === m.donnees.clients.at(-1).id, u[0].filtres[0][2]], [1, 1, true, ['s10']]);
+  vrai('… un seul message : fiche créée et arrêt relié ; la liste des arrêts se met à jour', m.toasts.at(-1) === '✔ Fiche créée et arrêt relié' && !m.noms().includes('8 rue Seule, Ville') && m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')).textContent === 'Arrêts sans fiche (4)');
+  // le nom de l'arrêt est proposé comme nom de la fiche
+  await cliquer(m.lignes().find((x) => x.nom === '930 ch. Bellevue, saint-boniface').noeud.children[0].children[0]);
+  await cliquer(m.champ('cl-relier-nouvelle'));
+  eq('le nom écrit sur l\'arrêt devient le nom proposé de la fiche', m.champ('cl-nom').value, 'Côme Garceau');
+  m.donnees.clients.pop();   // (pas de doublon de nom pour ce scénario : la fiche « Côme Garceau » existe déjà : on confirme)
+  m.repondre(true);
+  await cliquer(m.champ('cl-enregistrer'));
+  eq('un nom déjà utilisé : la confirmation habituelle, puis la création', m.appels.confirmations.at(-1)[0], 'Cette fiche existe peut-être déjà');
+  // la fiche est créée mais le lien échoue
+  const m2 = monde({ refusStops: true });
+  await m2.ouvrir();
+  await cliquer(m2.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  await cliquer(m2.lignes().find((x) => x.nom === '8 rue Seule, Ville').noeud.children[0].children[0]);
+  await cliquer(m2.champ('cl-relier-nouvelle'));
+  regler(m2, 'cl-nom', 'Autre Voisin');
+  await cliquer(m2.champ('cl-enregistrer'));
+  eq('la fiche est créée mais le lien est refusé : un message qui dit les DEUX choses, l\'arrêt reste sans fiche', [m2.toasts.at(-1), m2.donnees.clients.some((x) => x.nom === 'Autre Voisin'), m2.run(`stops.find(s => s.id === 's10').client_id`)], ['⚠ Fiche créée, mais l’arrêt n’a pas pu être relié : Rien n’a été changé (accès refusé ?).', true, null]);
+  // annuler ne garde pas le lien à relier pour la fiche suivante
+  const m3 = monde();
+  await m3.ouvrir();
+  await cliquer(m3.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')));
+  await cliquer(m3.lignes().find((x) => x.nom === '8 rue Seule, Ville').noeud.children[0].children[0]);
+  await cliquer(m3.champ('cl-relier-nouvelle'));
+  m3.run('clientsFermerFeuille()');
+  eq('abandonner la création vide le lien à créer (aucun reste en mémoire)', m3.run('_clientsALier'), null);
+  await cliquer(m3.filtres()[0]);
+  await cliquer(m3.bouton('＋ Nouveau client'));
+  vrai('abandonner la création n\'oublie pas de retirer le lien : la fiche suivante n\'en porte aucun', parClasse(m3.feuille(), 'cl-lier-info').length === 0);
+}
+
+log('=== ÉTAPE 2 : DÉLIER UN ARRÊT (depuis la fiche) ===');
+{
+  const m = monde();
+  await m.ouvrir();
+  const ouvrirFiche = async (nom) => cliquer(m.lignes().find((x) => x.nom === nom).noeud.children[0].children[0]);
+  await ouvrirFiche('Claude Lafreniere');
+  eq('la fiche liste ses arrêts, par adresse', [parClasse(m.feuille(), 'cl-arrets-titre')[0].textContent, parClasse(m.feuille(), 'cl-arret').map((x) => x.children[0].textContent)], ['Arrêts reliés à cette fiche (2) :', ['100 rue boisjoli, saint-boniface · Coupe de gazon, Déneigement']]);
+  await ouvrirFiche('Côme Garceau');
+  eq('… une fiche sans arrêt le dit', parClasse(m.feuille(), 'cl-arrets-titre')[0].textContent, 'Aucun arrêt relié à cette fiche (voir « Arrêts sans fiche »).');
+  await ouvrirFiche('Claude Lafreniere');
+  m.repondre(false);
+  await cliquer(parClasse(m.feuille(), 'cl-arret')[0].children[1]);
+  eq('« Délier » demande confirmation ; « Annuler » n\'écrit rien', [m.appels.confirmations.at(-1)[0], m.requetes('stops', 'update').length], ['Délier cet arrêt ?', 0]);
+  m.repondre(true);
+  await cliquer(parClasse(m.feuille(), 'cl-arret')[0].children[1]);
+  const u = m.requetes('stops', 'update');
+  eq('« Délier » : client_id remis à vide sur les DEUX arrêts de l\'adresse', [u.length, u[0].valeur, u[0].filtres], [1, { client_id: null }, [['in', 'id', ['s1', 's2']]]]);
+  eq('… les arrêts de l\'application sont mis à jour ; la feuille se rouvre à jour', [m.run(`stops.filter(s => s.client_id === 'c1').length`), parClasse(m.feuille(), 'cl-arrets-titre')[0].textContent, m.toasts.at(-1)], [0, 'Aucun arrêt relié à cette fiche (voir « Arrêts sans fiche »).', '✔ Arrêt délié']);
+  eq('… l\'adresse revient dans « Arrêts sans fiche » (une de plus)', m.filtres().find((b) => b.textContent.startsWith('Arrêts sans fiche')).textContent, 'Arrêts sans fiche (6)');
+  eq('délier ne modifie JAMAIS la fiche', [m.requetes('clients', 'update').length, m.requetes('stops', 'delete').length], [0, 0]);
+}
+
+log('=== ÉTAPE 2 : COPIER UN CLIENT VERS UNE AUTRE ROUTE COPIE AUSSI SA FICHE ===');
+{
+  const m = monde();
+  vm.runInContext(lire('js/admin-routes.js'), m.ctx, { filename: 'js/admin-routes.js' });
+  m.run(`routes = [{id:'r1', nom:'R1'}, {id:'r2', nom:'R2'}]; renderRoutesAdmin = () => {}; signalerEchecReseau = () => {};
+    stops = [{id:'sa', adresse:'1 rue A', client:'Un', service:'Sel', lat:1, lon:2, zone_points:null, actif:true, route_id:'r1', ordre:0, client_id:'c1'},
+             {id:'sb', adresse:'2 rue B', client:'Deux', service:'Sel', lat:1, lon:2, zone_points:null, actif:true, route_id:'r1', ordre:1, client_id:null}];
+    routesAdminListeSource = stops.slice(); routesAdminCoches = new Set(['sa', 'sb']); routesAdminDestination = 'r2'; routesAdminServiceOverride = '';`);
+  await m.run('copierClientsAdmin()');
+  const ins = m.requetes('stops', 'insert');
+  eq('copier vers une autre route : la copie garde la MÊME fiche du répertoire (ou aucune)', [ins.length, ins[0].valeur.map((c) => c.client_id)], [1, ['c1', null]]);
 }
 
 console.log(`\n===== RÉSULTAT : ${ok} réussis, ${ko} échoués =====`);

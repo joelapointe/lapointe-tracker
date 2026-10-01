@@ -18,6 +18,7 @@ function ongletsAdmin(){
     {id:'historique',icone:'📜',label:'Historique',titre:'Historique des passes',charger:(typeof chargerHistoriqueAdmin==='function')?chargerHistoriqueAdmin:null},
     {id:'routes',icone:'🗺️',label:'Routes',titre:'Routes et clients',charger:(typeof chargerRoutesAdmin==='function')?chargerRoutesAdmin:null},
     {id:'suivi',icone:'📋',label:'Suivi',titre:'Suivi des passages',charger:(typeof chargerSuiviAdmin==='function')?chargerSuiviAdmin:null},
+    {id:'clients',icone:'🗂',label:'Clients',titre:'Répertoire des clients',charger:(typeof chargerClientsAdmin==='function')?chargerClientsAdmin:null},
   ];
 }
 let _adminOnglet='problemes';

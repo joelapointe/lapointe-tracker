@@ -1,0 +1,254 @@
+[
+ {
+  "nom": "l'onglet Clients disparaît du panneau",
+  "fichier": "js/admin.js",
+  "de": "{id:'clients',icone:'🗂',label:'Clients'",
+  "vers": "{id:'clientsX',icone:'🗂',label:'Clients'"
+ },
+ {
+  "nom": "l'onglet ne se charge plus",
+  "fichier": "js/admin.js",
+  "de": "charger:(typeof chargerClientsAdmin==='function')?chargerClientsAdmin:null",
+  "vers": "charger:null"
+ },
+ {
+  "nom": "le téléphone cherché sans tenir compte des tirets ne marche plus",
+  "fichier": "js/admin-clients.js",
+  "de": "const nums=[f.telephone,f.cellulaire].map(x=>String(x||'').replace(/\\D/g,'')).join(' ');",
+  "vers": "const nums=[f.telephone,f.cellulaire].map(x=>String(x||'')).join(' ');"
+ },
+ {
+  "nom": "les archivées se mélangent à « Tous »",
+  "fichier": "js/admin-clients.js",
+  "de": "else if(f.actif===false) return false;",
+  "vers": ""
+ },
+ {
+  "nom": "« Archivés » montre les actives",
+  "fichier": "js/admin-clients.js",
+  "de": "if(filtre==='archives'){if(f.actif!==false) return false;}",
+  "vers": "if(filtre==='archives'){if(f.actif===false) return false;}"
+ },
+ {
+  "nom": "« Sans arrêt » ne regarde plus les arrêts",
+  "fichier": "js/admin-clients.js",
+  "de": "if(filtre==='sansarret'&&(arretsParClient.get(f.id)||0)>0) return false;",
+  "vers": ""
+ },
+ {
+  "nom": "un arrêt archivé compte comme un arrêt",
+  "fichier": "js/admin-clients.js",
+  "de": "if(s&&s.client_id&&s.actif!==false) m.set",
+  "vers": "if(s&&s.client_id) m.set"
+ },
+ {
+  "nom": "la recherche n'exige plus CHAQUE mot (un seul suffit)",
+  "fichier": "js/admin-clients.js",
+  "de": "if(!mots.every(m=>cle.includes(m)||",
+  "vers": "if(!mots.some(m=>cle.includes(m)||"
+ },
+ {
+  "nom": "la recherche ne regarde plus l'entreprise",
+  "fichier": "js/admin-clients.js",
+  "de": "[f.nom,f.nom_entreprise,f.adresse,f.ville,f.courriel]",
+  "vers": "[f.nom,f.adresse,f.ville,f.courriel]"
+ },
+ {
+  "nom": "un indicatif 1 devant le numéro n'est plus retiré",
+  "fichier": "js/admin-clients.js",
+  "de": "if(d.length===11&&d[0]==='1') d=d.slice(1);",
+  "vers": ""
+ },
+ {
+  "nom": "un numéro avec un indicatif régional impossible est accepté",
+  "fichier": "js/admin-clients.js",
+  "de": "/^[2-9]\\d{2}[2-9]\\d{6}$/",
+  "vers": "/^\\d{10}$/"
+ },
+ {
+  "nom": "un courriel sans point est accepté",
+  "fichier": "js/admin-clients.js",
+  "de": "/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(t)",
+  "vers": "/^[^@\\s]+@[^@\\s]+$/.test(t)"
+ },
+ {
+  "nom": "la lecture ne trie plus par nom",
+  "fichier": "js/admin-clients.js",
+  "de": ".order('nom',{ascending:true})",
+  "vers": ""
+ },
+ {
+  "nom": "la lecture oublie de tout lire (plage de 1000 → 10)",
+  "fichier": "js/admin-clients.js",
+  "de": "const CLIENTS_PAGE=1000;",
+  "vers": "const CLIENTS_PAGE=10;"
+ },
+ {
+  "nom": "la lecture demande la colonne du consentement exprès",
+  "fichier": "js/admin-clients.js",
+  "de": "desabonne_promo_le,notes,actif'",
+  "vers": "desabonne_promo_le,promo_consentement_expres_le,notes,actif'"
+ },
+ {
+  "nom": "une erreur de lecture montre « répertoire vide »",
+  "fichier": "js/admin-clients.js",
+  "de": "  if(erreur){\n    body.innerHTML='';",
+  "vers": "  if(erreur){fiches=[];erreur=null;}\n  if(erreur){\n    body.innerHTML='';"
+ },
+ {
+  "nom": "une réponse plus vieille remplace la plus récente",
+  "fichier": "js/admin-clients.js",
+  "de": "  if(numero!==_clientsLecture) return;",
+  "vers": ""
+ },
+ {
+  "nom": "l'enregistrement écrit l'inscription aux textos",
+  "fichier": "js/admin-clients.js",
+  "de": "cellulaire,avis_courriel:avis,notes:vide(clientsValeur('cl-notes')),",
+  "vers": "cellulaire,avis_courriel:avis,avis_texto:true,notes:vide(clientsValeur('cl-notes')),"
+ },
+ {
+  "nom": "l'enregistrement modifie « actif »",
+  "fichier": "js/admin-clients.js",
+  "de": "cellulaire,avis_courriel:avis,notes:vide(clientsValeur('cl-notes')),",
+  "vers": "cellulaire,avis_courriel:avis,actif:true,notes:vide(clientsValeur('cl-notes')),"
+ },
+ {
+  "nom": "un courriel n'est plus mis en minuscules",
+  "fichier": "js/admin-clients.js",
+  "de": "courriel:vide(courriel.toLowerCase())",
+  "vers": "courriel:vide(courriel)"
+ },
+ {
+  "nom": "le cellulaire part sans +1",
+  "fichier": "js/admin-clients.js",
+  "de": "cellulaire='+1'+d;",
+  "vers": "cellulaire=d;"
+ },
+ {
+  "nom": "un cellulaire invalide est envoyé quand même",
+  "fichier": "js/admin-clients.js",
+  "de": "if(!d) return {probleme:'⚠ Le cellulaire doit avoir 10 chiffres (ex. 819 555-1234)'};",
+  "vers": "if(!d) cellulaire=cellTexte;"
+ },
+ {
+  "nom": "un nom vide est accepté",
+  "fichier": "js/admin-clients.js",
+  "de": "if(!nom) return {probleme:'⚠ Entre le nom du client'};",
+  "vers": ""
+ },
+ {
+  "nom": "« avertir par courriel » sans courriel est accepté",
+  "fichier": "js/admin-clients.js",
+  "de": "if(avis&&!courriel) return",
+  "vers": "if(false) return"
+ },
+ {
+  "nom": "changer le cellulaire d'une inscrite ne prévient plus",
+  "fichier": "js/admin-clients.js",
+  "de": "if(f.avis_texto&&v.cellulaire!==ancien){",
+  "vers": "if(false){"
+ },
+ {
+  "nom": "la confirmation du cellulaire apparaît même sans changement",
+  "fichier": "js/admin-clients.js",
+  "de": "if(f.avis_texto&&v.cellulaire!==ancien){",
+  "vers": "if(f.avis_texto){"
+ },
+ {
+  "nom": "une mise à jour qui ne change aucune ligne est annoncée comme réussie",
+  "fichier": "js/admin-clients.js",
+  "de": "if(!r.data||r.data.length===0){toast('❌ Rien n’a été enregistré (accès refusé ?)');return;}",
+  "vers": ""
+ },
+ {
+  "nom": "l'archivage ne vérifie plus qu'une ligne a changé",
+  "fichier": "js/admin-clients.js",
+  "de": "if(!r.data||r.data.length===0){toast('❌ Rien n’a été changé (accès refusé ?)');return;}",
+  "vers": ""
+ },
+ {
+  "nom": "archiver ne demande plus confirmation",
+  "fichier": "js/admin-clients.js",
+  "de": "if(archiver&&!(await confirmer(",
+  "vers": "if(false&&!(await confirmer("
+ },
+ {
+  "nom": "archiver EFFACE la fiche",
+  "fichier": "js/admin-clients.js",
+  "de": "r=await db.from('clients').update({actif:!archiver}).eq('id',f.id)",
+  "vers": "r=await db.from('clients').delete().eq('id',f.id)"
+ },
+ {
+  "nom": "l'archivage touche toutes les fiches",
+  "fichier": "js/admin-clients.js",
+  "de": "update({actif:!archiver}).eq('id',f.id)",
+  "vers": "update({actif:!archiver})"
+ },
+ {
+  "nom": "la mise à jour touche toutes les fiches",
+  "fichier": "js/admin-clients.js",
+  "de": "db.from('clients').update(v).eq('id',f.id)",
+  "vers": "db.from('clients').update(v)"
+ },
+ {
+  "nom": "l'écriture reste « occupée » après une panne",
+  "fichier": "js/admin-clients.js",
+  "de": "  showSync(false);\n  _clientsOccupe=false;\n  if(r.error){toast(clientsMessageErreur(r.error));return;}\n  if(!r.data||r.data.length===0){toast('❌ Rien n’a été enregistré",
+  "vers": "  showSync(false);\n  if(r.error){toast(clientsMessageErreur(r.error));return;}\n  _clientsOccupe=false;\n  if(!r.data||r.data.length===0){toast('❌ Rien n’a été enregistré"
+ },
+ {
+  "nom": "un doublon de nom n'est plus signalé",
+  "fichier": "js/admin-clients.js",
+  "de": "if(meme&&!(await confirmer(",
+  "vers": "if(false&&!(await confirmer("
+ },
+ {
+  "nom": "un message de panne réseau n'est plus distinct à l'écriture",
+  "fichier": "js/admin-clients.js",
+  "de": "if(clientsErreurReseau(e)) return '📴 Pas de réseau : rien n’a été changé.';",
+  "vers": ""
+ },
+ {
+  "nom": "une table absente ressemble à une panne ordinaire",
+  "fichier": "js/admin-clients.js",
+  "de": "const absente=code==='PGRST205'||",
+  "vers": "const absente=false&&"
+ },
+ {
+  "nom": "le badge « Avis texto » s'affiche aussi pour un désabonné",
+  "fichier": "js/admin-clients.js",
+  "de": "if(f.avis_texto&&!f.desabonne_texto_le)",
+  "vers": "if(f.avis_texto)"
+ },
+ {
+  "nom": "le nombre d'arrêts est faux (un de trop)",
+  "fichier": "js/admin-clients.js",
+  "de": "nbArrets?'🛑 '+nbArrets+' arrêt'",
+  "vers": "nbArrets?'🛑 '+(nbArrets+1)+' arrêt'"
+ },
+ {
+  "nom": "la case « avertir par courriel » n'est plus cochée pour une fiche qui l'a",
+  "fichier": "js/admin-clients.js",
+  "de": "cb.checked=!!v.avis_courriel;",
+  "vers": "cb.checked=false;"
+ },
+ {
+  "nom": "la feuille ne se ferme plus après l'enregistrement",
+  "fichier": "js/admin-clients.js",
+  "de": "  clientsFermerFeuille();\n  toast(f?'✔ Fiche enregistrée':'✔ Fiche créée');",
+  "vers": "  toast(f?'✔ Fiche enregistrée':'✔ Fiche créée');"
+ },
+ {
+  "nom": "une nouvelle fiche n'est pas ajoutée à la liste",
+  "fichier": "js/admin-clients.js",
+  "de": "else{clientsDonnees.push(nouvelle);",
+  "vers": "else{"
+ },
+ {
+  "nom": "l'entreprise répète le nom",
+  "fichier": "js/admin-clients.js",
+  "de": "&&clientsCle(f.nom_entreprise)!==clientsCle(f.nom)) div.appendChild",
+  "vers": ") div.appendChild"
+ }
+]

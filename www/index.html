@@ -263,6 +263,13 @@
     <div id="suivi-feuille-corps"></div>
   </div>
 </div>
+<!-- RÉPERTOIRE DES CLIENTS (admin-clients.js) : la feuille d'une fiche (modifier ou créer) -->
+<div id="clients-feuille-overlay" onclick="clientsBgFeuille(event)">
+  <div id="clients-feuille" role="dialog" aria-modal="true" aria-labelledby="clients-feuille-titre">
+    <h2 id="clients-feuille-titre">Client</h2>
+    <div id="clients-feuille-corps"></div>
+  </div>
+</div>
 <div id="icone-tache-overlay" onclick="bgClickIconeTache(event)">
   <div id="icone-tache-modal">
     <h2 id="it-titre">Icône</h2>
@@ -454,6 +461,7 @@
 <script src="js/admin-suivi.js"></script>
 <script src="js/pdf-simple.js"></script>
 <script src="js/suivi-pdf.js"></script>
+<script src="js/admin-clients.js"></script>
 <script src="js/liste-arrets.js"></script>
 <script src="js/ordre.js"></script>
 <script src="js/parcours.js"></script>

@@ -696,3 +696,13 @@
 .su-case input{width:20px;height:20px;flex-shrink:0;}
 .su-detail{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(37,45,58,.8);font-size:14px;color:#f0f4f8;}
 .su-detail-qui{font-size:12px;color:#6b7a8d;text-align:right;}
+
+/* Demande 5, chantier D : l'onglet « Clients » (admin-clients.js) — la feuille d'une fiche, comme celle du Suivi */
+#clients-feuille-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;padding-bottom:var(--sa-bottom);}
+#clients-feuille-overlay.open{display:flex;}
+#clients-feuille{background:#161c24;border:1px solid #252d3a;border-radius:16px 16px 0 0;padding:20px 16px 24px;width:100%;max-height:90vh;overflow-y:auto;animation:slideUp .25s ease;}
+#clients-feuille h2{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:#c8e63c;margin-bottom:12px;overflow-wrap:anywhere;}
+.cl-champ{margin-bottom:10px;}
+.cl-champ select,.cl-champ textarea{width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:'Barlow',sans-serif;outline:none;}
+.cl-champ textarea{min-height:64px;resize:vertical;}
+.cl-etat-texto{margin:6px 0 12px;}

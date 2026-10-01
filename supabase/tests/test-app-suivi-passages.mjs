@@ -325,7 +325,7 @@ log('\n=== L\'ONGLET « SUIVI » DU PANNEAU ADMINISTRATEUR ===');
 {
   const m = monde();
   const onglets = m.run('ongletsAdmin()').map((x) => [x.id, x.icone, x.label, x.titre]);
-  eq('« 📋 Suivi » est le DERNIER onglet du panneau', onglets.at(-1), ['suivi', '📋', 'Suivi', 'Suivi des passages']);
+  eq('« 📋 Suivi » vient juste avant « 🗂 Clients » (le dernier onglet du panneau)', onglets.slice(-2), [['suivi', '📋', 'Suivi', 'Suivi des passages'], ['clients', '🗂', 'Clients', 'Répertoire des clients']]);
   eq('… son chargement est la fonction de admin-suivi.js', m.run(`ongletsAdmin().find(o => o.id === 'suivi').charger === chargerSuiviAdmin`), true);
 }
 

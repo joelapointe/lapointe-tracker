@@ -143,20 +143,31 @@
 <div class="av-champ">
 <label for="avis-courriel">Courriel <span class="av-facultatif">(facultatif)</span></label>
 <input autocomplete="email" class="form-control" id="avis-courriel" inputmode="email" maxlength="150" name="courriel" placeholder="Courriel" type="email" />
-<p class="av-aide">Votre courriel sert uniquement aux avis liés à vos services.</p>
+<p class="av-aide">Votre courriel sert aux avis liés à vos services et, seulement si vous cochez la deuxième case plus bas, à nos offres.</p>
 <div class="av-erreur" id="avis-err-courriel" hidden></div>
 </div>
 
+<div class="av-consentements">
 <div class="av-consentement">
 <label class="av-case" for="avis-accepte">
 <input aria-required="true" id="avis-accepte" name="accepte" type="checkbox" value="oui" />
 <span id="avis-consentement-texte">J'accepte de recevoir des textos d'Entretien Lapointe au numéro ci-dessus, pour les avis liés à mes services : jour ou heure de passage, début des travaux, changement d'horaire. Aucune publicité. La fréquence varie selon les travaux (jusqu'à quelques textos par semaine en saison). Des frais de messagerie et de données peuvent s'appliquer selon mon forfait. Je peux me désabonner en tout temps en répondant ARRET (ou STOP), ou obtenir de l'aide en répondant AIDE (ou HELP) ou en appelant le 819 268-8069. Mon numéro n'est ni vendu ni partagé avec des tiers, sauf le fournisseur qui envoie les textos pour Entretien Lapointe. Cette inscription est facultative : je reçois mes services même si je ne m'inscris pas.</span>
 </label>
 <div class="av-erreur" id="avis-err-accepte" hidden></div>
+</div>
+
+<div class="av-consentement av-promo">
+<label class="av-case" for="avis-promo">
+<input id="avis-promo" name="promo" type="checkbox" value="oui" />
+<span id="avis-promo-texte">J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.</span>
+</label>
+</div>
+
 <p class="av-aide" id="avis-identification">Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>
 </div>
 
 <input id="avis-version" name="version" type="hidden" value="texto-2026-10-v1" />
+<input id="avis-version-promo" name="version_promo" type="hidden" value="promo-2026-10-v1" />
 
 <!-- Protection anti-robots : ce champ doit rester vide (invisible pour les humains) -->
 <div aria-hidden="true" class="av-piege">
@@ -175,6 +186,7 @@
 <div class="av-merci" hidden id="avis-merci" role="status" tabindex="-1">
 <h3>Merci, votre inscription est reçue!</h3>
 <p>Nous allons la relier à votre dossier client. Dès que ce sera fait, vous recevrez nos avis de passage par texto.</p>
+<p hidden id="avis-merci-promo">Nous avons aussi noté votre accord pour recevoir nos offres par courriel : vous pouvez vous désabonner en tout temps avec le lien au bas de chaque courriel.</p>
 <p>Vous pouvez vous désabonner en tout temps en répondant ARRET (ou STOP) à l'un de nos textos. Une question? Appelez-nous au <a href="tel:18192688069">819 268-8069</a>.</p>
 </div>
 

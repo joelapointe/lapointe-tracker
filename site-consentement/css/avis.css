@@ -60,6 +60,7 @@
 
 /* ---------- Case de consentement ---------- */
 #avis .av-consentement { margin: 22px 0 6px; }
+#avis .av-promo { margin-top: 10px; }
 
 #avis .av-case {
 	display: flex;

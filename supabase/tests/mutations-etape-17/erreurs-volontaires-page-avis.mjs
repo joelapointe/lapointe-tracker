@@ -166,10 +166,10 @@ js('le succès ne cache pas le formulaire', `form.hidden = true;\n\t\tmerci.hidd
 js('le succès n\'affiche pas le « merci »', `form.hidden = true;\n\t\tmerci.hidden = false;`, `form.hidden = true;`);
 js('le « merci » ne reçoit pas le curseur', `if (merci.focus) { merci.focus(); }`, ``);
 js('le succès plante sur un navigateur sans scrollIntoView', `if (merci.scrollIntoView) { merci.scrollIntoView(); }`, `merci.scrollIntoView();`);
-js('toute réponse « ok » est prise pour un succès', `if (r.ok && statut === 'enregistree') { succes(); } else { echec(r.texte); }`, `if (r.ok) { succes(); } else { echec(r.texte); }`);
-js('le statut seul décide du succès (même avec une erreur HTTP)', `if (r.ok && statut === 'enregistree') { succes(); } else { echec(r.texte); }`, `if (statut === 'enregistree') { succes(); } else { echec(r.texte); }`, 'le statut n\'est lu que si la réponse est « ok » : pour une erreur HTTP il reste vide, donc aucune différence');
-js('tout est pris pour un succès', `if (r.ok && statut === 'enregistree') { succes(); } else { echec(r.texte); }`, `succes();`);
-js('un échec est aussi pris pour un succès', `else { echec(r.texte); }`, `else { succes(); }`);
+js('toute réponse « ok » est prise pour un succès', `if (r.ok && statut === 'enregistree') { succes(v.promo); } else { echec(r.texte); }`, `if (r.ok) { succes(v.promo); } else { echec(r.texte); }`);
+js('le statut seul décide du succès (même avec une erreur HTTP)', `if (r.ok && statut === 'enregistree') { succes(v.promo); } else { echec(r.texte); }`, `if (statut === 'enregistree') { succes(v.promo); } else { echec(r.texte); }`, 'le statut n\'est lu que si la réponse est « ok » : pour une erreur HTTP il reste vide, donc aucune différence');
+js('tout est pris pour un succès', `if (r.ok && statut === 'enregistree') { succes(v.promo); } else { echec(r.texte); }`, `succes(v.promo);`);
+js('un échec est aussi pris pour un succès', `else { echec(r.texte); }`, `else { succes(v.promo); }`);
 js('une réponse illisible est prise pour un succès', `catch (e) { statut = ''; } }`, `catch (e) { statut = 'enregistree'; } }`);
 js('le statut n\'est lu que si la réponse est « ok »', `if (r.ok) { try { statut`, `if (true) { try { statut`, 'le succès exige déjà « r.ok » : lire le statut de plus ne change rien');
 js('une erreur illisible est prise pour un champ en erreur', `try { code = String(JSON.parse(texte).message || ''); } catch (e) { code = ''; }`, `try { code = String(JSON.parse(texte).message || ''); } catch (e) { code = 'nom_invalide'; }`);
@@ -178,8 +178,8 @@ for (const [code, cle, autre] of [['nom_invalide', 'nom', 'adresse'], ['cellulai
 js('« consentement_requis » n\'est plus reconnu', `,\n\t\tconsentement_requis: 'accepte'\n`, `\n`);
 js('« nom_invalide » n\'est plus reconnu', `\t\tnom_invalide: 'nom',\n`, ``);
 js('le message d\'erreur de la base n\'est plus lu (tout est « général »)', `code = String(JSON.parse(texte).message || '');`, `code = '';`);
-js('l\'erreur d\'un champ ne met plus le curseur sur ce champ', `montrerErreur(cle, MSG_CHAMP[cle]);\n\t\t\tif (champ[cle].focus) { champ[cle].focus(); }`, `montrerErreur(cle, MSG_CHAMP[cle]);`);
-js('l\'erreur d\'un champ n\'est plus montrée', `montrerErreur(cle, MSG_CHAMP[cle]);\n\t\t\tif (champ[cle].focus)`, `if (champ[cle].focus)`);
+js('l\'erreur d\'un champ ne met plus le curseur sur ce champ', `montrerErreur(cle, MSG_CODE[code] || MSG_CHAMP[cle]);\n\t\t\tif (champ[cle].focus) { champ[cle].focus(); }`, `montrerErreur(cle, MSG_CODE[code] || MSG_CHAMP[cle]);`);
+js('l\'erreur d\'un champ n\'est plus montrée', `montrerErreur(cle, MSG_CODE[code] || MSG_CHAMP[cle]);\n\t\t\tif (champ[cle].focus)`, `if (champ[cle].focus)`);
 js('« version_inconnue » n\'est plus expliqué', `CODE_ALERTE[code]) {\n\t\t\tmontrerAlerte(CODE_ALERTE[code]);`, `CODE_ALERTE[code]) {\n\t\t\tmontrerAlerte(MSG_AUTRE);`);
 js('« version_inconnue » ne dit plus de recharger la page', `Rechargez la page, puis réessayez.`, `Réessayez.`);
 js('« trop_de_demandes » ne donne plus le téléphone', `Réessayez plus tard ou téléphonez-nous au ' + TEL + '.'`, `Réessayez plus tard.'`);
@@ -266,8 +266,6 @@ html('la page ne donne plus l\'adresse postale à côté de la case', `Entretien
 html('la page ne donne plus le nom de l\'entreprise à côté de la case', `id="avis-identification">Entretien Lapointe, 331,`, `id="avis-identification">331,`);
 html('le téléphone n\'est plus un lien à côté de la case', `Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">`, `Charette (Québec) · 819 268-8069 · <a href="mailto:info@entretienlapointe.ca">`);
 html('le courriel n\'est plus un lien à côté de la case', `<a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>\n</div>\n\n<input id="avis-version"`, `info@entretienlapointe.ca</p>\n</div>\n\n<input id="avis-version"`);
-html('l\'identification est sortie du bloc du consentement', `<div class="av-erreur" id="avis-err-accepte" hidden></div>\n<p class="av-aide" id="avis-identification">`, `<div class="av-erreur" id="avis-err-accepte" hidden></div>\n</div><div><p class="av-aide" id="avis-identification">`);
-html('l\'identification est déplacée DANS l\'étiquette du consentement (donc dans le texte gardé comme preuve)', [[`</span>\n</label>`, `</span>\n<p class="av-aide" id="avis-identification">Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>\n</label>`], [`<p class="av-aide" id="avis-identification">Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>\n</div>`, `</div>`]]);
 html('la page ne dit plus que les textos viennent d\'un numéro automatisé', `Les textos viennent d'un numéro automatisé qui ne lit pas les réponses (sauf ARRET et AIDE). `, ``);
 
 // =================== confidentialite.html ===================
@@ -323,6 +321,88 @@ css('le champ piège n\'est plus en position absolue', `#avis .av-piege {\n\tpos
 css('les champs ne sont plus en 16 px (zoom de l\'iPhone)', `font-size: 16px; /* 16 px`, `font-size: 14px; /* 14 px`);
 css('une règle du style touche toute la page (plus limitée à #avis)', `#avis .av-intro { font-size: 16px; line-height: 26px; }`, `.av-intro { font-size: 16px; line-height: 26px; }`);
 css('le style d\'une balise touche tout le site', `#avis label { display: block;`, `label { display: block;`);
+
+// =================== la 2ᵉ case : les offres par courriel ===================
+const PROMO_TEXTE = `J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.`;
+const PROMO_BLOC = `<div class="av-consentement av-promo">\n<label class="av-case" for="avis-promo">\n<input id="avis-promo" name="promo" type="checkbox" value="oui" />\n<span id="avis-promo-texte">${PROMO_TEXTE}</span>\n</label>\n</div>\n\n`;
+const IDENTIFICATION = `<p class="av-aide" id="avis-identification">Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · <a href="tel:18192688069">819 268-8069</a> · <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></p>`;
+
+// ---- avis.js
+js('la 2ᵉ case est lue comme toujours cochée', `promo: champ.promo.checked === true,`, `promo: true,`);
+js('la 2ᵉ case est lue comme jamais cochée', `promo: champ.promo.checked === true,`, `promo: false,`);
+js('la 2ᵉ case est lue à l\'envers', `promo: champ.promo.checked === true,`, `promo: champ.promo.checked !== true,`);
+js('la version des offres n\'est plus lue dans la page', `versionPromo: $('avis-version-promo').value,`, `versionPromo: 'promo-2026-10-v1',`);
+js('la version des offres est lue dans le champ de la version des textos', `versionPromo: $('avis-version-promo').value,`, `versionPromo: $('avis-version').value,`);
+js('les offres cochées n\'exigent plus de courriel dans la page', `\t\telse if (v.promo && v.courriel === '') { e.courriel = MSG_OFFRES; }\n`, ``);
+js('le courriel est exigé même sans les offres', `else if (v.promo && v.courriel === '')`, `else if (v.courriel === '')`);
+js('le courriel est exigé quand les offres ne sont PAS cochées', `else if (v.promo && v.courriel === '')`, `else if (!v.promo && v.courriel === '')`);
+js('les offres sans courriel donnent le message habituel du courriel', `e.courriel = MSG_OFFRES; }`, `e.courriel = MSG_CHAMP.courriel; }`);
+js('« p_promo » est toujours vrai', `p_promo: v.promo,`, `p_promo: true,`);
+js('« p_promo » est toujours faux', `p_promo: v.promo,`, `p_promo: false,`);
+js('« p_promo » est envoyé à l\'envers', `p_promo: v.promo,`, `p_promo: !v.promo,`);
+js('les offres ne sont pas envoyées du tout', `.slice(0, 300),\n\t\t\t\tp_promo: v.promo,\n\t\t\t\tp_version_promo: v.promo ? v.versionPromo : null\n`, `.slice(0, 300)\n`);
+js('« p_version_promo » est envoyé même sans les offres', `p_version_promo: v.promo ? v.versionPromo : null`, `p_version_promo: v.versionPromo`);
+js('« p_version_promo » n\'est jamais envoyé', `p_version_promo: v.promo ? v.versionPromo : null`, `p_version_promo: null`);
+js('« p_version_promo » est envoyé seulement SANS les offres', `p_version_promo: v.promo ? v.versionPromo : null`, `p_version_promo: v.promo ? null : v.versionPromo`);
+js('le « merci » ne mentionne jamais les offres', `succes(v.promo);`, `succes(false);`);
+js('le « merci » mentionne toujours les offres', `succes(v.promo);`, `succes(true);`);
+js('le succès n\'a plus son paramètre des offres', `function succes(avecOffres) {`, `function succes() {`);
+js('la mention des offres du « merci » n\'est plus gérée', `\t\t$('avis-merci-promo').hidden = !avecOffres;\n`, ``);
+js('la mention des offres du « merci » est à l\'envers', `.hidden = !avecOffres;`, `.hidden = avecOffres;`);
+js('le succès ne décoche pas la 2ᵉ case', `\t\tchamp.promo.checked = false;\n`, ``);
+js('le succès laisse la 2ᵉ case verte', `\t\tchamp.promo.parentNode.classList.remove('av-coche');\n\t\t$('avis-merci-promo')`, `\t\t$('avis-merci-promo')`);
+js('« courriel_requis_offres » n\'est plus reconnu', `\t\tcourriel_requis_offres: 'courriel',\n`, ``);
+js('« courriel_requis_offres » est montré sous le nom', `courriel_requis_offres: 'courriel',`, `courriel_requis_offres: 'nom',`);
+js('le message propre des offres n\'est plus utilisé pour « courriel_requis_offres »', `var MSG_CODE = { courriel_requis_offres: MSG_OFFRES };`, `var MSG_CODE = {};`);
+js('« version_promo_inconnue » n\'est plus expliqué', `\t\tversion_promo_inconnue: MSG_PAS_A_JOUR,\n`, ``);
+js('le message des offres est vague', `Écrivez votre courriel pour recevoir nos offres, ou décochez la deuxième case.`, `Courriel invalide.`);
+js('le message des offres ne dit plus de décocher la case', `, ou décochez la deuxième case.`, `.`);
+js('la 2ᵉ case cochée ne devient plus verte', `if (champ.promo.checked) { champ.promo.parentNode.classList.add('av-coche'); }`, `if (champ.promo.checked) { void 0; }`);
+js('la 2ᵉ case décochée reste verte', `else { champ.promo.parentNode.classList.remove('av-coche'); }`, `else { void 0; }`);
+js('décocher la 2ᵉ case n\'efface plus l\'erreur « courriel requis »', `\t\tif (!champ.promo.checked && $('avis-err-courriel').textContent === MSG_OFFRES) { effacerErreur('courriel'); }\n`, ``);
+js('décocher la 2ᵉ case efface n\'importe quelle erreur de courriel', `if (!champ.promo.checked && $('avis-err-courriel').textContent === MSG_OFFRES)`, `if (!champ.promo.checked)`);
+js('cocher la 2ᵉ case efface aussi l\'erreur « courriel requis »', `if (!champ.promo.checked && $('avis-err-courriel').textContent === MSG_OFFRES)`, `if ($('avis-err-courriel').textContent === MSG_OFFRES)`);
+js('la 2ᵉ case n\'est plus écoutée au changement (clic)', `champ.promo.addEventListener('change', function () {`, `champ.promo.addEventListener('click', function () {`);
+js('l\'élément de la 2ᵉ case est cherché sous un autre nom', `promo: $('avis-promo')`, `promo: $('avis-promo-x')`);
+js('l\'élément de la version des offres est cherché sous un autre nom', `$('avis-version-promo').value`, `$('avis-version-promo-x').value`);
+
+// ---- avis.html
+html('la 2ᵉ case est cochée d\'avance', `<input id="avis-promo" name="promo" type="checkbox" value="oui" />`, `<input checked id="avis-promo" name="promo" type="checkbox" value="oui" />`);
+html('la 2ᵉ case n\'est plus une case à cocher', `name="promo" type="checkbox"`, `name="promo" type="radio"`);
+html('la 2ᵉ case devient obligatoire dans la page', `<input id="avis-promo" name="promo"`, `<input aria-required="true" id="avis-promo" name="promo"`);
+html('l\'étiquette de la 2ᵉ case ne pointe plus vers elle', `<label class="av-case" for="avis-promo">`, `<label class="av-case" for="avis-autre">`);
+html('la 2ᵉ case est retirée de la page', PROMO_BLOC, ``);
+html('la 2ᵉ case est fusionnée dans le bloc de la case des textos', `<div class="av-erreur" id="avis-err-accepte" hidden></div>\n</div>\n\n<div class="av-consentement av-promo">`, `<div class="av-erreur" id="avis-err-accepte" hidden></div>\n<div class="av-promo">`);
+html('la version cachée du texte des offres change', `name="version_promo" type="hidden" value="promo-2026-10-v1"`, `name="version_promo" type="hidden" value="promo-2026-10-v2"`);
+html('la version du texte des offres n\'est plus cachée (modifiable)', `name="version_promo" type="hidden"`, `name="version_promo" type="text"`);
+html('la version du texte des offres est retirée de la page', `<input id="avis-version-promo" name="version_promo" type="hidden" value="promo-2026-10-v1" />\n`, ``);
+html('le texte des offres ne dit plus « par courriel »', `J'accepte aussi de recevoir par courriel, de temps en temps,`, `J'accepte aussi de recevoir, de temps en temps,`);
+html('le texte des offres parle aussi de textos', `J'accepte aussi de recevoir par courriel, de temps en temps,`, `J'accepte aussi de recevoir par courriel et par texto, de temps en temps,`);
+html('le texte des offres ne dit plus « de temps en temps »', `par courriel, de temps en temps, les offres`, `par courriel les offres`);
+html('le texte des offres ne donne plus l\'exemple des feuilles', ` (par exemple, un rappel avant la saison des feuilles)`, ``);
+html('le texte des offres ne dit plus comment se désabonner', `Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. `, ``);
+html('le texte des offres ne parle plus du lien de désabonnement', `avec le lien au bas de chaque courriel ou en écrivant`, `en écrivant`);
+html('le texte des offres ne dit plus que la case est facultative', `Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. `, ``);
+html('le texte des offres ne dit plus qu\'il n\'y a aucun effet sur les services', `elle n'a aucun effet sur mes services ni sur mes avis de passage`, `elle compte`);
+html('le texte des offres ne donne plus l\'adresse postale', `Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.</span>`, `Entretien Lapointe, 819 268-8069.</span>`);
+html('le texte des offres ne donne plus le téléphone', `Charette (Québec), 819 268-8069.</span>`, `Charette (Québec).</span>`);
+html('le texte des offres donne un mauvais courriel', `en écrivant à info@entretienlapointe.ca.`, `en écrivant à info@exemple.ca.`);
+html('le texte des offres change d\'un seul mot', `les offres et les nouvelles d'Entretien Lapointe`, `les offres et les nouvelles de Lapointe`);
+html('le « merci » montre la mention des offres dès le départ', `<p hidden id="avis-merci-promo">`, `<p id="avis-merci-promo">`);
+html('la mention des offres du « merci » est renommée (le script ne la trouve plus)', `id="avis-merci-promo"`, `id="avis-merci-promo-x"`);
+html('la mention des offres du « merci » ne parle plus d\'offres par courriel', `Nous avons aussi noté votre accord pour recevoir nos offres par courriel : `, `Merci : `);
+html('la mention des offres du « merci » ne parle plus du désabonnement', `vous pouvez vous désabonner en tout temps avec le lien au bas de chaque courriel.</p>`, `merci.</p>`);
+html('le bloc des consentements est renommé (l\'identification n\'est plus dedans)', `<div class="av-consentements">`, `<div class="av-autres">`);
+html('l\'aide du courriel ne parle plus des offres', `Votre courriel sert aux avis liés à vos services et, seulement si vous cochez la deuxième case plus bas, à nos offres.`, `Votre courriel sert uniquement aux avis liés à vos services.`);
+html('l\'identification est sortie du bloc des consentements', `${IDENTIFICATION}\n</div>\n\n<input id="avis-version"`, `</div>\n${IDENTIFICATION}\n\n<input id="avis-version"`);
+html('l\'identification est déplacée DANS l\'étiquette de la 2ᵉ case (donc dans le texte gardé comme preuve)', [[`<span id="avis-promo-texte">${PROMO_TEXTE}</span>\n</label>\n</div>\n\n${IDENTIFICATION}\n</div>`, `<span id="avis-promo-texte">${PROMO_TEXTE}</span>\n${IDENTIFICATION}\n</label>\n</div>\n\n</div>`]]);
+
+// ---- confidentialite.html
+conf('la section 2 ne parle plus de l\'accord aux offres qui est gardé', ` Si vous cochez la case facultative des offres par courriel, nous gardons aussi cet accord (date et texte accepté).`, ``);
+conf('la section 3 ne parle plus des offres par courriel', `\t<li>Vous envoyer nos offres et nos nouvelles par courriel, seulement si vous avez accepté d'en recevoir.</li>\n`, ``);
+conf('la section 5 ne parle plus de la 2ᵉ case de la page', ` Vous pouvez nous donner cet accord en cochant la deuxième case, facultative, de la page d'inscription aux avis de passage, ou en nous le disant.`, ``);
+conf('la section 5 ne dit plus que la case n\'a aucun effet sur les services', ` Cette case n'a aucun effet sur vos services ni sur vos avis de passage.`, ``);
+conf('la section 5 ne promet plus qu\'il n\'y aura jamais de publicité par texto', ` Nous n'envoyons jamais de publicité par texto.`, ``);
 
 // =================== l'exécution ===================
 const APPLIQUER = (texte, paires) => paires.reduce((t, [a, b, tous]) => (tous ? t.split(a).join(b) : t.replace(a, () => b)), texte);   // « tous » : remplace TOUTES les occurrences

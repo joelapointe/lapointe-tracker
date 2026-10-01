@@ -47,9 +47,10 @@ function ouvrir(opts = {}) {
 const el = (m, id) => m.doc.getElementById(id);
 const dire = (m, id, valeur) => { const e = el(m, id); e.value = valeur; e.dispatchEvent(new m.w.Event('input', { bubbles: true })); };
 const cocher = (m, etat) => { const c = el(m, 'avis-accepte'); c.checked = etat; c.dispatchEvent(new m.w.Event('change', { bubbles: true })); };
+const cocherPromo = (m, etat) => { const c = el(m, 'avis-promo'); c.checked = etat; c.dispatchEvent(new m.w.Event('change', { bubbles: true })); };
 const remplir = (m, o = {}) => {
-  const d = { nom: 'Marie Tremblay', cel: '(819) 555-1234', adr: '123, rue Principale, Charette', cour: 'marie@exemple.ca', coche: true, ...o };
-  dire(m, 'avis-nom', d.nom); dire(m, 'avis-cellulaire', d.cel); dire(m, 'avis-adresse', d.adr); dire(m, 'avis-courriel', d.cour); cocher(m, d.coche);
+  const d = { nom: 'Marie Tremblay', cel: '(819) 555-1234', adr: '123, rue Principale, Charette', cour: 'marie@exemple.ca', coche: true, promo: false, ...o };
+  dire(m, 'avis-nom', d.nom); dire(m, 'avis-cellulaire', d.cel); dire(m, 'avis-adresse', d.adr); dire(m, 'avis-courriel', d.cour); cocher(m, d.coche); cocherPromo(m, d.promo);
 };
 const soumettre = (m) => el(m, 'avis-envoi').click();
 const erreurs = (m) => Object.fromEntries(CHAMPS.map((k) => { const e = el(m, 'avis-err-' + k); return [k, e.hidden ? '' : e.textContent]; }));
@@ -80,12 +81,17 @@ log('=== LA PAGE D\'INSCRIPTION, TELLE QU\'ELLE EST ÉCRITE (avant tout script) 
   eq('le bouton d\'envoi est DÉSACTIVÉ dans la page (le script l\'active : sans JavaScript, il ne sert à rien)', [f('avis-envoi').type, f('avis-envoi').disabled], ['submit', true]);
   eq('le champ piège anti-robot : vide, hors du clavier (tabindex -1), sans mémoire du navigateur, dans un bloc caché aux lecteurs d\'écran', [f('avis-site-web').value, f('avis-site-web').tabIndex, f('avis-site-web').getAttribute('autocomplete'), f('avis-site-web').closest('[aria-hidden="true"]')?.classList.contains('av-piege'), f('avis-site-web').name], ['', -1, 'off', true, 'site_web']);
   eq('la version du texte de consentement est cachée dans la page', [f('avis-version').type, f('avis-version').value], ['hidden', V1]);
-  eq('les zones d\'erreur et le message « merci » sont cachés au départ', [...CHAMPS.map((k) => f('avis-err-' + k).hidden), f('avis-alerte').hidden, f('avis-merci').hidden], [true, true, true, true, true, true, true]);
+  eq('les zones d\'erreur et le message « merci » (avec sa mention des offres) sont cachés au départ', [...CHAMPS.map((k) => f('avis-err-' + k).hidden), f('avis-alerte').hidden, f('avis-merci').hidden, f('avis-merci-promo').hidden], [true, true, true, true, true, true, true, true]);
   eq('l\'alerte et le « merci » sont annoncés aux lecteurs d\'écran (role alert / status)', [f('avis-alerte').getAttribute('role'), f('avis-merci').getAttribute('role')], ['alert', 'status']);
   vrai('un lien vers la politique de confidentialité est juste sous le bouton', !!statique.querySelector('.av-envoi a[href="confidentialite.html"]'));
   vrai('le numéro de téléphone de Joé est joignable d\'un toucher (lien tel:) dans la page', !!statique.querySelector('a[href="tel:18192688069"]'));
   eq('à côté de la case, la page s\'identifie : l\'entreprise, son adresse postale, son téléphone et son courriel (la demande de consentement dit qui la fait)', [espaces(f('avis-identification').textContent), !!f('avis-identification').querySelector('a[href="tel:18192688069"]'), !!f('avis-identification').querySelector('a[href="mailto:info@entretienlapointe.ca"]')], ['Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec) · 819 268-8069 · info@entretienlapointe.ca', true, true]);
-  vrai('… cette identification est dans le bloc du consentement mais HORS de l\'étiquette (elle ne fait pas partie du texte gardé comme preuve)', !!f('avis-identification').closest('.av-consentement') && !f('avis-identification').closest('label'));
+  vrai('… cette identification est dans le bloc des consentements mais HORS des étiquettes (elle ne fait pas partie des textes gardés comme preuve)', !!f('avis-identification').closest('.av-consentements') && !f('avis-identification').closest('label'));
+  eq('la 2ᵉ case (offres par courriel) existe : DÉCOCHÉE d\'office, FACULTATIVE (ni étoile ni aria-required), dans son étiquette, APRÈS celle des textos', [f('avis-promo').type, f('avis-promo').checked, f('avis-promo').hasAttribute('checked'), f('avis-promo').getAttribute('aria-required'), f('avis-promo').closest('label')?.getAttribute('for'), f('avis-promo').closest('label')?.contains(f('avis-promo-texte')), !!(f('avis-accepte').compareDocumentPosition(f('avis-promo')) & 4)], ['checkbox', false, false, null, 'avis-promo', true, true]);
+  eq('… la version de son texte est cachée dans la page', [f('avis-version-promo').type, f('avis-version-promo').value], ['hidden', 'promo-2026-10-v1']);
+  vrai('… elle est SÉPARÉE de la case des textos (deux étiquettes, deux blocs : l\'accord aux offres n\'est jamais groupé avec l\'autre)', f('avis-promo').closest('label') !== f('avis-accepte').closest('label') && f('avis-promo').closest('.av-consentement') !== f('avis-accepte').closest('.av-consentement'));
+  eq('… et la case des textos reste la SEULE obligatoire', [f('avis-accepte').getAttribute('aria-required'), f('avis-promo').getAttribute('aria-required')], ['true', null]);
+  vrai('… l\'aide du courriel explique qu\'il sert aux offres seulement si la 2ᵉ case est cochée', /seulement si vous cochez la deuxième case plus bas, à nos offres/.test(espaces(f('avis-courriel').parentNode.querySelector('.av-aide').textContent)));
 }
 
 log('\n=== LE TEXTE DE CONSENTEMENT DE LA PAGE EST EXACTEMENT CELUI DE LA BASE (celui que le registre garde comme preuve) ===');
@@ -97,6 +103,12 @@ log('\n=== LE TEXTE DE CONSENTEMENT DE LA PAGE EST EXACTEMENT CELUI DE LA BASE (
   eq('la version écrite dans la page est celle du fichier SQL', statique.getElementById('avis-version').value, m && m[1]);
   eq('le texte affiché à côté de la case est IDENTIQUE, mot pour mot, à celui du fichier SQL', textePage, texteSql);
   vrai('… et il contient tout ce que les opérateurs exigent : entreprise, aucune publicité, fréquence, frais, ARRET/STOP, AIDE/HELP, téléphone, pas vendu ni partagé, facultatif', [/Entretien Lapointe/, /Aucune publicité/, /fréquence varie/, /frais de messagerie et de données/, /ARRET \(ou STOP\)/, /AIDE \(ou HELP\)/, /819 268-8069/, /ni vendu ni partagé/, /facultative/].every((r) => r.test(textePage)));
+  const mp = SQL30.match(/insert into public\.textes_consentement \(version, canal, texte\) values \(\s*'(promo[^']*)', 'courriel_promo',\s*\$t\$([\s\S]*?)\$t\$\)/);
+  vrai('le texte des OFFRES PAR COURRIEL (version « promo… ») est bien trouvé dans le fichier SQL 30', !!mp);
+  eq('la version des offres écrite dans la page est celle du fichier SQL', statique.getElementById('avis-version-promo').value, mp && mp[1]);
+  eq('le texte des offres affiché à côté de la 2ᵉ case est IDENTIQUE, mot pour mot, à celui du fichier SQL', espaces(statique.getElementById('avis-promo-texte').textContent), mp ? espaces(mp[2]) : '');
+  vrai('… et il contient ce que la loi exige d\'une demande de consentement par courriel : l\'entreprise, l\'objet (offres et nouvelles par courriel), comment se désabonner, l\'adresse postale, le téléphone et le courriel, et que la case est facultative', [/Entretien Lapointe/, /par courriel/, /offres et les nouvelles/, /me désabonner en tout temps avec le lien au bas de chaque courriel/, /331, Le Petit Bellechasse N, Charette \(Québec\)/, /819 268-8069/, /info@entretienlapointe\.ca/, /facultative/].every((r) => r.test(espaces(statique.getElementById('avis-promo-texte').textContent))));
+  vrai('… et il ne parle PAS de textos (la publicité par texto n\'existe pas : décision de Joé)', !/texto/i.test(espaces(statique.getElementById('avis-promo-texte').textContent)));
 }
 
 log('\n=== AUCUN SUIVI SUR CES PAGES (on y saisit un numéro de cellulaire) ===');
@@ -218,8 +230,9 @@ log('\n=== UNE INSCRIPTION VALIDE : CE QUI EST ENVOYÉ À LA BASE ===');
   const a = m.appels[0];
   eq('UN seul appel au serveur', m.appels.length, 1);
   eq('… vers la fonction « inscrire_avis » de Supabase (adresse exacte, méthode POST)', [a.url, a.options.method], ['https://uxoxdauzcxjsefuoruwt.supabase.co/rest/v1/rpc/inscrire_avis', 'POST']);
-  eq('… avec les bons champs, sans les espaces autour, et le consentement TOUJOURS vrai avec la version du texte lue', a.corps, { p_nom: 'Marie Tremblay', p_adresse: '123, rue Principale, Charette', p_cellulaire: '(819) 555-1234', p_courriel: 'Marie.Tremblay@Exemple.CA', p_accepte: true, p_version: V1, p_site_web: '', p_agent: m.w.navigator.userAgent });
+  eq('… avec les bons champs, sans les espaces autour, et le consentement TOUJOURS vrai avec la version du texte lue', a.corps, { p_nom: 'Marie Tremblay', p_adresse: '123, rue Principale, Charette', p_cellulaire: '(819) 555-1234', p_courriel: 'Marie.Tremblay@Exemple.CA', p_accepte: true, p_version: V1, p_site_web: '', p_agent: m.w.navigator.userAgent, p_promo: false, p_version_promo: null });
   const cle = JS.match(/var SUPA_KEY = '([^']+)'/)[1];
+  eq('… la 2ᵉ case n\'étant pas cochée : « p_promo » est faux et aucune version des offres n\'est envoyée', [a.corps.p_promo, a.corps.p_version_promo], [false, null]);
   eq('… avec la clé PUBLIQUE dans les deux en-têtes habituels et le format JSON', [a.options.headers['apikey'] === cle, a.options.headers['Authorization'], a.options.headers['Content-Type']], [true, 'Bearer ' + cle, 'application/json']);
   const charge = JSON.parse(Buffer.from(cle.split('.')[1], 'base64url').toString());
   eq('… cette clé est bien celle du rôle « anon » (publique) de NOTRE projet, jamais la clé secrète « service_role »', [charge.role, charge.ref], ['anon', 'uxoxdauzcxjsefuoruwt']);
@@ -230,6 +243,7 @@ log('\n=== UNE INSCRIPTION VALIDE : CE QUI EST ENVOYÉ À LA BASE ===');
   eq('… le navigateur est transmis pour la preuve (texte coupé à 300 caractères au plus)', a.corps.p_agent.length <= 300 && a.corps.p_agent.length > 0, true);
   eq('après la réponse « enregistree » : la minuterie est libérée', m.liberees, [1]);
   eq('… le formulaire disparaît, le « merci » s\'affiche et reçoit le curseur (lecteurs d\'écran)', [formCache(m), merciVisible(m), m.doc.activeElement.id], [true, true, 'avis-merci']);
+  eq('… la mention « offres par courriel » du « merci » reste cachée (la case n\'était pas cochée)', el(m, 'avis-merci-promo').hidden, true);
   eq('… les champs sont VIDÉS (rien de la personne ne reste dans la page) et la case est décochée', [['avis-nom', 'avis-cellulaire', 'avis-adresse', 'avis-courriel'].map((id) => el(m, id).value), el(m, 'avis-accepte').checked, el(m, 'avis-accepte').parentNode.classList.contains('av-coche')], [['', '', '', ''], false, false]);
   eq('… aucune erreur dans la page', m.erreursPage, []);
   vrai('… le « merci » explique la suite : relié au dossier client, désabonnement par ARRET/STOP', /dossier client/.test(el(m, 'avis-merci').textContent) && /ARRET \(ou STOP\)/.test(el(m, 'avis-merci').textContent));
@@ -266,6 +280,116 @@ log('\n=== LE STYLE : CE QUI CACHE CE QUI DOIT ÊTRE CACHÉ ===');
   vrai('les champs sont en 16 px (sinon l\'iPhone agrandit la page quand on touche un champ)', /\.form-control\s*\{[^}]*font-size:\s*16px/.test(CSS));
   vrai('tout le style est limité à la section #avis (rien ne change sur les autres pages du site)', CSS.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map((b) => b.split('{')[0].trim()).filter((s) => s && !s.startsWith('@')).every((s) => s.split(',').every((x) => x.trim().startsWith('#avis'))), CSS.replace(/\/\*[\s\S]*?\*\//g, '').split('}').map((b) => b.split('{')[0].trim()).filter((s) => s && !s.startsWith('@') && !s.startsWith('#avis')).join(' | '));
   vrai('la section qui reçoit le style existe dans les deux pages (id="avis")', !!statique.getElementById('avis') && !!statiqueConf.getElementById('avis'));
+}
+
+log('\n=== LA 2ᵉ CASE : LES OFFRES PAR COURRIEL (facultative, jamais cochée d\'office) ===');
+{
+  const OFFRES = /Écrivez votre courriel pour recevoir nos offres, ou décochez la deuxième case/;
+  // cochée AVEC un courriel : l'inscription part avec l'accord aux offres
+  let m = ouvrir();
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  eq('2ᵉ case cochée avec un courriel : un seul envoi, « p_promo » est vrai et la version du texte des offres est envoyée', [m.appels.length, m.appels[0].corps.p_promo, m.appels[0].corps.p_version_promo], [1, true, 'promo-2026-10-v1']);
+  eq('… la version des textos est toujours envoyée aussi, avec l\'accord aux textos', [m.appels[0].corps.p_accepte, m.appels[0].corps.p_version], [true, V1]);
+  eq('… le « merci » s\'affiche avec la mention des offres par courriel', [merciVisible(m), el(m, 'avis-merci-promo').hidden, /offres par courriel/.test(el(m, 'avis-merci-promo').textContent), /désabonner en tout temps avec le lien au bas de chaque courriel/.test(el(m, 'avis-merci-promo').textContent)], [true, false, true, true]);
+  eq('… les deux cases sont vidées et ne restent pas vertes', [el(m, 'avis-promo').checked, el(m, 'avis-accepte').checked, el(m, 'avis-promo').parentNode.classList.contains('av-coche'), el(m, 'avis-accepte').parentNode.classList.contains('av-coche')], [false, false, false, false]);
+
+  // cochée SANS courriel : une erreur sous le courriel, rien ne part
+  m = ouvrir();
+  remplir(m, { promo: true, cour: '' });
+  soumettre(m); await attendre();
+  eq('2ᵉ case cochée SANS courriel : l\'erreur est sous le COURRIEL (« écrivez votre courriel… »), le curseur y va, rien n\'est envoyé', [champsEnErreur(m), OFFRES.test(erreurs(m).courriel), m.doc.activeElement.id, m.appels.length, champInvalide(m, 'courriel')], [['courriel'], true, 'avis-courriel', 0, true]);
+  cocherPromo(m, false);
+  eq('… décocher la 2ᵉ case efface cette erreur (le courriel redevient facultatif)', [champsEnErreur(m), champInvalide(m, 'courriel')], [[], false]);
+  soumettre(m); await attendre();
+  eq('… et l\'inscription part alors sans courriel et sans offres', [m.appels.length, m.appels[0].corps.p_courriel, m.appels[0].corps.p_promo, m.appels[0].corps.p_version_promo], [1, null, false, null]);
+
+  m = ouvrir();
+  remplir(m, { promo: true, cour: '   ' });
+  soumettre(m); await attendre();
+  eq('un courriel fait d\'espaces compte comme « aucun » pour les offres aussi', [champsEnErreur(m), m.appels.length], [['courriel'], 0]);
+
+  m = ouvrir();
+  remplir(m, { promo: true, cour: 'pasuncourriel' });
+  soumettre(m); await attendre();
+  eq('2ᵉ case cochée avec un courriel INVALIDE : c\'est le message habituel du courriel (pas celui des offres)', [champsEnErreur(m), /semble incomplet/.test(erreurs(m).courriel), OFFRES.test(erreurs(m).courriel), m.appels.length], [['courriel'], true, false, 0]);
+  dire(m, 'avis-courriel', 'marie@exemple.ca');
+  soumettre(m); await attendre();
+  eq('… corrigé, l\'inscription part avec les offres', [m.appels.length, m.appels[0].corps.p_promo], [1, true]);
+
+  m = ouvrir();
+  remplir(m, { cour: 'pasuncourriel' });
+  cocherPromo(m, true); cocherPromo(m, false);
+  soumettre(m); await attendre();
+  eq('décocher la 2ᵉ case n\'efface PAS une erreur de courriel invalide (l\'erreur est toujours vraie)', [champsEnErreur(m), /semble incomplet/.test(erreurs(m).courriel)], [['courriel'], true]);
+  cocherPromo(m, true); cocherPromo(m, false);
+  eq('… même si la case est cochée puis décochée de nouveau', champsEnErreur(m), ['courriel']);
+
+  // la case des textos reste obligatoire
+  m = ouvrir();
+  remplir(m, { promo: true, coche: false });
+  soumettre(m); await attendre();
+  eq('2ᵉ case cochée mais PAS celle des textos : seule la case des textos est en erreur, rien n\'est envoyé (les offres seules ne suffisent pas)', [champsEnErreur(m), m.appels.length], [['accepte'], 0]);
+
+  // la version envoyée est celle de la page
+  m = ouvrir();
+  el(m, 'avis-version-promo').value = 'promo-2027-v2';
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  eq('la version des offres envoyée est celle ÉCRITE DANS LA PAGE', m.appels[0].corps.p_version_promo, 'promo-2027-v2');
+  m = ouvrir();
+  el(m, 'avis-version-promo').value = 'promo-2027-v2';
+  remplir(m);
+  soumettre(m); await attendre();
+  eq('… et sans la 2ᵉ case cochée, AUCUNE version des offres n\'est envoyée (même si la page en contient une)', [m.appels[0].corps.p_promo, m.appels[0].corps.p_version_promo], [false, null]);
+
+  // une course : la personne décoche la case PENDANT l'envoi ; la base répond « courriel requis pour les offres » ; elle recoche : cocher n'efface jamais cette erreur
+  let finirCourse;
+  m = ouvrir({ reponse: () => new Promise((res) => { finirCourse = res; }) });
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  cocherPromo(m, false);
+  finirCourse(rep(false, 400, JSON.stringify({ message: 'courriel_requis_offres' })));
+  await attendre();
+  eq('la case est décochée pendant l\'envoi et la base répond « courriel requis pour les offres » : l\'erreur est montrée sous le courriel', [champsEnErreur(m), OFFRES.test(erreurs(m).courriel)], [['courriel'], true]);
+  cocherPromo(m, true);
+  eq('… recocher la 2ᵉ case n\'efface PAS cette erreur (seul décocher l\'efface)', champsEnErreur(m), ['courriel']);
+
+  // la couleur de la case
+  m = ouvrir();
+  cocherPromo(m, true);
+  eq('la 2ᵉ case cochée devient verte (av-coche), sans toucher à la case des textos', [el(m, 'avis-promo').parentNode.classList.contains('av-coche'), el(m, 'avis-accepte').parentNode.classList.contains('av-coche')], [true, false]);
+  cocherPromo(m, false);
+  eq('… décochée, elle redevient normale', el(m, 'avis-promo').parentNode.classList.contains('av-coche'), false);
+
+  // les réponses de la base
+  const refus = (message) => () => Promise.resolve(rep(false, 400, JSON.stringify({ code: 'P0001', details: null, hint: null, message })));
+  m = ouvrir({ reponse: refus('courriel_requis_offres') });
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  eq('la base répond « courriel_requis_offres » : l\'erreur est sous le courriel avec le message des offres, le curseur y va, les valeurs sont gardées', [champsEnErreur(m), OFFRES.test(erreurs(m).courriel), m.doc.activeElement.id, el(m, 'avis-promo').checked, el(m, 'avis-nom').value], [['courriel'], true, 'avis-courriel', true, 'Marie Tremblay']);
+  m = ouvrir({ reponse: refus('version_promo_inconnue') });
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  eq('« version_promo_inconnue » : une alerte dit de recharger la page (le texte des offres a changé), les valeurs sont gardées', [/plus à jour/.test(alerte(m)), /Rechargez/.test(alerte(m)), champsEnErreur(m), el(m, 'avis-promo').checked], [true, true, [], true]);
+  m = ouvrir({ reponse: refus('courriel_invalide') });
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  eq('« courriel_invalide » (même avec la 2ᵉ case) : le message habituel du courriel', [champsEnErreur(m), /semble incomplet/.test(erreurs(m).courriel)], [['courriel'], true]);
+
+  // un échec ne vide pas la 2ᵉ case ; le succès ne montre la mention que si elle était cochée
+  m = ouvrir({ reponse: () => Promise.reject(new TypeError('réseau')) });
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  eq('pas de réseau : la 2ᵉ case reste cochée (la personne n\'a rien à refaire)', [el(m, 'avis-promo').checked, el(m, 'avis-promo').parentNode.classList.contains('av-coche'), merciVisible(m)], [true, true, false]);
+  m = ouvrir();
+  remplir(m, { promo: true });
+  soumettre(m); await attendre();
+  const m2 = ouvrir();
+  remplir(m2, { promo: false });
+  soumettre(m2); await attendre();
+  eq('la mention des offres dans le « merci » n\'apparaît que si la case était cochée', [el(m, 'avis-merci-promo').hidden, el(m2, 'avis-merci-promo').hidden], [false, true]);
+  eq('… aucune erreur dans la page', [m.erreursPage, m2.erreursPage], [[], []]);
 }
 
 log('\n=== PENDANT L\'ENVOI : BOUTON BLOQUÉ, PAS DE DOUBLE ENVOI ===');
@@ -415,6 +539,8 @@ log('\n=== LA PAGE « CONFIDENTIALITÉ » DIT CE QU\'ELLE DOIT DIRE (chaque phra
     [1, 'la personne responsable de la protection des renseignements personnels', /responsable de la protection des renseignements personnels est Joé Lapointe, propriétaire/],
     [1, 'l\'entreprise et son adresse', /Entretien Lapointe, 331, Le Petit Bellechasse N, Charette \(Québec\)/],
     [2, 'les renseignements recueillis pour l\'inscription aux textos (nom, adresse, cellulaire, courriel, preuve de consentement, empreinte de l\'adresse IP)', /inscrivez aux avis de passage par texto[\s\S]*numéro de cellulaire[\s\S]*empreinte chiffrée de votre adresse IP/],
+    [2, 'l\'accord aux offres par courriel (case facultative) est gardé : date et texte accepté', /case facultative des offres par courriel, nous gardons aussi cet accord \(date et texte accepté\)/],
+    [3, 'les offres et nouvelles par courriel, seulement si la personne a accepté d\'en recevoir', /nos offres et nos nouvelles par courriel, seulement si vous avez accepté d'en recevoir/],
     [4, 'aucune publicité par texto', /Aucune publicité par texto\. Jamais/],
     [4, 'le désabonnement ARRET / STOP et l\'aide AIDE / HELP', /ARRET \(ou STOP\)[\s\S]*AIDE \(ou HELP\)/],
     [4, 'la fréquence', /fréquence varie selon les travaux : jusqu'à quelques textos par semaine en saison/],
@@ -425,6 +551,9 @@ log('\n=== LA PAGE « CONFIDENTIALITÉ » DIT CE QU\'ELLE DOIT DIRE (chaque phra
     [4, 'le numéro n\'est ni vendu ni partagé à des fins de marketing (exigence des opérateurs)', /Nous ne vendons ni ne partageons votre numéro de cellulaire, ni votre consentement aux textos, avec des tiers à des fins de marketing ou de promotion/],
     [4, 'l\'inscription est facultative', /L'inscription est facultative : vous recevez vos services même si vous ne vous inscrivez pas/],
     [5, 'les offres par courriel : client depuis moins de 2 ans ou accord, lien de désabonnement, 10 jours ouvrables', /moins de 2 ans ou si vous nous avez donné votre accord[\s\S]*lien de désabonnement[\s\S]*10 jours ouvrables/],
+    [5, 'l\'accord se donne par la 2ᵉ case, facultative, de la page d\'inscription (ou en le disant)', /cochant la deuxième case, facultative, de la page d'inscription aux avis de passage, ou en nous le disant/],
+    [5, 'cette case n\'a aucun effet sur les services ni sur les avis de passage', /Cette case n'a aucun effet sur vos services ni sur vos avis de passage/],
+    [5, 'jamais de publicité par texto', /Nous n'envoyons jamais de publicité par texto/],
     [6, 'Supabase hébergée à Montréal', /Supabase : base de données[\s\S]*hébergée à Montréal, au Canada/],
     [7, 'le traitement hors du Québec', /à l'extérieur du Québec/],
     [8, 'la durée de conservation du dossier client', /2 ans après votre dernier service/],

@@ -24,6 +24,8 @@ const V1 = 'texto-2026-10-v1';
 // Le texte de consentement approuvé (version 1), MOT POUR MOT. La page entretienlapointe.ca/avis (site-consentement/avis.html) doit afficher exactement le même (test-page-avis.mjs) :
 // on ne le change que volontairement, avec une NOUVELLE version, jamais en modifiant celle-ci.
 const TEXTE_V1 = 'J\'accepte de recevoir des textos d\'Entretien Lapointe au numéro ci-dessus, pour les avis liés à mes services : jour ou heure de passage, début des travaux, changement d\'horaire. Aucune publicité. La fréquence varie selon les travaux (jusqu\'à quelques textos par semaine en saison). Des frais de messagerie et de données peuvent s\'appliquer selon mon forfait. Je peux me désabonner en tout temps en répondant ARRET (ou STOP), ou obtenir de l\'aide en répondant AIDE (ou HELP) ou en appelant le 819 268-8069. Mon numéro n\'est ni vendu ni partagé avec des tiers, sauf le fournisseur qui envoie les textos pour Entretien Lapointe. Cette inscription est facultative : je reçois mes services même si je ne m\'inscris pas.';
+const V1P = 'promo-2026-10-v1';   // le texte de la 2ᵉ case (offres par courriel), SÉPARÉ de celui des textos
+const TEXTE_PROMO_V1 = 'J\'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d\'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n\'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.';
 const TABLES = ['clients', 'textes_consentement', 'avis_sel', 'inscriptions_avis', 'consentements'];
 
 const db = await prepare(FILES);
@@ -53,7 +55,7 @@ const admin = await ins('joe@t.ca', { nom: 'Joé', role: 'admin' });
 const nina = await emp('Nina'), luc = await emp('Luc');
 const existe = async (nom) => (await q(`select to_regclass('public.' || $1) is not null as r`, [nom]))[0].r;
 const fonctionExiste = async (sig) => (await q(`select to_regprocedure($1) is not null as r`, [sig]))[0].r;
-const SIG_INSCRIRE = 'public.inscrire_avis(text, text, text, text, boolean, text, text, text)';
+const SIG_INSCRIRE = 'public.inscrire_avis(text, text, text, text, boolean, text, text, text, boolean, text)';
 const SIG_PROMO = 'public.promo_courriel_permis(text, date, timestamptz, timestamptz, timestamptz, boolean)';
 const SIG_DESAB = 'public.desabonner_contact(text, text, text)';
 const SIG_RELIER = 'public.admin_relier_inscription(uuid, uuid)';
@@ -64,8 +66,8 @@ const n = async (sql, p) => (await q(sql, p))[0].n;
 const compte = (t) => n(`select count(*)::int n from public.${t}`);
 
 // Une inscription par la page publique (visiteur non connecté)
-const inscrire = (nom, adresse, cel, cour, accepte = true, version = V1, piege = null, agent = null) =>
-  fn(null, `inscrire_avis($1::text,$2::text,$3::text,$4::text,$5::boolean,$6::text,$7::text,$8::text)`, [nom, adresse, cel, cour, accepte, version, piege, agent], 'anon');
+const inscrire = (nom, adresse, cel, cour, accepte = true, version = V1, piege = null, agent = null, promo = false, versionPromo = null) =>
+  fn(null, `inscrire_avis($1::text,$2::text,$3::text,$4::text,$5::boolean,$6::text,$7::text,$8::text,$9::boolean,$10::text)`, [nom, adresse, cel, cour, accepte, version, piege, agent, promo, versionPromo], 'anon');
 let cel = 0;
 const celNeuf = () => '819555' + String(1000 + (++cel)).padStart(4, '0');   // 8195551001, 8195551002…
 const client = async (nom, extra = {}) => {
@@ -96,10 +98,12 @@ const colonnesStopsAvant = (await q(`select column_name from information_schema.
   const res30 = await db.exec(SQL30);
   eq('après : les 5 tables existent', await Promise.all(TABLES.map(existe)), [true, true, true, true, true]);
   eq('… la vue et toutes les fonctions existent', [await existe('clients_avis'), await fonctionExiste(SIG_INSCRIRE), await fonctionExiste(SIG_PROMO), await fonctionExiste(SIG_DESAB), await fonctionExiste(SIG_RELIER), await fonctionExiste(SIG_IGNORER), await fonctionExiste(SIG_ENREG), await fonctionExiste('public._cellulaire_normalise(text)')], [true, true, true, true, true, true, true, true]);
-  eq('… clients, inscriptions et registre sont VIDES ; UNE version du texte ; UN sel', [await compte('clients'), await compte('inscriptions_avis'), await compte('consentements'), await compte('textes_consentement'), await compte('avis_sel')], [0, 0, 0, 1, 1]);
+  eq('… clients, inscriptions et registre sont VIDES ; DEUX versions du texte (textos et offres par courriel) ; UN sel', [await compte('clients'), await compte('inscriptions_avis'), await compte('consentements'), await compte('textes_consentement'), await compte('avis_sel')], [0, 0, 0, 2, 1]);
   eq('… la version 1 du texte : canal texto, en vigueur, avec tous les éléments exigés par les opérateurs', (await q(`select version, canal, en_vigueur, texte like '%Entretien Lapointe%' a, texte like '%Aucune publicité%' b, texte like '%frais de messagerie et de données%' c, texte like '%ARRET%' d, texte like '%AIDE%' e, texte like '%819 268-8069%' f, texte like '%ni vendu ni partagé%' g, texte like '%facultative%' h, texte like '%fréquence varie%' i from public.textes_consentement`))[0],
     { version: V1, canal: 'texto', en_vigueur: true, a: true, b: true, c: true, d: true, e: true, f: true, g: true, h: true, i: true });
   eq('… et son texte est EXACTEMENT celui approuvé (la page du site doit afficher le même, mot pour mot)', (await q(`select texte from public.textes_consentement where version = $1`, [V1]))[0].texte, TEXTE_V1);
+  eq('… la version 1 du texte des OFFRES PAR COURRIEL : canal courriel_promo, en vigueur, EXACTEMENT le texte approuvé', (await q(`select canal, en_vigueur, texte from public.textes_consentement where version = $1`, [V1P]))[0], { canal: 'courriel_promo', en_vigueur: true, texte: TEXTE_PROMO_V1 });
+  vrai('… ce texte nomme l\'entreprise, dit « par courriel », la façon de se désabonner, que la case est facultative, et donne l\'adresse, le téléphone et le courriel (exigés par la loi dans une demande de consentement)', [/Entretien Lapointe/, /par courriel/, /me désabonner en tout temps avec le lien au bas de chaque courriel/, /info@entretienlapointe\.ca/, /facultative/, /sur mes services ni sur mes avis de passage/, /331, Le Petit Bellechasse N, Charette \(Québec\)/, /819 268-8069/].every((r) => r.test(TEXTE_PROMO_V1)));
   eq('… la sécurité (RLS) est ACTIVE sur les 5 tables', (await q(`select relname from pg_class where oid in ('public.clients'::regclass, 'public.textes_consentement'::regclass, 'public.avis_sel'::regclass, 'public.inscriptions_avis'::regclass, 'public.consentements'::regclass) and relrowsecurity order by relname`)).map((x) => x.relname), ['avis_sel', 'clients', 'consentements', 'inscriptions_avis', 'textes_consentement']);
   eq('… les règles d\'accès : tout est réservé à l\'administrateur (et « avis_sel » n\'en a AUCUNE : personne n\'y a accès)', (await q(`select tablename || '.' || policyname || ' (' || cmd || ')' r from pg_policies where schemaname = 'public' and tablename in ('clients','textes_consentement','avis_sel','inscriptions_avis','consentements') order by tablename, policyname`)).map((x) => x.r),
     ['clients.clients_admin (ALL)', 'consentements.consentements_admin_lecture (SELECT)', 'inscriptions_avis.inscriptions_avis_admin_lecture (SELECT)', 'textes_consentement.textes_consentement_admin_lecture (SELECT)']);
@@ -128,10 +132,10 @@ const colonnesStopsAvant = (await q(`select column_name from information_schema.
     (await q(`select policyname, cmd from pg_policies where schemaname = 'public' and tablename = 'utilisateurs' order by policyname`)).map((x) => x.policyname + ' ' + x.cmd).join('|') === reglesUtilAvant.join('|'),
     (await q(`select pg_get_functiondef('public.est_admin()'::regprocedure) d`))[0].d === defAdmin,
     (await q(`select pg_get_functiondef('public._exiger_actif()'::regprocedure) d`))[0].d === defExiger], [true, true, true, true]);
-  eq('… la requête « verification » du bas du fichier dit la vérité (celle que Joé et Claude lisent après l\x27exécution)', Object.fromEntries(Object.entries(res30[res30.length - 1].rows[0].verification).sort()), Object.fromEntries(Object.entries({ tables: ['avis_sel', 'clients', 'consentements', 'inscriptions_avis', 'textes_consentement'], regles_actives: ['avis_sel', 'clients', 'consentements', 'inscriptions_avis', 'textes_consentement'], regles: ['clients.clients_admin (ALL)', 'consentements.consentements_admin_lecture (SELECT)', 'inscriptions_avis.inscriptions_avis_admin_lecture (SELECT)', 'textes_consentement.textes_consentement_admin_lecture (SELECT)'], visiteur_peut_lire_les_tables: false, connecte_peut_ecrire_le_consentement: false, visiteur_peut_appeler: ['inscrire_avis'], desabonner_reserve_au_service: true, colonne_stops_client_id: 'uuid', texte_en_vigueur: V1, clients: 0, inscriptions: 0, consentements: 0 }).sort()));
+  eq('… la requête « verification » du bas du fichier dit la vérité (celle que Joé et Claude lisent après l\x27exécution)', Object.fromEntries(Object.entries(res30[res30.length - 1].rows[0].verification).sort()), Object.fromEntries(Object.entries({ tables: ['avis_sel', 'clients', 'consentements', 'inscriptions_avis', 'textes_consentement'], regles_actives: ['avis_sel', 'clients', 'consentements', 'inscriptions_avis', 'textes_consentement'], regles: ['clients.clients_admin (ALL)', 'consentements.consentements_admin_lecture (SELECT)', 'inscriptions_avis.inscriptions_avis_admin_lecture (SELECT)', 'textes_consentement.textes_consentement_admin_lecture (SELECT)'], visiteur_peut_lire_les_tables: false, connecte_peut_ecrire_le_consentement: false, visiteur_peut_appeler: ['inscrire_avis'], desabonner_reserve_au_service: true, colonne_stops_client_id: 'uuid', texte_en_vigueur: V1, texte_promo_en_vigueur: V1P, clients: 0, inscriptions: 0, consentements: 0 }).sort()));
   eq('… les 7 index existent', (await q(`select indexname from pg_indexes where schemaname = 'public' and indexname in ('clients_courriel_idx','clients_cellulaire_idx','stops_client_id_idx','inscriptions_avis_ip_idx','inscriptions_avis_cellulaire_idx','consentements_client_idx','consentements_contact_idx') order by indexname`)).map((x) => x.indexname), ['clients_cellulaire_idx', 'clients_courriel_idx', 'consentements_client_idx', 'consentements_contact_idx', 'inscriptions_avis_cellulaire_idx', 'inscriptions_avis_ip_idx', 'stops_client_id_idx']);
-  eq('… les clés étrangères : stops.client_id met à VIDE si la fiche disparaît ; les autres ne supprimentt JAMAIS en cascade (registre et inscriptions restent)', (await q(`select c.conrelid::regclass::text || '.' || a.attname col, c.confdeltype::text t from pg_constraint c join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any(c.conkey) where c.contype = 'f' and c.conrelid in ('public.stops'::regclass, 'public.inscriptions_avis'::regclass, 'public.consentements'::regclass) and a.attname in ('client_id','inscription_id','version_texte','traitee_par','fait_par') order by 1`)).map((x) => x.col + ':' + x.t),
-    ['consentements.client_id:a', 'consentements.fait_par:a', 'consentements.inscription_id:a', 'consentements.version_texte:a', 'inscriptions_avis.client_id:a', 'inscriptions_avis.traitee_par:a', 'inscriptions_avis.version_texte:a', 'stops.client_id:n']);
+  eq('… les clés étrangères : stops.client_id met à VIDE si la fiche disparaît ; les autres ne supprimentt JAMAIS en cascade (registre et inscriptions restent)', (await q(`select c.conrelid::regclass::text || '.' || a.attname col, c.confdeltype::text t from pg_constraint c join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any(c.conkey) where c.contype = 'f' and c.conrelid in ('public.stops'::regclass, 'public.inscriptions_avis'::regclass, 'public.consentements'::regclass) and a.attname in ('client_id','inscription_id','version_texte','version_promo','traitee_par','fait_par') order by 1`)).map((x) => x.col + ':' + x.t),
+    ['consentements.client_id:a', 'consentements.fait_par:a', 'consentements.inscription_id:a', 'consentements.version_texte:a', 'inscriptions_avis.client_id:a', 'inscriptions_avis.traitee_par:a', 'inscriptions_avis.version_promo:a', 'inscriptions_avis.version_texte:a', 'stops.client_id:n']);
 }
 
 log('\n=== SANS LES FICHIERS PRÉCÉDENTS, LE FICHIER REFUSE DE S\'EXÉCUTER ET NE CRÉE RIEN ===');
@@ -159,7 +163,7 @@ log('\n=== ON PEUT L\'EXÉCUTER PLUSIEURS FOIS : RIEN N\'EST EFFACÉ, LE SEL ET 
     await compte('textes_consentement'),
     await n(`select count(*)::int n from pg_policies where schemaname = 'public' and tablename in ('clients','textes_consentement','avis_sel','inscriptions_avis','consentements')`),
     await n(`select count(*)::int n from pg_trigger where not tgisinternal and tgrelid in ('public.clients'::regclass, 'public.consentements'::regclass, 'public.textes_consentement'::regclass)`),
-    await n(`select count(*)::int n from pg_constraint where contype = 'c' and conrelid in ('public.clients'::regclass, 'public.inscriptions_avis'::regclass, 'public.consentements'::regclass, 'public.textes_consentement'::regclass)`)], [1, 4, 4, 25]);
+    await n(`select count(*)::int n from pg_constraint where contype = 'c' and conrelid in ('public.clients'::regclass, 'public.inscriptions_avis'::regclass, 'public.consentements'::regclass, 'public.textes_consentement'::regclass)`)], [2, 4, 4, 26]);
   await q(`update public.clients set nom = 'Modifié' where id = $1`, [c1]);
   await db.exec(SQL30);
   eq('… ne remet pas à zéro ce que Joé a changé dans une fiche', (await ligneClient(c1)).nom, 'Modifié');
@@ -468,7 +472,7 @@ log('\n=== RELIER UNE INSCRIPTION À UN CLIENT : LE CLIENT EST ALORS INSCRIT AUX
   await err('un client ARCHIVÉ est refusé', () => fn(admin, `admin_relier_inscription($1::uuid,$2::uuid)`, [ins1, cVieux]), 'client_introuvable');
   eq('… (rien n\'a bougé après ces refus : l\'inscription est encore « nouvelle » et le client sans numéro)', [(await q(`select statut from public.inscriptions_avis where id = $1`, [ins1]))[0].statut, (await ligneClient(cMarc)).cellulaire, (await ligneClient(cMarc)).avis_texto], ['nouvelle', null, false]);
   const r = await fn(admin, `admin_relier_inscription($1::uuid,$2::uuid)`, [ins1, cMarc]);
-  eq('l\'administrateur relie : « reliee » avec l\'identifiant du client', r, { statut: 'reliee', client_id: cMarc });
+  eq('l\'administrateur relie : « reliee » avec l\'identifiant du client (et « promo » : la case des offres n\'était pas cochée)', r, { promo: 'non_demandee', statut: 'reliee', client_id: cMarc });
   const m = await ligneClient(cMarc);
   eq('… le client reçoit le numéro de l\'inscription, le courriel (il n\'en avait pas), et il est INSCRIT aux textos', [m.cellulaire, m.courriel, m.avis_texto, m.desabonne_texto_le], ['+1' + num, 'marc@nouveau.ca', true, null]);
   const i1 = (await q(`select statut, client_id, traitee_par, traitee_le is not null t from public.inscriptions_avis where id = $1`, [ins1]))[0];
@@ -646,7 +650,7 @@ log('\n=== LE REGISTRE ET LES TEXTES NE SE MODIFIENT NI NE S\'EFFACENT (même pa
   eq('… seul « en_vigueur » peut changer (on retire une version du service sans l\'effacer)', (await q(`select en_vigueur from public.textes_consentement where version = $1`, [V1]))[0].en_vigueur, false);
   await q(`update public.textes_consentement set en_vigueur = true where version = $1`, [V1]);
   await q(`insert into public.textes_consentement (version, canal, texte) values ('texto-2027-v2', 'texto', 'Un nouveau texte de consentement, version deux.')`);
-  eq('une NOUVELLE version s\'ajoute (les deux existent)', await compte('textes_consentement'), 2);
+  eq('une NOUVELLE version s\'ajoute (les trois existent)', await compte('textes_consentement'), 3);
   await err('un texte trop court (moins de 20 caractères) est refusé', () => q(`insert into public.textes_consentement (version, canal, texte) values ('v3', 'texto', 'court')`), 'textes_consentement_texte_present');
   await err('un autre canal que « texto » est refusé', () => q(`insert into public.textes_consentement (version, canal, texte) values ('v4', 'pigeon', 'Un texte assez long pour passer la règle')`), 'textes_consentement_canal_liste');
   await q(`alter table public.textes_consentement disable trigger textes_consentement_immuables`); await q(`delete from public.textes_consentement where version = 'texto-2027-v2'`); await q(`alter table public.textes_consentement enable trigger textes_consentement_immuables`);
@@ -716,6 +720,171 @@ log('\n=== QUI PEUT RECEVOIR QUOI : LES AVIS PAR COURRIEL, PAR TEXTO ET LES COUR
   eq('… ni contrat ni consentement : non ; contrat vieux de 3 ans : non ; consentement exprès seul : oui', [await pp('a@b.ca', null, null, null, null, true), await pp('a@b.ca', jours(1100), null, null, null, true), await pp('a@b.ca', null, '2026-01-01', null, null, true)], [false, false, true]);
   await vider();
   await q(`delete from public.clients`);
+}
+
+log('\n=== LA 2ᵉ CASE DE LA PAGE : LES OFFRES PAR COURRIEL (facultative, séparée de celle des textos) ===');
+{
+  const desab = (canal, contact, source) => fn(null, `desabonner_contact($1::text,$2::text,$3::text)`, [canal, contact, source], 'service_role');
+  const effacerTexte = async (version) => { await q(`alter table public.textes_consentement disable trigger textes_consentement_immuables`); await q(`delete from public.textes_consentement where version = $1`, [version]); await q(`alter table public.textes_consentement enable trigger textes_consentement_immuables`); };
+  let ipTour = 0;   // chaque inscription vient d'une adresse IP différente (sinon la limite de 5 par heure et par adresse arrête le test)
+  const promoUn = async (nom, cour, o = {}) => { await headers({ 'x-forwarded-for': '203.0.113.' + (100 + (++ipTour % 150)) }); return inscrire(nom, '1 rue Promo', o.cel || celNeuf(), cour, o.accepte === undefined ? true : o.accepte, o.version || V1, null, null, o.promo === undefined ? true : o.promo, o.versionPromo === undefined ? V1P : o.versionPromo); };
+  const insc = async (nom) => (await q(`select nom, courriel, promo_accepte, version_promo, statut from public.inscriptions_avis where nom = $1`, [nom]))[0];
+  await vider();
+  await q(`delete from public.clients`);
+  await headers({ 'x-forwarded-for': '203.0.113.80' });
+
+  log('  -- s\'inscrire AVEC la 2ᵉ case cochée');
+  eq('inscription avec les offres : réponse « enregistree »', await promoUn('Promo Un', 'Promo.Un@Exemple.CA'), { statut: 'enregistree' });
+  eq('… l\'inscription garde l\'accord aux offres, la version lue et le courriel (en minuscules)', await insc('Promo Un'), { nom: 'Promo Un', courriel: 'promo.un@exemple.ca', promo_accepte: true, version_promo: V1P, statut: 'nouvelle' });
+  const reg = await q(`select canal, action, source, contact, version_texte, ip_hash is not null h, client_id is null libre, inscription_id is not null i from public.consentements order by canal`);
+  eq('… le registre garde DEUX accords distincts : les textos (le numéro, la version des textos) et les offres (le courriel, la version des offres)', reg.map((x) => [x.canal, x.action, x.source, x.version_texte, x.h, x.libre, x.i]), [['courriel_promo', 'accord', 'page_avis', V1P, true, true, true], ['texto', 'accord', 'page_avis', V1, true, true, true]]);
+  eq('… avec le bon contact dans chaque ligne (courriel pour les offres, numéro pour les textos)', reg.map((x) => x.contact.startsWith('+1') ? 'numéro' : x.contact), ['promo.un@exemple.ca', 'numéro']);
+  eq('… et la MÊME empreinte d\'adresse IP dans les deux lignes et dans l\'inscription', (await q(`select count(distinct h)::int n from (select ip_hash h from public.consentements union all select ip_hash from public.inscriptions_avis) x`))[0].n, 1);
+
+  log('  -- s\'inscrire SANS la 2ᵉ case');
+  await promoUn('Sans Promo', 'sans.promo@exemple.ca', { promo: false, versionPromo: null });
+  eq('case non cochée : « promo_accepte » est faux, aucune version, même si un courriel est donné', await insc('Sans Promo'), { nom: 'Sans Promo', courriel: 'sans.promo@exemple.ca', promo_accepte: false, version_promo: null, statut: 'nouvelle' });
+  eq('… et aucune ligne « courriel_promo » n\'est écrite au registre pour elle', await n(`select count(*)::int n from public.consentements c join public.inscriptions_avis i on i.id = c.inscription_id where i.nom = 'Sans Promo' and c.canal = 'courriel_promo'`), 0);
+  await promoUn('Promo Absent', 'absent@exemple.ca', { promo: null, versionPromo: V1P });
+  eq('« promo » absent (NULL) compte comme « non » : rien n\'est noté pour les offres (même si une version est envoyée)', [await insc('Promo Absent'), await n(`select count(*)::int n from public.consentements c join public.inscriptions_avis i on i.id = c.inscription_id where i.nom = 'Promo Absent' and c.canal = 'courriel_promo'`)], [{ nom: 'Promo Absent', courriel: 'absent@exemple.ca', promo_accepte: false, version_promo: null, statut: 'nouvelle' }, 0]);
+  await promoUn('Version Ignoree', null, { promo: false, versionPromo: 'texto-fantome' });
+  eq('case non cochée avec une version quelconque : la version est ignorée (aucune erreur, rien de gardé)', (await insc('Version Ignoree')).version_promo, null);
+  await promoUn('Sans Courriel', null, { promo: false, versionPromo: null });
+  eq('sans la 2ᵉ case, le courriel reste facultatif (aucun courriel)', (await insc('Sans Courriel')).courriel, null);
+
+  await headers({ 'x-forwarded-for': '203.0.113.99' });
+  const ancienne = await fn(null, `inscrire_avis($1::text,$2::text,$3::text,$4::text,$5::boolean,$6::text,$7::text,$8::text)`, ['Ancienne Page', '1 rue Ancienne', celNeuf(), 'ancienne@exemple.ca', true, V1, null, null], 'anon');
+  eq('une page qui ne connaît pas encore la 2ᵉ case (8 paramètres seulement) marche toujours : « enregistree », sans offres', [ancienne, (await insc('Ancienne Page')).promo_accepte, (await insc('Ancienne Page')).version_promo], [{ statut: 'enregistree' }, false, null]);
+  eq('… et le registre n\'a que l\'accord aux textos pour elle', (await q(`select c.canal from public.consentements c join public.inscriptions_avis i on i.id = c.inscription_id where i.nom = 'Ancienne Page'`)).map((x) => x.canal), ['texto']);
+
+  log('  -- les refus');
+  const avant = [await compte('inscriptions_avis'), await compte('consentements')];
+  await err('case des offres cochée SANS courriel : refusée', () => promoUn('Refus Un', null), 'courriel_requis_offres');
+  await err('… un courriel fait d\'espaces compte comme « aucun »', () => promoUn('Refus Deux', '   '), 'courriel_requis_offres');
+  await err('case des offres cochée avec un courriel invalide : c\'est le courriel qui est refusé', () => promoUn('Refus Trois', 'pasuncourriel'), 'courriel_invalide');
+  await err('case des offres cochée sans version du texte lu : refusée', () => promoUn('Refus Quatre', 'q4@exemple.ca', { versionPromo: null }), 'version_promo_inconnue');
+  await err('… avec une version qui n\'existe pas : refusée', () => promoUn('Refus Cinq', 'q5@exemple.ca', { versionPromo: 'promo-fantome' }), 'version_promo_inconnue');
+  await err('… avec la version du texte des TEXTOS (mauvais canal) : refusée', () => promoUn('Refus Six', 'q6@exemple.ca', { versionPromo: V1 }), 'version_promo_inconnue');
+  await q(`update public.textes_consentement set en_vigueur = false where version = $1`, [V1P]);
+  await err('… avec la bonne version mais retirée du service (plus « en vigueur ») : refusée', () => promoUn('Refus Sept', 'q7@exemple.ca'), 'version_promo_inconnue');
+  await q(`update public.textes_consentement set en_vigueur = true where version = $1`, [V1P]);
+  await err('les offres ne suffisent pas : la case des TEXTOS reste obligatoire', () => promoUn('Refus Huit', 'q8@exemple.ca', { accepte: false }), 'consentement_requis');
+  await err('la version des offres NE PEUT PAS servir de version du texte des textos (mauvais canal)', () => promoUn('Refus Neuf', 'q9@exemple.ca', { version: V1P }), 'version_inconnue');
+  eq('… rien n\'a été gardé par tous ces refus', [await compte('inscriptions_avis'), await compte('consentements')], avant);
+
+  log('  -- le « double toucher » : un NOUVEL accord aux offres est noté, un doublon non');
+  await vider();
+  const numero = celNeuf();
+  await promoUn('Double A', 'double.a@exemple.ca', { cel: numero, promo: false, versionPromo: null });
+  await promoUn('Double B', 'double.b@exemple.ca', { cel: numero, promo: false, versionPromo: null });
+  eq('même numéro, sans offres les deux fois : le 2ᵉ est un doublon (une seule inscription)', await compte('inscriptions_avis'), 1);
+  const second = await promoUn('Double C', 'double.c@exemple.ca', { cel: numero });
+  eq('même numéro, mais la personne ajoute maintenant son accord aux offres : c\'est un NOUVEL accord, il est noté (une 2ᵉ inscription)', [second, await compte('inscriptions_avis'), (await insc('Double C')).promo_accepte], [{ statut: 'enregistree' }, 2, true]);
+  await promoUn('Double D', 'double.d@exemple.ca', { cel: numero });
+  eq('… un 3ᵉ envoi identique (avec offres) est un doublon', await compte('inscriptions_avis'), 2);
+  await promoUn('Double E', 'double.e@exemple.ca', { cel: numero, promo: false, versionPromo: null });
+  eq('… et un envoi SANS offres après un envoi AVEC offres est aussi un doublon', await compte('inscriptions_avis'), 2);
+  eq('… le registre garde un seul accord aux offres (celui de « Double C »)', (await q(`select contact from public.consentements where canal = 'courriel_promo'`)).map((x) => x.contact), ['double.c@exemple.ca']);
+
+  log('  -- les règles de la table (même pour le propriétaire de la base)');
+  await vider();
+  const ligneBase = (promo, version, cour) => q(`insert into public.inscriptions_avis (nom, adresse, cellulaire, courriel, version_texte, promo_accepte, version_promo) values ('Table Promo', '1 rue Ok', '+18195559950', $1, '${V1}', $2, $3)`, [cour, promo, version]);
+  await err('promo cochée sans version lue : refusé par la table', () => ligneBase(true, null, 'ok@exemple.ca'), 'inscriptions_avis_promo_coherente');
+  await err('promo cochée sans courriel : refusé par la table', () => ligneBase(true, V1P, null), 'inscriptions_avis_promo_coherente');
+  await err('promo NON cochée mais avec une version : refusé par la table', () => ligneBase(false, V1P, 'ok@exemple.ca'), 'inscriptions_avis_promo_coherente');
+  await err('« promo_accepte » ne peut pas être NULL (colonne obligatoire)', () => q(`insert into public.inscriptions_avis (nom, adresse, cellulaire, version_texte, promo_accepte) values ('Promo Null', '1 rue Ok', '+18195559951', '${V1}', null)`), 'null value');
+  await err('une version des offres qui n\'existe pas : refusée (clé étrangère)', () => ligneBase(true, 'promo-fantome', 'ok@exemple.ca'), 'foreign key');
+  await ligneBase(true, V1P, 'ok@exemple.ca');
+  await ligneBase(false, null, null);
+  eq('les deux cas permis passent : offres avec courriel et version ; sans offres ni version', await compte('inscriptions_avis'), 2);
+  await err('une ligne du registre ne peut pas viser une version du texte qui n\'existe pas (offres)', () => q(`insert into public.consentements (canal, action, source, contact, version_texte) values ('courriel_promo', 'accord', 'page_avis', 'ok@exemple.ca', 'promo-fantome')`), 'foreign key');
+  await q(`insert into public.textes_consentement (version, canal, texte) values ('promo-2027-v2', 'courriel_promo', 'Un nouveau texte des offres par courriel, version deux.')`);
+  eq('une NOUVELLE version du texte des offres s\'ajoute (et « texte_promo_en_vigueur » de la vérification suivrait la plus récente)', (await q(`select version from public.textes_consentement where en_vigueur and canal = 'courriel_promo' order by cree_le desc, version desc limit 1`))[0].version.startsWith('promo-'), true);
+  await effacerTexte('promo-2027-v2');
+  await vider();
+
+  log('  -- relier une inscription qui accepte les offres : la fiche reçoit le consentement exprès');
+  const vieux = (id, jours) => q(`alter table public.consentements disable trigger consentements_immuables`).then(() => q(`update public.consentements set fait_le = now() - ($2 || ' days')::interval where inscription_id = $1`, [id, String(jours)])).then(() => q(`alter table public.consentements enable trigger consentements_immuables`));
+  const idInsc = async (nom) => (await q(`select id from public.inscriptions_avis where nom = $1`, [nom]))[0].id;
+  const relier = (nom, c) => idInsc(nom).then((id) => fn(admin, `admin_relier_inscription($1::uuid,$2::uuid)`, [id, c]));
+  const fait = async (nom) => (await q(`select fait_le from public.consentements c join public.inscriptions_avis i on i.id = c.inscription_id where i.nom = $1 and c.canal = 'courriel_promo'`, [nom]))[0].fait_le;
+
+  await promoUn('Appliquée Sans Courriel', 'sans.courriel@exemple.ca');
+  await vieux(await idInsc('Appliquée Sans Courriel'), 9);
+  const cSpectateur = await client('Spectateur', { courriel: 'spectateur@exemple.ca', cellulaire: '819 555 9969' });
+  await q(`update public.clients set desabonne_promo_le = now() - interval '40 days' where id = $1`, [cSpectateur]);
+  const cSans = await client('Fiche sans courriel');
+  await q(`update public.clients set desabonne_promo_le = now() - interval '30 days' where id = $1`, [cSans]);
+  const rep1 = await relier('Appliquée Sans Courriel', cSans);
+  const l1 = await ligneClient(cSans);
+  eq('fiche SANS courriel : « promo » = appliquee, la fiche reçoit le courriel de l\'inscription', [rep1.promo, l1.courriel], ['appliquee', 'sans.courriel@exemple.ca']);
+  eq('… le consentement exprès porte la DATE DE L\'INSCRIPTION (il y a 9 jours), pas celle du lien, et le désabonnement des offres est levé', [Math.abs(new Date(l1.promo_consentement_expres_le).getTime() - new Date(await fait('Appliquée Sans Courriel')).getTime()) < 1000, Math.round((Date.now() - new Date(l1.promo_consentement_expres_le).getTime()) / 86400000), l1.desabonne_promo_le], [true, 9, null]);
+  eq('… la vue dit que les offres par courriel sont permises, sans date d\'expiration (consentement exprès)', await sqlAs(admin, `select promo_courriel_ok, promo_implicite_expire_le from public.clients_avis where id = $1`, [cSans]), [{ promo_courriel_ok: true, promo_implicite_expire_le: null }]);
+  eq('… et le registre : les DEUX lignes de l\'inscription sont reliées à la fiche', (await consents(`client_id = $1`, [cSans])).map((x) => x.canal).sort(), ['courriel_promo', 'texto']);
+
+  await promoUn('Appliquée Même Courriel', 'meme@exemple.ca');
+  const cMeme = await client('Fiche même courriel', { courriel: 'MEME@exemple.ca' });
+  eq('fiche avec le MÊME courriel (écrit autrement) : appliquee', (await relier('Appliquée Même Courriel', cMeme)).promo, 'appliquee');
+  eq('… la fiche a le consentement exprès', (await ligneClient(cMeme)).promo_consentement_expres_le !== null, true);
+
+  await promoUn('Courriel Différent', 'celui.de.la.page@exemple.ca');
+  const cAutre = await client('Fiche autre courriel', { courriel: 'autre.adresse@exemple.ca' });
+  const rep2 = await relier('Courriel Différent', cAutre);
+  const l2 = await ligneClient(cAutre);
+  eq('fiche avec un AUTRE courriel : « promo » = courriel_different, rien n\'est appliqué (ni consentement exprès, ni changement du courriel)', [rep2.promo, l2.promo_consentement_expres_le, l2.courriel], ['courriel_different', null, 'autre.adresse@exemple.ca']);
+  eq('… mais l\'inscription est reliée quand même et le numéro est inscrit aux textos', [rep2.statut, l2.avis_texto], ['reliee', true]);
+  eq('… et le registre garde l\'accord aux offres avec le courriel de la PAGE (la preuve ne change pas)', (await consents(`canal = 'courriel_promo' and client_id = $1`, [cAutre])).map((x) => x.contact), ['celui.de.la.page@exemple.ca']);
+
+  await promoUn('Désabonné De Tout', 'desab.tout@exemple.ca');
+  const cDesab = await client('Fiche désabonnée de tous les courriels', { courriel: 'desab.tout@exemple.ca' });
+  await desab('courriel', 'desab.tout@exemple.ca', 'lien_desabonnement');
+  const rep3 = await relier('Désabonné De Tout', cDesab);
+  eq('fiche désabonnée de TOUS les courriels : « promo » = desabonne_des_courriels, rien n\'est appliqué', [rep3.promo, (await ligneClient(cDesab)).promo_consentement_expres_le, (await ligneClient(cDesab)).desabonne_courriel_le !== null], ['desabonne_des_courriels', null, true]);
+
+  await promoUn('Retrait Venu Après', 'retrait.apres@exemple.ca');
+  await vieux(await idInsc('Retrait Venu Après'), 3);
+  await desab('courriel_promo', 'retrait.apres@exemple.ca', 'lien_desabonnement');
+  const cRetrait = await client('Fiche avant le retrait');
+  const rep4 = await relier('Retrait Venu Après', cRetrait);
+  eq('un RETRAIT des offres venu APRÈS l\'accord de la page : « promo » = retire_depuis, rien n\'est appliqué (le dernier mot est celui de la personne)', [rep4.promo, (await ligneClient(cRetrait)).promo_consentement_expres_le], ['retire_depuis', null]);
+
+  await promoUn('Retrait Avant', 'retrait.avant@exemple.ca');
+  await desab('courriel_promo', 'retrait.avant@exemple.ca', 'lien_desabonnement');
+  await q(`alter table public.consentements disable trigger consentements_immuables`);
+  await q(`update public.consentements set fait_le = now() - interval '5 days' where contact = 'retrait.avant@exemple.ca' and action = 'retrait'`);
+  await q(`alter table public.consentements enable trigger consentements_immuables`);
+  const cAvant = await client('Fiche retrait ancien');
+  eq('un retrait ANTÉRIEUR à l\'accord de la page (la personne a changé d\'avis) ne bloque pas : appliquee', [(await relier('Retrait Avant', cAvant)).promo, (await ligneClient(cAvant)).promo_consentement_expres_le !== null], ['appliquee', true]);
+
+  await promoUn('Retrait Autre Courriel', 'retrait.autre@exemple.ca');
+  await desab('courriel_promo', 'quelquun.dautre@exemple.ca', 'lien_desabonnement');
+  const cAutreRetrait = await client('Fiche retrait d\'un autre');
+  eq('le retrait d\'un AUTRE courriel ne touche pas cette inscription : appliquee', (await relier('Retrait Autre Courriel', cAutreRetrait)).promo, 'appliquee');
+
+  await promoUn('Sans Offres A Relier', 'sans.offres@exemple.ca', { promo: false, versionPromo: null });
+  const cSansOffres = await client('Fiche sans offres', { courriel: 'sans.offres@exemple.ca' });
+  eq('inscription SANS la case des offres : « promo » = non_demandee, la fiche n\'a aucun consentement exprès', [(await relier('Sans Offres A Relier', cSansOffres)).promo, (await ligneClient(cSansOffres)).promo_consentement_expres_le], ['non_demandee', null]);
+
+  eq('le client « spectateur » n\'a été touché par AUCUN des liens ci-dessus (ni consentement exprès, ni désabonnement levé)', [(await ligneClient(cSpectateur)).promo_consentement_expres_le, (await ligneClient(cSpectateur)).desabonne_promo_le !== null, (await ligneClient(cSpectateur)).avis_texto], [null, true, false]);
+
+  log('  -- la requête « verification » : un canal à la fois');
+  await q(`insert into public.textes_consentement (version, canal, texte, cree_le) values ('promo-2099-futur', 'courriel_promo', 'Un texte des offres plus récent que tous les autres.', now() + interval '1 hour')`);
+  const v2 = (await db.query(SQL30.slice(SQL30.lastIndexOf('select jsonb_build_object(')))).rows[0].verification;
+  eq('avec un texte des offres PLUS RÉCENT : « texte_en_vigueur » reste celui des textos, « texte_promo_en_vigueur » est celui des offres', [v2.texte_en_vigueur, v2.texte_promo_en_vigueur], [V1, 'promo-2099-futur']);
+  await effacerTexte('promo-2099-futur');
+  await q(`insert into public.textes_consentement (version, canal, texte, cree_le) values ('texto-2099-futur', 'texto', 'Un texte des textos plus récent que tous les autres.', now() + interval '1 hour')`);
+  const v3 = (await db.query(SQL30.slice(SQL30.lastIndexOf('select jsonb_build_object(')))).rows[0].verification;
+  eq('avec un texte des TEXTOS plus récent : « texte_en_vigueur » le suit et « texte_promo_en_vigueur » ne change pas', [v3.texte_en_vigueur, v3.texte_promo_en_vigueur], ['texto-2099-futur', V1P]);
+  await effacerTexte('texto-2099-futur');
+
+  log('  -- noter un accord aux textos : seulement une version du texte DES TEXTOS');
+  const cNoter = await client('Fiche noter', { cellulaire: '819 555 9960', courriel: 'noter@exemple.ca' });
+  await err('un accord par texto noté avec la version du texte des OFFRES : refusé (mauvais canal)', () => fn(admin, `admin_enregistrer_consentement($1::uuid,'texto','accord','verbal',$2::text)`, [cNoter, V1P]), 'version_inconnue');
+  eq('… rien n\'a été écrit', [(await ligneClient(cNoter)).avis_texto, (await consents(`client_id = $1`, [cNoter])).length], [false, 0]);
+
+  await vider();
+  await q(`delete from public.clients`);
+  await headers({ 'x-forwarded-for': '203.0.113.10' });
 }
 
 log('\n=== DURCISSEMENT : LES CAS LIMITES QUE LES ERREURS VOLONTAIRES ONT FAIT DÉCOUVRIR ===');

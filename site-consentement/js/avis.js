@@ -26,15 +26,21 @@
 	};
 
 	// Les codes que la base peut répondre (texte de l'erreur) : un champ précis, ou un message général
+	var MSG_OFFRES = 'Écrivez votre courriel pour recevoir nos offres, ou décochez la deuxième case.';
+	var MSG_PAS_A_JOUR = 'Cette page n\'est plus à jour. Rechargez la page, puis réessayez.';
 	var CODE_CHAMP = {
 		nom_invalide: 'nom',
 		cellulaire_invalide: 'cellulaire',
 		adresse_invalide: 'adresse',
 		courriel_invalide: 'courriel',
+		courriel_requis_offres: 'courriel',
 		consentement_requis: 'accepte'
 	};
+	// Le message d'un code qui n'est pas celui habituel de son champ
+	var MSG_CODE = { courriel_requis_offres: MSG_OFFRES };
 	var CODE_ALERTE = {
-		version_inconnue: 'Cette page n\'est plus à jour. Rechargez la page, puis réessayez.',
+		version_inconnue: MSG_PAS_A_JOUR,
+		version_promo_inconnue: MSG_PAS_A_JOUR,
 		trop_de_demandes: 'Il y a eu trop de demandes en peu de temps. Réessayez plus tard ou téléphonez-nous au ' + TEL + '.'
 	};
 	var MSG_RESEAU = 'Connexion impossible. Vérifiez votre réseau et réessayez, ou téléphonez-nous au ' + TEL + '.';
@@ -54,7 +60,8 @@
 		cellulaire: $('avis-cellulaire'),
 		adresse: $('avis-adresse'),
 		courriel: $('avis-courriel'),
-		accepte: $('avis-accepte')
+		accepte: $('avis-accepte'),
+		promo: $('avis-promo')
 	};
 	var TEXTE_BOUTON = bouton.textContent;
 	var enCours = false;
@@ -71,7 +78,9 @@
 			adresse: champ.adresse.value.replace(/^\s+|\s+$/g, ''),
 			courriel: champ.courriel.value.replace(/^\s+|\s+$/g, ''),
 			accepte: champ.accepte.checked === true,
+			promo: champ.promo.checked === true,
 			version: $('avis-version').value,
+			versionPromo: $('avis-version-promo').value,
 			piege: $('avis-site-web').value
 		};
 	}
@@ -82,6 +91,7 @@
 		if (!cellulaireValide(v.cellulaire)) { e.cellulaire = MSG_CHAMP.cellulaire; }
 		if (v.adresse.length < 5 || v.adresse.length > 200) { e.adresse = MSG_CHAMP.adresse; }
 		if (v.courriel !== '' && !courrielValide(v.courriel)) { e.courriel = MSG_CHAMP.courriel; }
+		else if (v.promo && v.courriel === '') { e.courriel = MSG_OFFRES; }
 		if (!v.accepte) { e.accepte = MSG_CHAMP.accepte; }
 		return e;
 	}
@@ -132,8 +142,11 @@
 		bouton.textContent = TEXTE_BOUTON;
 	}
 
-	function succes() {
+	function succes(avecOffres) {
 		// on ne garde rien de la personne dans la page une fois l'inscription reçue
+		champ.promo.checked = false;
+		champ.promo.parentNode.classList.remove('av-coche');
+		$('avis-merci-promo').hidden = !avecOffres;
 		CHAMPS.forEach(function (cle) { if (cle === 'accepte') { champ.accepte.checked = false; } else { champ[cle].value = ''; } });
 		champ.accepte.parentNode.classList.remove('av-coche');
 		form.hidden = true;
@@ -147,7 +160,7 @@
 		try { code = String(JSON.parse(texte).message || ''); } catch (e) { code = ''; }
 		if (CODE_CHAMP[code]) {
 			var cle = CODE_CHAMP[code];
-			montrerErreur(cle, MSG_CHAMP[cle]);
+			montrerErreur(cle, MSG_CODE[code] || MSG_CHAMP[cle]);
 			if (champ[cle].focus) { champ[cle].focus(); }
 		} else if (CODE_ALERTE[code]) {
 			montrerAlerte(CODE_ALERTE[code]);
@@ -175,7 +188,9 @@
 				p_accepte: true,
 				p_version: v.version,
 				p_site_web: v.piege,
-				p_agent: String(navigator.userAgent || '').slice(0, 300)
+				p_agent: String(navigator.userAgent || '').slice(0, 300),
+				p_promo: v.promo,
+				p_version_promo: v.promo ? v.versionPromo : null
 			})
 		};
 		if (controle) { options.signal = controle.signal; }
@@ -187,7 +202,7 @@
 				fini();
 				var statut = '';
 				if (r.ok) { try { statut = String(JSON.parse(r.texte).statut || ''); } catch (e) { statut = ''; } }
-				if (r.ok && statut === 'enregistree') { succes(); } else { echec(r.texte); }
+				if (r.ok && statut === 'enregistree') { succes(v.promo); } else { echec(r.texte); }
 			})
 			.catch(function () {
 				if (minuterie) { clearTimeout(minuterie); }
@@ -221,6 +236,12 @@
 				else { champ.accepte.parentNode.classList.remove('av-coche'); }
 			}
 		});
+	});
+
+	champ.promo.addEventListener('change', function () {
+		if (champ.promo.checked) { champ.promo.parentNode.classList.add('av-coche'); }
+		else { champ.promo.parentNode.classList.remove('av-coche'); }
+		if (!champ.promo.checked && $('avis-err-courriel').textContent === MSG_OFFRES) { effacerErreur('courriel'); }
 	});
 
 	bouton.disabled = false;

@@ -17,12 +17,15 @@
 --     l'ancien numéro).
 --   • stops.client_id : le lien d'un arrêt vers une fiche du répertoire (vide au départ).
 --   • textes_consentement : les versions du texte que le client lit avant de s'inscrire (une version n'est jamais modifiée ni effacée : c'est la preuve de ce que le client a accepté).
+--     Deux textes au départ : celui des TEXTOS d'avis de passage (texto-2026-10-v1) et celui, SÉPARÉ et facultatif, des OFFRES PAR COURRIEL (promo-2026-10-v1 : une 2ᵉ case sur la page).
 --   • inscriptions_avis : les inscriptions reçues de la page publique, en attente que Joé les relie à un client.
 --   • consentements : le registre (accord, retrait ; par la page, verbalement, sur papier, par ARRET, par un lien de désabonnement). On n'y écrit qu'en AJOUTANT ; la seule
 --     modification permise est de relier une ligne à un client (une fois).
 --   • inscrire_avis(…) : la SEULE fonction que la page publique (visiteur non connecté) peut appeler. Piège anti-robot, vérification de chaque champ, une seule inscription par
---     numéro et par jour, et des limites par adresse IP (on ne garde qu'une EMPREINTE de l'adresse IP, jamais l'adresse elle-même).
---   • admin_relier_inscription, admin_ignorer_inscription, admin_enregistrer_consentement : pour l'administrateur seulement.
+--     numéro et par jour, et des limites par adresse IP (on ne garde qu'une EMPREINTE de l'adresse IP, jamais l'adresse elle-même). Si la 2ᵉ case (offres par courriel) est cochée,
+--     le courriel est exigé et un 2ᵉ accord, distinct, est noté au registre.
+--   • admin_relier_inscription, admin_ignorer_inscription, admin_enregistrer_consentement : pour l'administrateur seulement. Relier une inscription qui accepte les offres par courriel
+--     marque la fiche « consentement exprès » (à la date de l'inscription), sauf si le courriel de la fiche est différent, si le client est désabonné de tous les courriels ou si un retrait est venu après.
 --   • desabonner_contact : pour la fonction d'envoi seulement (rôle service_role : le mot ARRET reçu par texto, un lien de désabonnement dans un courriel).
 --   • promo_courriel_permis + la vue clients_avis : « qui peut recevoir quoi » (avis par courriel, avis par texto, courriels promotionnels : consentement exprès, ou contrat dans les
 --     2 dernières années = consentement implicite de la loi anti-pourriel, jamais après un désabonnement).
@@ -107,7 +110,7 @@ create table if not exists public.textes_consentement (
   texte      text not null,
   en_vigueur boolean not null default true,
   cree_le    timestamptz not null default now(),
-  constraint textes_consentement_canal_liste check (canal in ('texto')),
+  constraint textes_consentement_canal_liste check (canal in ('texto', 'courriel_promo')),
   constraint textes_consentement_texte_present check (char_length(btrim(texte)) >= 20)
 );
 
@@ -117,6 +120,12 @@ comment on table public.textes_consentement is
 insert into public.textes_consentement (version, canal, texte) values (
   'texto-2026-10-v1', 'texto',
   $t$J'accepte de recevoir des textos d'Entretien Lapointe au numéro ci-dessus, pour les avis liés à mes services : jour ou heure de passage, début des travaux, changement d'horaire. Aucune publicité. La fréquence varie selon les travaux (jusqu'à quelques textos par semaine en saison). Des frais de messagerie et de données peuvent s'appliquer selon mon forfait. Je peux me désabonner en tout temps en répondant ARRET (ou STOP), ou obtenir de l'aide en répondant AIDE (ou HELP) ou en appelant le 819 268-8069. Mon numéro n'est ni vendu ni partagé avec des tiers, sauf le fournisseur qui envoie les textos pour Entretien Lapointe. Cette inscription est facultative : je reçois mes services même si je ne m'inscris pas.$t$)
+on conflict (version) do nothing;
+
+-- Le texte de la 2ᵉ case de la page (facultative, décochée au départ) : les offres et les nouvelles PAR COURRIEL, jamais par texto
+insert into public.textes_consentement (version, canal, texte) values (
+  'promo-2026-10-v1', 'courriel_promo',
+  $t$J'accepte aussi de recevoir par courriel, de temps en temps, les offres et les nouvelles d'Entretien Lapointe (par exemple, un rappel avant la saison des feuilles). Je peux me désabonner en tout temps avec le lien au bas de chaque courriel ou en écrivant à info@entretienlapointe.ca. Cette case est facultative : elle n'a aucun effet sur mes services ni sur mes avis de passage. Entretien Lapointe, 331, Le Petit Bellechasse N, Charette (Québec), 819 268-8069.$t$)
 on conflict (version) do nothing;
 
 -- Le « sel » des empreintes d'adresses IP (un secret propre à cette base ; personne n'y a accès, sauf les fonctions ci-dessous)
@@ -133,6 +142,8 @@ create table if not exists public.inscriptions_avis (
   cellulaire    text not null,
   courriel      text,
   version_texte text not null references public.textes_consentement(version),
+  promo_accepte boolean not null default false,
+  version_promo text references public.textes_consentement(version),
   ip_hash       text,
   agent         text,
   statut        text not null default 'nouvelle',
@@ -145,7 +156,8 @@ create table if not exists public.inscriptions_avis (
   constraint inscriptions_avis_cellulaire_format check (cellulaire ~ '^\+1[2-9][0-9]{2}[2-9][0-9]{6}$'),
   constraint inscriptions_avis_courriel_format check (courriel is null or (char_length(courriel) <= 150 and courriel ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$')),
   constraint inscriptions_avis_agent_court check (agent is null or char_length(agent) <= 300),
-  constraint inscriptions_avis_statut_liste check (statut in ('nouvelle', 'reliee', 'ignoree'))
+  constraint inscriptions_avis_statut_liste check (statut in ('nouvelle', 'reliee', 'ignoree')),
+  constraint inscriptions_avis_promo_coherente check ((promo_accepte and version_promo is not null and courriel is not null) or (not promo_accepte and version_promo is null))
 );
 
 comment on table public.inscriptions_avis is
@@ -297,11 +309,14 @@ create or replace function public.inscrire_avis(
   p_accepte  boolean,
   p_version  text,
   p_site_web text default null,
-  p_agent    text default null)
+  p_agent    text default null,
+  p_promo    boolean default false,
+  p_version_promo text default null)
 returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
 declare
+  v_promo  boolean := coalesce(p_promo, false);
   v_nom    text := btrim(coalesce(p_nom, ''));
   v_adr    text := btrim(coalesce(p_adresse, ''));
   v_cel    text := public._cellulaire_normalise(p_cellulaire);
@@ -330,12 +345,22 @@ begin
   if p_accepte is distinct from true then
     raise exception 'consentement_requis';
   end if;
-  if not exists (select 1 from public.textes_consentement t where t.version = p_version and t.en_vigueur) then
+  if not exists (select 1 from public.textes_consentement t where t.version = p_version and t.canal = 'texto' and t.en_vigueur) then
     raise exception 'version_inconnue';
+  end if;
+  -- La 2ᵉ case (offres par courriel) : facultative ; si elle est cochée, il faut un courriel et la version du texte lu
+  if v_promo then
+    if v_cour is null then
+      raise exception 'courriel_requis_offres';
+    end if;
+    if not exists (select 1 from public.textes_consentement t where t.version = p_version_promo and t.canal = 'courriel_promo' and t.en_vigueur) then
+      raise exception 'version_promo_inconnue';
+    end if;
   end if;
 
   -- Déjà inscrit dans les dernières 24 h avec ce numéro (un double toucher) : on répond « enregistrée » sans rien ajouter
-  if exists (select 1 from public.inscriptions_avis i where i.cellulaire = v_cel and i.cree_le > now() - interval '1 day') then
+  -- (sauf si la personne ajoute maintenant son accord aux offres : c'est un NOUVEL accord, il doit être noté)
+  if exists (select 1 from public.inscriptions_avis i where i.cellulaire = v_cel and i.cree_le > now() - interval '1 day' and (i.promo_accepte or not v_promo)) then
     return jsonb_build_object('statut', 'enregistree');
   end if;
 
@@ -356,26 +381,36 @@ begin
     raise exception 'trop_de_demandes';
   end if;
 
-  insert into public.inscriptions_avis (nom, adresse, cellulaire, courriel, version_texte, ip_hash, agent)
-  values (v_nom, v_adr, v_cel, v_cour, p_version, v_hash, left(p_agent, 300))
+  insert into public.inscriptions_avis (nom, adresse, cellulaire, courriel, version_texte, promo_accepte, version_promo, ip_hash, agent)
+  values (v_nom, v_adr, v_cel, v_cour, p_version, v_promo, case when v_promo then p_version_promo end, v_hash, left(p_agent, 300))
   returning id into v_id;
 
   insert into public.consentements (inscription_id, canal, action, source, contact, version_texte, ip_hash)
   values (v_id, 'texto', 'accord', 'page_avis', v_cel, p_version, v_hash);
 
+  if v_promo then
+    insert into public.consentements (inscription_id, canal, action, source, contact, version_texte, ip_hash)
+    values (v_id, 'courriel_promo', 'accord', 'page_avis', v_cour, p_version_promo, v_hash);
+  end if;
+
   return jsonb_build_object('statut', 'enregistree');
 end;
 $$;
 
--- Relier une inscription à un client : le numéro devient celui du client, et le client est INSCRIT aux avis par texto
+-- Relier une inscription à un client : le numéro devient celui du client, et le client est INSCRIT aux avis par texto.
+-- Si l'inscription accepte aussi les offres par courriel, la fiche reçoit le consentement exprès (daté du jour de l'inscription) — sauf si le courriel de la fiche est
+-- différent, si le client est désabonné de tous les courriels ou si un retrait des offres est venu après : la réponse dit alors « promo » = courriel_different,
+-- desabonne_des_courriels ou retire_depuis (rien n'est appliqué ; l'administrateur décide). « non_demandee » : la case n'était pas cochée.
 create or replace function public.admin_relier_inscription(p_inscription_id uuid, p_client_id uuid)
 returns jsonb
 language plpgsql security definer set search_path = ''
 as $$
 declare
-  v_uid uuid;
-  v_i   public.inscriptions_avis%rowtype;
-  v_c   public.clients%rowtype;
+  v_uid   uuid;
+  v_i     public.inscriptions_avis%rowtype;
+  v_c     public.clients%rowtype;
+  v_promo text := 'non_demandee';
+  v_fait  timestamptz;
 begin
   v_uid := public._exiger_actif();
   if not public.est_admin() then
@@ -399,7 +434,22 @@ begin
   update public.consentements set client_id = p_client_id where inscription_id = p_inscription_id and client_id is null;
   update public.inscriptions_avis set statut = 'reliee', client_id = p_client_id, traitee_le = now(), traitee_par = v_uid where id = p_inscription_id;
 
-  return jsonb_build_object('statut', 'reliee', 'client_id', p_client_id);
+  if v_i.promo_accepte then
+    select c.fait_le into v_fait from public.consentements c where c.inscription_id = p_inscription_id and c.canal = 'courriel_promo' and c.action = 'accord' order by c.fait_le limit 1;
+    v_fait := coalesce(v_fait, v_i.cree_le);
+    if v_c.desabonne_courriel_le is not null then
+      v_promo := 'desabonne_des_courriels';
+    elsif v_c.courriel is not null and lower(v_c.courriel) <> v_i.courriel then
+      v_promo := 'courriel_different';
+    elsif exists (select 1 from public.consentements c where c.canal = 'courriel_promo' and c.action = 'retrait' and c.contact = v_i.courriel and c.fait_le > v_fait) then
+      v_promo := 'retire_depuis';
+    else
+      update public.clients set promo_consentement_expres_le = v_fait, desabonne_promo_le = null where id = p_client_id;
+      v_promo := 'appliquee';
+    end if;
+  end if;
+
+  return jsonb_build_object('statut', 'reliee', 'client_id', p_client_id, 'promo', v_promo);
 end;
 $$;
 
@@ -465,7 +515,7 @@ begin
       if v_c.cellulaire is null then
         raise exception 'cellulaire_requis';
       end if;
-      if not exists (select 1 from public.textes_consentement t where t.version = p_version and t.en_vigueur) then
+      if not exists (select 1 from public.textes_consentement t where t.version = p_version and t.canal = 'texto' and t.en_vigueur) then
         raise exception 'version_inconnue';
       end if;
       update public.clients set avis_texto = true, desabonne_texto_le = null where id = p_client_id;
@@ -593,8 +643,8 @@ revoke all on function public._consentements_immuables()                        
 revoke all on function public._textes_consentement_immuables()                    from public, anon, authenticated;
 revoke all on function public._cellulaire_normalise(text)                         from public, anon, authenticated;
 revoke all on function public._clients_avant_ecriture()                           from public, anon, authenticated;
-revoke all on function public.inscrire_avis(text, text, text, text, boolean, text, text, text) from public;
-grant execute on function public.inscrire_avis(text, text, text, text, boolean, text, text, text) to anon, authenticated;
+revoke all on function public.inscrire_avis(text, text, text, text, boolean, text, text, text, boolean, text) from public;
+grant execute on function public.inscrire_avis(text, text, text, text, boolean, text, text, text, boolean, text) to anon, authenticated;
 revoke all on function public.admin_relier_inscription(uuid, uuid)                from public, anon;
 grant execute on function public.admin_relier_inscription(uuid, uuid)             to authenticated;
 revoke all on function public.admin_ignorer_inscription(uuid)                     from public, anon;
@@ -622,7 +672,8 @@ select jsonb_build_object(
   'visiteur_peut_appeler', (select coalesce(jsonb_agg(p.proname order by p.proname), '[]'::jsonb) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('inscrire_avis', 'admin_relier_inscription', 'admin_ignorer_inscription', 'admin_enregistrer_consentement', 'desabonner_contact', 'promo_courriel_permis') and has_function_privilege('anon', p.oid, 'execute')),
   'desabonner_reserve_au_service', has_function_privilege('service_role', 'public.desabonner_contact(text, text, text)', 'execute') and not has_function_privilege('authenticated', 'public.desabonner_contact(text, text, text)', 'execute'),
   'colonne_stops_client_id', (select data_type from information_schema.columns where table_schema = 'public' and table_name = 'stops' and column_name = 'client_id'),
-  'texte_en_vigueur', (select version from public.textes_consentement where en_vigueur order by cree_le desc limit 1),
+  'texte_en_vigueur', (select version from public.textes_consentement where en_vigueur and canal = 'texto' order by cree_le desc limit 1),
+  'texte_promo_en_vigueur', (select version from public.textes_consentement where en_vigueur and canal = 'courriel_promo' order by cree_le desc limit 1),
   'clients', (select count(*) from public.clients),
   'inscriptions', (select count(*) from public.inscriptions_avis),
   'consentements', (select count(*) from public.consentements)

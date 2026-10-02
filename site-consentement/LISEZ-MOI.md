@@ -8,6 +8,12 @@ Ces fichiers s'ajoutent au site **entretienlapointe.ca** (hébergé chez WHC). I
 | `confidentialite.html` | `public_html/confidentialite.html` | https://www.entretienlapointe.ca/confidentialite.html |
 | `css/avis.css` | `public_html/css/avis.css` | |
 | `js/avis.js` | `public_html/js/avis.js` | |
+| `desabonnement.html` | `public_html/desabonnement.html` | https://www.entretienlapointe.ca/desabonnement.html (le lien au bas de chaque courriel d'avis de passage) |
+| `js/desabonnement.js` | `public_html/js/desabonnement.js` | |
+
+## La page de désabonnement des courriels (chantier C)
+
+`desabonnement.html` + `js/desabonnement.js` : le lien que chaque courriel d'avis de passage contient (`desabonnement.html?c=<identifiant du client>&t=<jeton secret>`). **La page ne fait rien au chargement** (les robots de sécurité des boîtes courriel ouvrent les liens) : le client touche le bouton, et la fonction `avis_desabonner_par_jeton` (fichier SQL 31) le désabonne et l'inscrit au registre. Elle utilise `css/avis.css` comme `avis.html`. **À mettre en ligne AVANT d'envoyer le moindre courriel d'avis.** Essai : `node supabase/tests/serveur-page-avis.mjs`, puis http://localhost:8124/desabonnement.html?c=…&t=… ; test : `node supabase/tests/test-page-desabonnement.mjs`.
 
 ## Ordre à respecter
 

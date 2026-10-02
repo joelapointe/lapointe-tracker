@@ -20,6 +20,8 @@ const FILES = ['01-etape6-utilisateurs.sql', '02-etape7-modele-passes-quarts.sql
   '05-etape9b-passes-fermetures-export.sql', '13-etape13-taches-et-tours-partages.sql', '14-etape13d-retrait-stops-fait.sql', '15-etape14c-dernier-tour-visible.sql',
   '16-etape14e-photo-probleme.sql', '17-etape15-equipage-precedent.sql', '18-etape16d-heure-des-gestes-sans-reseau.sql', '19-etape16d-annulation-ignoree-precisee.sql'];
 const SQL30 = fs.readFileSync(SQL_DIR + '30-repertoire-clients-et-inscriptions.sql', 'utf8');
+const AVEC32 = process.env.AVEC_32 === '1';   // test-avis-envois-32.mjs : applique AUSSI le fichier 32 (canaux et aperçu) avant les scénarios
+const SQL32 = fs.readFileSync(process.env.SQL32_TEST || (SQL_DIR + '32-avis-canaux-et-apercu.sql'), 'utf8');
 const SQL31 = fs.readFileSync(process.env.SQL31_TEST || (SQL_DIR + '31-avis-aux-clients.sql'), 'utf8');
 
 const db = await prepare(FILES);
@@ -100,6 +102,32 @@ let res31;
     modeles: ['avis-2026-10-v1:courriel:demain', 'avis-2026-10-v1:courriel:heures', 'avis-2026-10-v1:texto:demain', 'avis-2026-10-v1:texto:heures'], journal: 0 }));
 }
 
+// ── Le fichier 32 (seulement avec AVEC_32=1) : il REMPLACE avis_preparer et ajoute avis_apercu ─────
+if (AVEC32) {
+  log('=== FICHIER 32 : AVANT, LA FONCTION À 4 PARAMÈTRES ; APRÈS, CELLE À 5 PARAMÈTRES ET L’APERÇU ===');
+  const args = async (nom) => (await q(`select pg_get_function_identity_arguments(oid) a from pg_proc where pronamespace = 'public'::regnamespace and proname = $1 order by oid`, [nom])).map((x) => x.a);
+  eq('avant : avis_preparer à 4 paramètres, pas d’aperçu ni de fonction centrale', [await args('avis_preparer'), await args('avis_apercu'), await args('_avis_decider')], [['p_par uuid, p_delai text, p_lignes jsonb, p_maintenant timestamp with time zone'], [], []]);
+  const sans31 = await prepare([FILES[0]]);
+  await err('dans une base sans le fichier 31 : le fichier 32 refuse de s’exécuter (il dit pourquoi)', () => sans31.exec(SQL32), 'pas été exécuté');
+  const stub31 = await prepare([FILES[0]]);
+  await stub31.exec(`create function public.avis_preparer(p_par uuid, p_delai text, p_lignes jsonb, p_maintenant timestamptz) returns jsonb language sql as $$ select null::jsonb $$`);
+  await err('avec la fonction du fichier 31 mais sans ses tables : le fichier 32 refuse aussi (« incomplet »)', () => stub31.exec(SQL32), 'incomplet');
+  const res32 = await db.exec(SQL32);
+  const NOUVEAUX = 'p_par uuid, p_delai text, p_lignes jsonb, p_maintenant timestamp with time zone, p_canaux text[]';
+  eq('après : UNE seule version de avis_preparer (à 5 paramètres), avis_apercu, et la fonction centrale', [await args('avis_preparer'), await args('avis_apercu'), await args('_avis_decider')], [[NOUVEAUX], [NOUVEAUX], [NOUVEAUX + ', p_ecrire boolean']]);
+  await db.exec(SQL32);
+  await db.exec(SQL32);
+  eq('exécuté deux fois de plus : aucune erreur, toujours une seule version de chaque fonction', [(await args('avis_preparer')).length, (await args('avis_apercu')).length], [1, 1]);
+  const sigs = { prep: 'public.avis_preparer(uuid, text, jsonb, timestamptz, text[])', ap: 'public.avis_apercu(uuid, text, jsonb, timestamptz, text[])', dec: 'public._avis_decider(uuid, text, jsonb, timestamptz, text[], boolean)' };
+  const priv = async (role, s) => (await q(`select has_function_privilege($1, $2, 'execute') r`, [role, s]))[0].r;
+  eq('avis_preparer, avis_apercu : réservées au rôle service_role ; la fonction centrale : ni visiteur ni personne connectée', [await priv('anon', sigs.prep), await priv('authenticated', sigs.prep), await priv('service_role', sigs.prep), await priv('anon', sigs.ap), await priv('authenticated', sigs.ap), await priv('service_role', sigs.ap), await priv('anon', sigs.dec), await priv('authenticated', sigs.dec), await priv('service_role', sigs.dec)],
+    [false, false, true, false, false, true, false, false, true]);
+  eq('les fonctions du fichier 32 sont « security definer » avec un chemin de recherche VIDE', (await q(`select proname, prosecdef, array_to_string(proconfig, ',') c from pg_proc where pronamespace = 'public'::regnamespace and proname in ('avis_preparer', 'avis_apercu', '_avis_decider') order by proname`)).map((x) => [x.proname, x.prosecdef, x.c]),
+    [['_avis_decider', true, 'search_path=""'], ['avis_apercu', true, 'search_path=""'], ['avis_preparer', true, 'search_path=""']]);
+  eq('le fichier 32 ne touche ni au journal ni aux modèles (vides, quatre)', [await compte('avis_envois'), await compte('avis_modeles')], [0, 4]);
+  eq('la requête « verification » du bas du fichier 32 dit la vérité', trie(res32[res32.length - 1].rows[0].verification), trie({ preparer: [NOUVEAUX], apercu: [NOUVEAUX], reserve_au_service: true, journal: 0, modeles: 4 }));
+}
+
 // ── Les textes approuvés, mot pour mot ───────────────────────────────
 const TEXTO_H = (d, s) => `Entretien Lapointe : nous passerons chez vous dans environ ${d} pour le service « ${s} ». Merci de ramasser les objets sur le terrain pour éviter les bris. Questions : textez le 819 268-8069. ARRET pour ne plus recevoir ces avis.`;
 const TEXTO_D = (s) => `Entretien Lapointe : nous passerons chez vous demain pour le service « ${s} ». Merci de ramasser les objets sur le terrain pour éviter les bris. Questions : textez le 819 268-8069. ARRET pour ne plus recevoir ces avis.`;
@@ -121,6 +149,7 @@ const client = async (nom, o = {}) => {
 const tout = (nom, o = {}) => client(nom, { courriel: `c${++seq}@exemple.ca`, cellulaire: '819555' + String(2000 + seq), avis_courriel: true, avis_texto: true, ...o });   // un client qui reçoit TOUT
 const prep = (delai, lignes, quand = MIDI, par = admin, role = 'service_role') => fn(null, 'avis_preparer($1::uuid, $2::text, $3::jsonb, $4::timestamptz)', [par, delai, JSON.stringify(lignes), quand], role);
 const L = (id, service = 'Coupe de gazon', adresse = '10 rue des Pins, Louiseville') => ({ client_id: id, service, adresse });
+const prep5 = (delai, lignes, quand = MIDI, par = admin, canaux = ['courriel', 'texto'], role = 'service_role') => fn(null, 'avis_preparer($1::uuid, $2::text, $3::jsonb, $4::timestamptz, $5::text[])', [par, delai, JSON.stringify(lignes), quand, canaux], role);
 const ligne = (r, id, canal) => r.lignes.find((x) => x.client_id === id && x.canal === canal);
 const vider = async () => { await q(`alter table public.avis_envois disable trigger avis_envois_immuables`); await q(`alter table public.avis_envois disable trigger avis_envois_pas_de_vidage`); await q(`delete from public.avis_envois`); await q(`alter table public.avis_envois enable trigger avis_envois_immuables`); await q(`alter table public.avis_envois enable trigger avis_envois_pas_de_vidage`); };
 
@@ -293,6 +322,69 @@ log('=== CE QUE LE SERVICE REÇOIT : RIEN DE DANGEREUX DANS LES MESSAGES ===');
   const r2 = await prep('2h', [L(a, 'Épandage de sel', 'Rue Éloïse « Test », Trois-Rivières')]);
   eq('les accents et les guillemets passent tels quels', ligne(r2, a, 'courriel').message.includes('(adresse : Rue Éloïse « Test », Trois-Rivières)') && ligne(r2, a, 'texto').message.includes('« Épandage de sel »'), true);
 }
+
+// ═════════════════════════════════════════════════════════════════
+// FICHIER 32 : LES CANAUX DEMANDÉS ET L'APERÇU (exécuté seulement avec AVEC_32=1 : test-avis-envois-32.mjs)
+// ═════════════════════════════════════════════════════════════════
+if (AVEC32) {
+  log('=== LES CANAUX DEMANDÉS : LES AUTRES N’ÉCRIVENT RIEN AU JOURNAL ===');
+  {
+    await vider();
+    const a = await tout('Client des canaux');
+    const rc = await prep5('2h', [L(a)], MIDI, admin, ['courriel']);
+    eq('« courriel » seulement : UNE ligne (le courriel) ; rien pour le texto', [rc.lignes.map((x) => x.canal + ':' + x.statut), (await q(`select canal from public.avis_envois order by canal`)).map((x) => x.canal)], [['courriel:en_attente'], ['courriel']]);
+    await vider();
+    const rt = await prep5('2h', [L(a)], MIDI, admin, ['texto']);
+    eq('« texto » seulement : UNE ligne (le texto) ; rien pour le courriel', [rt.lignes.map((x) => x.canal + ':' + x.statut), (await q(`select canal from public.avis_envois order by canal`)).map((x) => x.canal)], [['texto:en_attente'], ['texto']]);
+    await vider();
+    const r2 = await prep5('2h', [L(a)], MIDI, admin, ['texto', 'courriel']);
+    eq('les deux (dans n’importe quel ordre) : deux lignes, toujours courriel puis texto', r2.lignes.map((x) => x.canal), ['courriel', 'texto']);
+    await vider();
+    eq('sans préciser les canaux (appel à 4 paramètres) : les deux, comme avant', (await prep('2h', [L(a)])).lignes.map((x) => x.canal), ['courriel', 'texto']);
+    await vider();
+    await prep5('2h', [L(a)], MIDI, admin, ['courriel']);
+    const suite = await prep5('3h', [L(a)], MIDI, admin, ['courriel', 'texto']);
+    eq('un courriel déjà envoyé aujourd’hui n’empêche pas le TEXTO de partir plus tard ; le courriel, lui, est refusé', suite.lignes.map((x) => x.canal + ':' + x.statut + ':' + x.motif), ['courriel:refuse:deja_averti_aujourdhui', 'texto:en_attente:null']);
+    await vider();
+    for (const [titre, c] of [['une liste vide', []], ['aucune liste', null], ['un canal inconnu', ['sms']], ['un canal vide', ['courriel', null]], ['un canal inconnu parmi de bons', ['courriel', 'sms']], ['du texte au lieu d’une liste', 'courriel']]) {
+      await err(`${titre} : « canaux_invalides »`, () => fn(null, 'avis_preparer($1::uuid, $2::text, $3::jsonb, $4::timestamptz, $5::text[])', [admin, '2h', JSON.stringify([L(a)]), MIDI, c], 'service_role'), 'canaux_invalides|malformed array|invalid input');
+    }
+    eq('… rien n’a été écrit', await compte('avis_envois'), 0);
+  }
+
+  log('=== L’APERÇU : LES MÊMES DÉCISIONS ET LES MÊMES MESSAGES, SANS RIEN ÉCRIRE ===');
+  {
+    await vider();
+    const a = await tout('Client de l’aperçu');
+    const b = await client('Client sans avis', { courriel: 'x@exemple.ca' });
+    const ap = (delai, lignes, quand = MIDI, canaux = ['courriel', 'texto'], par = admin, role = 'service_role') => fn(null, 'avis_apercu($1::uuid, $2::text, $3::jsonb, $4::timestamptz, $5::text[])', [par, delai, JSON.stringify(lignes), quand, canaux], role);
+    const r = await ap('3h', [L(a), L(b)]);
+    eq('un aperçu : « a_envoyer » ou « refuse » (avec le motif), jamais « en_attente » ; aucun numéro de ligne ni de lot', [r.lignes.map((x) => x.statut + (x.motif ? ':' + x.motif : '')), r.lignes.every((x) => x.id === null), r.lot_id, r.apercu], [['a_envoyer', 'a_envoyer', 'refuse:pas_active', 'refuse:pas_active'], true, null, true]);
+    eq('… RIEN n’a été écrit au journal', await compte('avis_envois'), 0);
+    const aperçuTexte = r.lignes.filter((x) => x.client_id === a);
+    const vrai1 = await prep('3h', [L(a), L(b)]);
+    eq('l’aperçu donne EXACTEMENT les messages (et objets, destinataires) qui partent ensuite', [aperçuTexte.map((x) => [x.canal, x.message, x.objet, x.destinataire]), ], [vrai1.lignes.filter((x) => x.client_id === a).map((x) => [x.canal, x.message, x.objet, x.destinataire])]);
+    eq('… et les mêmes refus', r.lignes.filter((x) => x.client_id === b).map((x) => x.motif), vrai1.lignes.filter((x) => x.client_id === b).map((x) => x.motif));
+    eq('après l’envoi, l’aperçu montre « déjà averti aujourd’hui »', (await ap('3h', [L(a)])).lignes.map((x) => x.statut + ':' + x.motif), ['refuse:deja_averti_aujourdhui', 'refuse:deja_averti_aujourdhui']);
+    eq('… l’aperçu ne réserve RIEN : après plusieurs aperçus, le journal est resté tel quel', await compte('avis_envois'), 4);
+    await vider();
+    await ap('3h', [L(a)]); await ap('3h', [L(a)]);
+    eq('deux aperçus de suite puis un vrai envoi : l’envoi part (l’aperçu n’a rien bloqué)', (await prep('3h', [L(a)])).lignes.map((x) => x.statut), ['en_attente', 'en_attente']);
+    await vider();
+    eq('l’aperçu de la nuit : le texto est refusé « hors_heures », le courriel est « a_envoyer »', (await ap('3h', [L(a)], T(22))).lignes.map((x) => x.canal + ':' + x.statut + (x.motif ? ':' + x.motif : '')), ['courriel:a_envoyer', 'texto:refuse:hors_heures']);
+    eq('sans préciser les canaux (appel à 4 paramètres), l’aperçu montre les DEUX canaux, comme l’envoi', (await fn(null, 'avis_apercu($1::uuid, $2::text, $3::jsonb, $4::timestamptz)', [admin, '2h', JSON.stringify([L(a)]), MIDI], 'service_role')).lignes.map((x) => x.canal), ['courriel', 'texto']);
+    eq('l’aperçu respecte les canaux demandés', (await ap('3h', [L(a)], MIDI, ['courriel'])).lignes.map((x) => x.canal), ['courriel']);
+    eq('… « demain » aussi', (await ap('demain', [L(a, 'Déneigement', '5 av. du Lac')])).lignes.map((x) => x.message.includes('demain')), [true, true]);
+    for (const [titre, f, motif] of [
+      ['un délai invalide', () => ap('0h', [L(a)]), 'delai_invalide'], ['une liste vide', () => ap('2h', []), 'lignes_invalides'], ['des canaux invalides', () => ap('2h', [L(a)], MIDI, ['sms']), 'canaux_invalides'],
+      ['un employé', () => ap('2h', [L(a)], MIDI, ['courriel'], nina), 'non_autorise'], ['un administrateur désactivé', () => ap('2h', [L(a)], MIDI, ['courriel'], admin2), 'non_autorise'],
+      ['un visiteur', () => ap('2h', [L(a)], MIDI, ['courriel'], admin, 'anon'), 'permission denied|droit|privilege'], ['une personne connectée (même l’administrateur)', () => ap('2h', [L(a)], MIDI, ['courriel'], admin, 'authenticated'), 'permission denied|droit|privilege'],
+    ]) await err(`l’aperçu refuse ${titre}`, f, motif);
+    eq('… et aucun refus n’a écrit quoi que ce soit', await compte('avis_envois'), 0);
+    eq('un client inconnu ou archivé : refusé dans l’aperçu aussi', (await ap('2h', [L('00000000-0000-4000-8000-000000000000')])).lignes.map((x) => x.motif), ['client_introuvable']);
+  }
+}
+
 
 log('=== QUI PEUT PRÉPARER UN AVIS ===');
 {

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8">
+	<title>Entretien Lapointe | Ne plus recevoir les avis par courriel</title>
+	<meta name="description" content="Désabonnement des avis de passage par courriel d'Entretien Lapointe.">
+	<meta name="robots" content="noindex">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- Cette page ne charge AUCUN suivi (ni Google, ni Meta). Elle ne fait RIEN au chargement (un lien de courriel est souvent ouvert par un robot de sécurité) : le désabonnement se fait seulement quand la personne touche le bouton. -->
+	<link href="css/bootstrap.min.css" rel="stylesheet" />
+	<link href="css/animations.css" rel="stylesheet" />
+	<link href="css/fonts.css" rel="stylesheet" />
+	<link class="color-switcher-link" href="css/main.css" rel="stylesheet" />
+	<link href="css/avis.css" rel="stylesheet" />
+	<script src="js/vendor/modernizr-2.6.2.min.js"></script>
+</head>
+<body>
+<div class="preloader">
+<div class="preloader_image"></div>
+</div>
+<!-- Unyson messages modal -->
+
+<div class="modal fade" id="messages_modal" role="dialog" tabindex="-1">
+<div class="fw-messages-wrap ls with_padding"></div>
+</div>
+<!-- eof .modal -->
+
+<div id="canvas">
+<div id="box_wrapper">
+<section class="page_topline cs section_padding_15 table_section table_section_md">
+<div class="container">
+<div class="row">
+<div class="col-md-2 text-center text-md-left">
+<div class="page_social_icons"></div>
+</div>
+
+<div class="col-md-10 text-center text-md-right">
+<div class="inline-elem">
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body">331, Le Petit Bellechasse N</div>
+</div>
+
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body">
+  <a href="tel:18192688069" style="color: inherit; text-decoration: none;">819 268-8069</a>
+</div>
+</div>
+
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body">
+  <a href="mailto:info@entretienlapointe.ca" style="color: inherit; text-decoration: none;">info@entretienlapointe.ca</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<header class="page_header header_white toggler_right">
+<div class="container">
+<div class="row">
+<div class="col-sm-12 display_table">
+<div class="header_left_logo display_table_cell"><a class="logo top_logo" href="./"><img alt="" src="images/logo.png" /> </a></div>
+
+<div class="header_mainmenu display_table_cell text-right"><!-- main nav start -->
+<nav class="mainmenu_wrapper">
+<ul class="mainmenu nav sf-menu">
+	<li><a href="index.html">Accueil</a></li>
+	<li><a href="services.html">Nos services</a></li>
+	<li><a href="deneigement.html">D&eacute;neigement</a></li>
+	<li><a href="pelouse.html">Entretien de gazon</a></li>
+	<li><a href="realisations.html">R&eacute;alisations</a></li>
+	<li><a href="soumission.html">Soumission</a></li>
+	<li><a href="contact.html">Contact</a></li>
+	<li></li>
+</ul>
+</nav>
+<!-- eof main nav --></div>
+</div>
+</div>
+</div>
+</header>
+
+<section class="page_breadcrumbs ds parallax section_padding_top_100 section_padding_bottom_75">
+<div class="container">
+<div class="row">
+<div class="col-sm-12 text-center">
+<h2>Désabonnement</h2>
+
+<ol class="breadcrumb">
+	<li><a href="index.html">Accueil </a></li>
+	<li class="active">Avis de passage par courriel</li>
+</ol>
+</div>
+</div>
+</div>
+</section>
+
+<section class="ls section_padding_top_75 section_padding_bottom_100" id="desabonnement">
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+<div class="av-colonne">
+
+<h2>Ne plus recevoir nos <span class="highlight regular">avis par courriel</span></h2>
+
+<noscript><p class="av-alerte">Cette page a besoin de JavaScript. Vous pouvez aussi nous joindre au <a href="tel:18192688069">819 268-8069</a> ou à <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a> : nous vous retirerons de la liste.</p></noscript>
+
+<div hidden id="des-confirmer">
+<p class="av-intro">Vous recevez des courriels d'Entretien Lapointe pour vous avertir de notre passage chez vous (par exemple : « nous passons chez vous d'ici environ 3 heures »).</p>
+<p class="av-intro">Si vous ne voulez plus les recevoir, touchez le bouton ci-dessous. Vous pouvez aussi nous écrire à <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a> ou nous téléphoner au <a href="tel:18192688069">819 268-8069</a>.</p>
+<div class="av-envoi">
+<button class="av-btn" id="des-bouton" type="button">Je ne veux plus recevoir ces avis par courriel</button>
+<div class="av-alerte" hidden id="des-alerte" role="alert"></div>
+<p class="av-confidentialite">Nous ne vendons ni ne partageons vos renseignements. <a href="confidentialite.html">Politique de confidentialité</a></p>
+</div>
+</div>
+
+<div hidden id="des-incomplet">
+<p class="av-alerte" role="alert">Ce lien est incomplet ou n'est plus valide.</p>
+<p class="av-intro">Pour ne plus recevoir nos avis par courriel, écrivez-nous à <a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a> ou téléphonez-nous au <a href="tel:18192688069">819 268-8069</a> : nous vous retirerons de la liste.</p>
+</div>
+
+<div class="av-merci" hidden id="des-merci" role="status" tabindex="-1">
+<h3>C'est fait : vous êtes désabonné</h3>
+<p>Vous ne recevrez plus nos avis de passage par courriel.</p>
+<p>Si vous êtes aussi inscrit à nos avis par texto, répondez ARRET (ou STOP) à l'un de nos textos pour ne plus les recevoir. Une question? Appelez-nous au <a href="tel:18192688069">819 268-8069</a>.</p>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<footer class="page_footer ds parallax section_padding_top_100 section_padding_bottom_50">
+<div class="container">
+<div class="row">
+<div class="col-md-3 col-sm-6">
+<div class="widget widget_text">
+<h3 class="widget-title">Nos <span class="highlight regular">Coordonn&eacute;es</span></h3>
+
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body">331, Le Petit Bellechasse N, Charette</div>
+</div>
+
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body greylinks underlined-links"><a href="mailto:info@entretienlapointe.ca">info@entretienlapointe.ca</a></div>
+</div>
+
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body greylinks underlined-links"><a href="https://www.facebook.com/entretienlapointe">facebook.com/entretienlapointe</a></div>
+</div>
+
+<div class="media small-teaser">
+<div class="media-left"></div>
+
+<div class="media-body"><a href="tel:18192688069" style="color: inherit; text-decoration: none;">819 268-8069</a></div>
+</div>
+</div>
+</div>
+
+<div class="col-md-3 col-sm-6">
+<div class="widget widget_nav_menu">
+<h3 class="widget-title">Navigation <span class="highlight regular">du site</span></h3>
+
+<div>
+<ul class="menu greylinks fontsize_16">
+	<li><a href="index.html">Accueil</a></li>
+	<li><a href="services.html">Nos Services</a></li>
+	<li><a href="realisations.html">R&eacute;alisations</a></li>
+	<li><a href="contact.html">Pour nous rejoindre</a></li>
+	<li><a href="confidentialite.html">Confidentialit&eacute;</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+<div class="col-md-3 col-sm-6">
+<div class="widget widget_categories">
+<h3 class="widget-title">Nos <span class="highlight regular">Services</span></h3>
+
+<ul class="greylinks">
+	<li><a href="pelouse.html">Paysagement</a></li>
+	<li><a href="services.html">Service d&#39;entretien</a></li>
+	<li><a href="deneigement.html">D&eacute;neigement</a></li>
+	<li><a href="deneigement.html">D&eacute;neigement de toitures</a></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</footer>
+</div>
+
+<section class="ls page_copyright table_section section_padding_50">
+<div class="container">
+<div class="row">
+<div class="col-sm-12 text-center">
+<p class="grey"></p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- eof #box_wrapper --><!-- eof #canvas --><script src="js/compressed.js"></script><script src="js/main.js"></script>
+<script src="js/desabonnement.js"></script>
+</body>
+</html>

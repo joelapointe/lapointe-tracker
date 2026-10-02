@@ -1,0 +1,1106 @@
+[
+ {
+ "nom": "« demain » n’est plus un délai valide",
+ "fichier": "js/admin-avis.js",
+ "de": "d==='demain'||(/^[1-9][0-9]?h$/.test(d)",
+ "vers": "(/^[1-9][0-9]?h$/.test(d)"
+ },
+ {
+ "nom": "le délai maximum passe à 99 heures",
+ "fichier": "js/admin-avis.js",
+ "de": "Number(d.slice(0,-1))<=72",
+ "vers": "Number(d.slice(0,-1))<=99"
+ },
+ {
+ "nom": "0 h devient un délai valide",
+ "fichier": "js/admin-avis.js",
+ "de": "/^[1-9][0-9]?h$/.test(d)",
+ "vers": "/^[0-9][0-9]?h$/.test(d)"
+ },
+ {
+ "nom": "le délai tapé accepte 3 chiffres",
+ "fichier": "js/admin-avis.js",
+ "de": "[0-9]{1,2}",
+ "vers": "[0-9]{1,3}"
+ },
+ {
+ "nom": "le délai tapé ne tolère plus les espaces",
+ "fichier": "js/admin-avis.js",
+ "de": "/^\\s*([0-9]{1,2})\\s*h?\\s*$/i",
+ "vers": "/^([0-9]{1,2})h?$/i"
+ },
+ {
+ "nom": "le délai tapé n’est plus validé (73 passe)",
+ "fichier": "js/admin-avis.js",
+ "de": "return avisDelaiValide(d)?d:null;",
+ "vers": "return d;"
+ },
+ {
+ "nom": "le délai écrit dit « dans » au lieu de « environ »",
+ "fichier": "js/admin-avis.js",
+ "de": "'environ '+Number(String(d).slice(0,-1))+' h'",
+ "vers": "'dans '+Number(String(d).slice(0,-1))+' h'"
+ },
+ {
+ "nom": "« demain » s’écrit avec une majuscule",
+ "fichier": "js/admin-avis.js",
+ "de": "d==='demain'?'demain':'environ '",
+ "vers": "d==='demain'?'Demain':'environ '"
+ },
+ {
+ "nom": "la liste « A, B et C » perd son « et »",
+ "fichier": "js/admin-avis.js",
+ "de": "t.slice(0,-1).join(', ')+' et '+t[t.length-1]",
+ "vers": "t.join(', ')"
+ },
+ {
+ "nom": "la liste garde les éléments vides",
+ "fichier": "js/admin-avis.js",
+ "de": "const t=(l||[]).filter(Boolean);",
+ "vers": "const t=(l||[]);"
+ },
+ {
+ "nom": "le courriel ne demande plus « avertir par courriel »",
+ "fichier": "js/admin-avis.js",
+ "de": "f.avis_courriel&&String(f.courriel||'').trim()&&!f.desabonne_courriel_le",
+ "vers": "String(f.courriel||'').trim()&&!f.desabonne_courriel_le"
+ },
+ {
+ "nom": "le courriel ignore le désabonnement",
+ "fichier": "js/admin-avis.js",
+ "de": "f.avis_courriel&&String(f.courriel||'').trim()&&!f.desabonne_courriel_le",
+ "vers": "f.avis_courriel&&String(f.courriel||'').trim()"
+ },
+ {
+ "nom": "le courriel ne demande plus d’adresse de courriel",
+ "fichier": "js/admin-avis.js",
+ "de": "f.avis_courriel&&String(f.courriel||'').trim()&&!f.desabonne_courriel_le",
+ "vers": "f.avis_courriel&&!f.desabonne_courriel_le"
+ },
+ {
+ "nom": "le texto ne demande plus l’inscription",
+ "fichier": "js/admin-avis.js",
+ "de": "f.avis_texto&&String(f.cellulaire||'').trim()&&!f.desabonne_texto_le",
+ "vers": "String(f.cellulaire||'').trim()&&!f.desabonne_texto_le"
+ },
+ {
+ "nom": "le texto ignore le désabonnement",
+ "fichier": "js/admin-avis.js",
+ "de": "f.avis_texto&&String(f.cellulaire||'').trim()&&!f.desabonne_texto_le",
+ "vers": "f.avis_texto&&String(f.cellulaire||'').trim()"
+ },
+ {
+ "nom": "le texto ne demande plus de cellulaire",
+ "fichier": "js/admin-avis.js",
+ "de": "f.avis_texto&&String(f.cellulaire||'').trim()&&!f.desabonne_texto_le",
+ "vers": "f.avis_texto&&!f.desabonne_texto_le"
+ },
+ {
+ "nom": "une fiche archivée peut recevoir",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!f||f.actif===false) return {courriel:false,texto:false};",
+ "vers": "if(!f) return {courriel:false,texto:false};"
+ },
+ {
+ "nom": "un arrêt archivé compte",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!s||s.actif===false) return;",
+ "vers": "if(!s) return;"
+ },
+ {
+ "nom": "la route choisie n’est plus respectée",
+ "fichier": "js/admin-avis.js",
+ "de": "if(source!=='__main__'&&s.route_id!==source) return;",
+ "vers": ""
+ },
+ {
+ "nom": "« à la main » (__main__) n’est plus reconnu",
+ "fichier": "js/admin-avis.js",
+ "de": "if(source!=='__main__'&&s.route_id!==source) return;",
+ "vers": "if(s.route_id!==source) return;"
+ },
+ {
+ "nom": "une fiche archivée est offerte",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!f||f.actif===false){sansFiche++;return;}",
+ "vers": "if(!f){sansFiche++;return;}"
+ },
+ {
+ "nom": "les arrêts sans fiche ne sont plus comptés",
+ "fichier": "js/admin-avis.js",
+ "de": "{sansFiche++;return;}",
+ "vers": "{return;}"
+ },
+ {
+ "nom": "un service en double est répété",
+ "fichier": "js/admin-avis.js",
+ "de": "if(sv&&!g.services.includes(sv)) g.services.push(sv);",
+ "vers": "if(sv) g.services.push(sv);"
+ },
+ {
+ "nom": "une adresse en double est répétée",
+ "fichier": "js/admin-avis.js",
+ "de": "if(ad&&!g.adresses.includes(ad)) g.adresses.push(ad);",
+ "vers": "if(ad) g.adresses.push(ad);"
+ },
+ {
+ "nom": "les adresses trop longues ne sont plus raccourcies",
+ "fichier": "js/admin-avis.js",
+ "de": "(toutes.length<=200?toutes:g.adresses[0]||'').slice(0,200)",
+ "vers": "toutes"
+ },
+ {
+ "nom": "les services trop longs ne sont plus raccourcis",
+ "fichier": "js/admin-avis.js",
+ "de": "(ensemble.length<=100?ensemble:g.services[0]||'').slice(0,100)",
+ "vers": "ensemble"
+ },
+ {
+ "nom": "un client sans service ni adresse est offert",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!adresse||!service){incomplets++;return;}",
+ "vers": "if(!adresse||!service){incomplets++;}"
+ },
+ {
+ "nom": "les clients incomplets ne sont plus comptés",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!adresse||!service){incomplets++;return;}",
+ "vers": "if(!adresse||!service){return;}"
+ },
+ {
+ "nom": "les clients ne sont plus triés par nom",
+ "fichier": "js/admin-avis.js",
+ "de": "clients.sort((a,b)=>String(a.nom).localeCompare(String(b.nom),'fr'));",
+ "vers": ""
+ },
+ {
+ "nom": "toutes les lignes partent, cochées ou non",
+ "fichier": "js/admin-avis.js",
+ "de": ".filter(c=>coches.has(c.client_id))",
+ "vers": ""
+ },
+ {
+ "nom": "la ligne n’a plus de service",
+ "fichier": "js/admin-avis.js",
+ "de": ".map(c=>({client_id:c.client_id,service:c.service,adresse:c.adresse}))",
+ "vers": ".map(c=>({client_id:c.client_id,adresse:c.adresse}))"
+ },
+ {
+ "nom": "la signature oublie le délai",
+ "fichier": "js/admin-avis.js",
+ "de": "JSON.stringify([delai,[...lignes]",
+ "vers": "JSON.stringify([[...lignes]"
+ },
+ {
+ "nom": "la signature dépend de l’ordre des clients",
+ "fichier": "js/admin-avis.js",
+ "de": "[...lignes].sort((a,b)=>String(a.client_id).localeCompare(String(b.client_id)))",
+ "vers": "[...lignes]"
+ },
+ {
+ "nom": "le motif ne tient plus compte du canal",
+ "fichier": "js/admin-avis.js",
+ "de": "return m[canal]||m.defaut||String(motif);",
+ "vers": "return m.defaut||String(motif);"
+ },
+ {
+ "nom": "un motif inconnu devient vide",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!m) return String(motif||'raison inconnue');",
+ "vers": "if(!m) return '';"
+ },
+ {
+ "nom": "les refus ne sont plus comptés",
+ "fichier": "js/admin-avis.js",
+ "de": "r.refuses++;",
+ "vers": ""
+ },
+ {
+ "nom": "les motifs sont comptés une fois chacun",
+ "fichier": "js/admin-avis.js",
+ "de": "r.motifs[t]=(r.motifs[t]||0)+1;",
+ "vers": "r.motifs[t]=1;"
+ },
+ {
+ "nom": "tout compte comme envoyé",
+ "fichier": "js/admin-avis.js",
+ "de": "if(l.statut==='envoye') r.envoyes++;",
+ "vers": "r.envoyes++;"
+ },
+ {
+ "nom": "les échecs ne sont plus comptés",
+ "fichier": "js/admin-avis.js",
+ "de": "else if(l.statut==='echec') r.echecs++;",
+ "vers": ""
+ },
+ {
+ "nom": "un courriel est compté comme un texto",
+ "fichier": "js/admin-avis.js",
+ "de": "if(l.canal==='courriel') r.courriels++;",
+ "vers": "if(l.canal==='courriel') r.textos++;"
+ },
+ {
+ "nom": "les motifs perdent leur nombre",
+ "fichier": "js/admin-avis.js",
+ "de": "motifs[t]+' × '+t",
+ "vers": "t"
+ },
+ {
+ "nom": "« courriels » reste au singulier",
+ "fichier": "js/admin-avis.js",
+ "de": "(r.courriels>1?'s':'')",
+ "vers": "''"
+ },
+ {
+ "nom": "« textos » reste au singulier",
+ "fichier": "js/admin-avis.js",
+ "de": "(r.textos>1?'s':'')",
+ "vers": "''"
+ },
+ {
+ "nom": "« 2 courriels + 1 texto » devient « 2 courriels, 1 texto »",
+ "fichier": "js/admin-avis.js",
+ "de": "p.join(' + ')",
+ "vers": "p.join(', ')"
+ },
+ {
+ "nom": "aucun refus n’est caché",
+ "fichier": "js/admin-avis.js",
+ "de": "return (lignes||[]).filter(l=>!(l.statut==='refuse'&&l.motif==='pas_active'&&recoit.has(l.client_id)));",
+ "vers": "return (lignes||[]);"
+ },
+ {
+ "nom": "un « pas inscrit » est caché même si le client ne reçoit rien",
+ "fichier": "js/admin-avis.js",
+ "de": "l.motif==='pas_active'&&recoit.has(l.client_id)",
+ "vers": "l.motif==='pas_active'"
+ },
+ {
+ "nom": "tous les refus d’un client qui reçoit sont cachés",
+ "fichier": "js/admin-avis.js",
+ "de": "l.statut==='refuse'&&l.motif==='pas_active'&&recoit",
+ "vers": "l.statut==='refuse'&&recoit"
+ },
+ {
+ "nom": "un refus compte comme « reçoit un avis »",
+ "fichier": "js/admin-avis.js",
+ "de": ".filter(l=>l.statut!=='refuse').map(l=>l.client_id)",
+ "vers": ".map(l=>l.client_id)"
+ },
+ {
+ "nom": "les refus passent avant les échecs",
+ "fichier": "js/admin-avis.js",
+ "de": "const AVIS_RANG={a_envoyer:0,envoye:0,echec:1,refuse:2};",
+ "vers": "const AVIS_RANG={a_envoyer:0,envoye:0,echec:2,refuse:1};"
+ },
+ {
+ "nom": "les lignes ne sont plus triées par statut",
+ "fichier": "js/admin-avis.js",
+ "de": "(AVIS_RANG[a.statut]??3)-(AVIS_RANG[b.statut]??3)||",
+ "vers": ""
+ },
+ {
+ "nom": "les lignes ne sont plus triées par nom",
+ "fichier": "js/admin-avis.js",
+ "de": "||nomDe(a.client_id).localeCompare(nomDe(b.client_id),'fr')",
+ "vers": ""
+ },
+ {
+ "nom": "le texto passe avant le courriel",
+ "fichier": "js/admin-avis.js",
+ "de": "||String(a.canal).localeCompare(String(b.canal)))",
+ "vers": "||String(b.canal).localeCompare(String(a.canal)))"
+ },
+ {
+ "nom": "une panne de réseau pendant l’envoi dit « rien n’a été envoyé »",
+ "fichier": "js/admin-avis.js",
+ "de": "['reseau','erreur_interne','erreur','reponse_illisible','configuration'].includes(code)",
+ "vers": "['erreur_interne','erreur','reponse_illisible','configuration'].includes(code)"
+ },
+ {
+ "nom": "une panne pendant l’APERÇU parle d’avis « peut-être partis »",
+ "fichier": "js/admin-avis.js",
+ "de": "if(action==='envoyer'&&[",
+ "vers": "if(["
+ },
+ {
+ "nom": "le message « pas de réseau » change",
+ "fichier": "js/admin-avis.js",
+ "de": "reseau:'📴 Pas de réseau : rien n’a été envoyé.',",
+ "vers": "reseau:'📴 Pas de réseau.',"
+ },
+ {
+ "nom": "le message « non autorisé » change",
+ "fichier": "js/admin-avis.js",
+ "de": "non_autorise:'❌ Réservé à l’administrateur : reconnecte-toi, puis réessaie.',",
+ "vers": "non_autorise:'❌ Accès refusé.',"
+ },
+ {
+ "nom": "le message « base » change",
+ "fichier": "js/admin-avis.js",
+ "de": "base_erreur:'❌ La base a refusé la demande : rien n’a été envoyé (voir les journaux de la fonction).',",
+ "vers": "base_erreur:'❌ Erreur de la base.',"
+ },
+ {
+ "nom": "le message « SQL absent » change",
+ "fichier": "js/admin-avis.js",
+ "de": "sql_absent:'❌ Les fichiers SQL 31 et 32 ne sont pas tous exécutés chez Supabase.',",
+ "vers": "sql_absent:'❌ Erreur.',"
+ },
+ {
+ "nom": "une demande invalide ne dit plus pourquoi",
+ "fichier": "js/admin-avis.js",
+ "de": "requete_invalide:'❌ La demande est invalide'+((e&&e.message)?' : '+e.message:'.'),",
+ "vers": "requete_invalide:'❌ La demande est invalide.',"
+ },
+ {
+ "nom": "une erreur inconnue ne montre plus le message du serveur",
+ "fichier": "js/admin-avis.js",
+ "de": "return m||('❌ '+((e&&e.message)||'Une erreur est survenue.'));",
+ "vers": "return m||'❌ Une erreur est survenue.';"
+ },
+ {
+ "nom": "une erreur HTTP du serveur n’est plus lue",
+ "fichier": "js/admin-avis.js",
+ "de": "return {erreur:await lireErreurFonction(r.error)};",
+ "vers": ""
+ },
+ {
+ "nom": "un jeton périmé (401) n’est plus reconnu",
+ "fichier": "js/admin-avis.js",
+ "de": "if(r.error.context&&r.error.context.status===401) return {erreur:{code:'non_autorise',message:''}};",
+ "vers": ""
+ },
+ {
+ "nom": "le 401 est cherché sur un autre statut",
+ "fichier": "js/admin-avis.js",
+ "de": "r.error.context.status===401",
+ "vers": "r.error.context.status===402"
+ },
+ {
+ "nom": "un 401 est présenté comme une autre erreur",
+ "fichier": "js/admin-avis.js",
+ "de": "return {erreur:{code:'non_autorise',message:''}};",
+ "vers": "return {erreur:{code:'erreur',message:''}};"
+ },
+ {
+ "nom": "« ok: false » est pris pour un succès",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!d||d.ok!==true) return",
+ "vers": "if(!d) return"
+ },
+ {
+ "nom": "le code d’erreur d’une réponse « ok: false » est perdu",
+ "fichier": "js/admin-avis.js",
+ "de": "code:(d&&d.erreur)||'reponse_illisible'",
+ "vers": "code:'reponse_illisible'"
+ },
+ {
+ "nom": "une panne de réseau n’est plus reconnue",
+ "fichier": "js/admin-avis.js",
+ "de": "code:(typeof estErreurReseau==='function'&&estErreurReseau(e))?'reseau':'erreur'",
+ "vers": "code:'erreur'"
+ },
+ {
+ "nom": "l’appel va vers une autre fonction",
+ "fichier": "js/admin-avis.js",
+ "de": "db.functions.invoke('envoyer-avis',{body:corps})",
+ "vers": "db.functions.invoke('envoyer-avis-2',{body:corps})"
+ },
+ {
+ "nom": "la limite passe à 301 clients",
+ "fichier": "js/admin-avis.js",
+ "de": "const AVIS_MAX_LIGNES=300;",
+ "vers": "const AVIS_MAX_LIGNES=301;"
+ },
+ {
+ "nom": "la limite passe à 299 clients",
+ "fichier": "js/admin-avis.js",
+ "de": "const AVIS_MAX_LIGNES=300;",
+ "vers": "const AVIS_MAX_LIGNES=299;"
+ },
+ {
+ "nom": "on peut demander un aperçu sans aucun client",
+ "fichier": "js/admin-avis.js",
+ "de": "&&n>0&&n<=AVIS_MAX_LIGNES",
+ "vers": "&&n<=AVIS_MAX_LIGNES"
+ },
+ {
+ "nom": "on peut demander un aperçu sans délai",
+ "fichier": "js/admin-avis.js",
+ "de": "!!avisSource&&avisDelaiValide(avisDelai)&&n>0",
+ "vers": "!!avisSource&&n>0"
+ },
+ {
+ "nom": "changer quelque chose n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "function avisInvalider(){avisApercu=null;avisResultat=null;}",
+ "vers": "function avisInvalider(){avisResultat=null;}"
+ },
+ {
+ "nom": "changer quelque chose n’efface plus le résultat",
+ "fichier": "js/admin-avis.js",
+ "de": "function avisInvalider(){avisApercu=null;avisResultat=null;}",
+ "vers": "function avisInvalider(){avisApercu=null;}"
+ },
+ {
+ "nom": "relire le répertoire n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "function avisReinitialiser(){avisInvalider();}",
+ "vers": "function avisReinitialiser(){}"
+ },
+ {
+ "nom": "une route supprimée reste choisie",
+ "fichier": "js/admin-avis.js",
+ "de": "{avisSource='';avisCoches=new Set();avisInvalider();}",
+ "vers": "{}"
+ },
+ {
+ "nom": "un client inconnu s’affiche sans nom",
+ "fichier": "js/admin-avis.js",
+ "de": "return f?f.nom:'(client inconnu)';",
+ "vers": "return f?f.nom:'';"
+ },
+ {
+ "nom": "les routes n’indiquent plus leur nombre de clients",
+ "fichier": "js/admin-avis.js",
+ "de": "r.nom+' ('+n+' client'+(n>1?'s':'')+')'",
+ "vers": "r.nom"
+ },
+ {
+ "nom": "« à la main » change de valeur",
+ "fichier": "js/admin-avis.js",
+ "de": "om.value='__main__'",
+ "vers": "om.value='main'"
+ },
+ {
+ "nom": "choisir une route ne fait plus rien",
+ "fichier": "js/admin-avis.js",
+ "de": "sel.onchange=()=>avisChoisirSource(sel.value);",
+ "vers": ""
+ },
+ {
+ "nom": "toucher un délai ne fait plus rien",
+ "fichier": "js/admin-avis.js",
+ "de": "b.onclick=()=>avisChoisirDelai(val);",
+ "vers": ""
+ },
+ {
+ "nom": "le champ « autre délai » permet 99 heures",
+ "fichier": "js/admin-avis.js",
+ "de": "autre.max='72';",
+ "vers": "autre.max='99';"
+ },
+ {
+ "nom": "le champ « autre délai » n’est plus numérique",
+ "fichier": "js/admin-avis.js",
+ "de": "autre.type='number';",
+ "vers": "autre.type='text';"
+ },
+ {
+ "nom": "taper un autre délai ne fait plus rien",
+ "fichier": "js/admin-avis.js",
+ "de": "autre.oninput=()=>avisChoisirDelai(avisDelaiDeSaisie(autre.value)||'',true);",
+ "vers": ""
+ },
+ {
+ "nom": "un délai tapé n’est pas remis dans le champ après un nouveau dessin",
+ "fichier": "js/admin-avis.js",
+ "de": "autre.value=!avisDelai||AVIS_DELAIS.some(d=>d[0]===avisDelai)?'':String(Number(avisDelai.slice(0,-1)));",
+ "vers": "autre.value='';"
+ },
+ {
+ "nom": "la puce « 6 h » disparaît",
+ "fichier": "js/admin-avis.js",
+ "de": "['6h','6 h'],",
+ "vers": ""
+ },
+ {
+ "nom": "« Tout cocher » coche aussi les clients cachés par la recherche",
+ "fichier": "js/admin-avis.js",
+ "de": "bTout.onclick=()=>{avisFiltrer(clients).forEach(",
+ "vers": "bTout.onclick=()=>{clients.forEach("
+ },
+ {
+ "nom": "« Tout cocher » n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": ".forEach(c=>avisCoches.add(c.client_id));avisInvalider();renderClientsListe();};",
+ "vers": ".forEach(c=>avisCoches.add(c.client_id));renderClientsListe();};"
+ },
+ {
+ "nom": "« Tout décocher » ne décoche rien",
+ "fichier": "js/admin-avis.js",
+ "de": "bRien.onclick=()=>{avisCoches=new Set();avisInvalider();renderClientsListe();};",
+ "vers": "bRien.onclick=()=>{avisInvalider();renderClientsListe();};"
+ },
+ {
+ "nom": "« Tout décocher » n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "bRien.onclick=()=>{avisCoches=new Set();avisInvalider();",
+ "vers": "bRien.onclick=()=>{avisCoches=new Set();"
+ },
+ {
+ "nom": "l’avertissement « arrêts sans fiche » disparaît",
+ "fichier": "js/admin-avis.js",
+ "de": "if(sansFiche) zone.appendChild(",
+ "vers": "if(false) zone.appendChild("
+ },
+ {
+ "nom": "l’avertissement « arrêts sans fiche » reste au pluriel",
+ "fichier": "js/admin-avis.js",
+ "de": "sansFiche>1?'⚠ '+sansFiche+' arrêts",
+ "vers": "false?'⚠ '+sansFiche+' arrêts"
+ },
+ {
+ "nom": "l’avertissement « clients incomplets » disparaît",
+ "fichier": "js/admin-avis.js",
+ "de": "if(incomplets) zone.appendChild(",
+ "vers": "if(false) zone.appendChild("
+ },
+ {
+ "nom": "l’avertissement « clients incomplets » reste au pluriel",
+ "fichier": "js/admin-avis.js",
+ "de": "incomplets>1?'⚠ '+incomplets+' clients",
+ "vers": "false?'⚠ '+incomplets+' clients"
+ },
+ {
+ "nom": "la recherche ne filtre plus",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!mots.length) return clients;",
+ "vers": "return clients;"
+ },
+ {
+ "nom": "la recherche accepte UN des mots",
+ "fichier": "js/admin-avis.js",
+ "de": "mots.every(m=>cle.includes(m))",
+ "vers": "mots.some(m=>cle.includes(m))"
+ },
+ {
+ "nom": "la recherche ne regarde que le nom",
+ "fichier": "js/admin-avis.js",
+ "de": "clientsCle(c.nom+' '+c.adresse+' '+c.service)",
+ "vers": "clientsCle(c.nom)"
+ },
+ {
+ "nom": "les messages « aucun client » sont inversés",
+ "fichier": "js/admin-avis.js",
+ "de": "clients.length?'Aucun client ne correspond.':'Aucun client à avertir ici (aucun arrêt relié à une fiche).'",
+ "vers": "clients.length?'Aucun client à avertir ici (aucun arrêt relié à une fiche).':'Aucun client ne correspond.'"
+ },
+ {
+ "nom": "les cases ne montrent pas ce qui est coché",
+ "fichier": "js/admin-avis.js",
+ "de": "cb.checked=avisCoches.has(c.client_id);",
+ "vers": "cb.checked=false;"
+ },
+ {
+ "nom": "cocher une case n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "else avisCoches.delete(c.client_id);avisInvalider();renderAvisBas();};",
+ "vers": "else avisCoches.delete(c.client_id);renderAvisBas();};"
+ },
+ {
+ "nom": "décocher une case ne retire pas le client",
+ "fichier": "js/admin-avis.js",
+ "de": "if(cb.checked) avisCoches.add(c.client_id); else avisCoches.delete(c.client_id);",
+ "vers": "if(cb.checked) avisCoches.add(c.client_id);"
+ },
+ {
+ "nom": "les clients à plusieurs adresses ne le disent plus",
+ "fichier": "js/admin-avis.js",
+ "de": "(c.nbAdresses>1?' ('+c.nbAdresses+' adresses)':'')",
+ "vers": "''"
+ },
+ {
+ "nom": "l’icône du texto disparaît",
+ "fichier": "js/admin-avis.js",
+ "de": "c.canaux.texto?'📱 texto':''",
+ "vers": "c.canaux.texto?'texto':''"
+ },
+ {
+ "nom": "un client sans avis activé ne le dit plus",
+ "fichier": "js/admin-avis.js",
+ "de": "icones||'Aucun avis activé pour ce client'",
+ "vers": "icones"
+ },
+ {
+ "nom": "choisir une route coche tout le monde",
+ "fichier": "js/admin-avis.js",
+ "de": "clients.filter(c=>c.canaux.courriel||c.canaux.texto).map(c=>c.client_id)",
+ "vers": "clients.map(c=>c.client_id)"
+ },
+ {
+ "nom": "« à la main » coche tout le monde",
+ "fichier": "js/admin-avis.js",
+ "de": "id&&id!=='__main__'?",
+ "vers": "id?"
+ },
+ {
+ "nom": "changer de route n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "avisSource=id;avisInvalider();",
+ "vers": "avisSource=id;"
+ },
+ {
+ "nom": "changer de délai n’efface plus l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "avisDelai=d;avisInvalider();",
+ "vers": "avisDelai=d;"
+ },
+ {
+ "nom": "toucher une puce ne vide plus le champ « autre délai »",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!saisie){const i=document.getElementById('av-autre');if(i) i.value='';}",
+ "vers": ""
+ },
+ {
+ "nom": "les puces de délai ne montrent plus le choix",
+ "fichier": "js/admin-avis.js",
+ "de": "if(puces) Array.from(puces.children).forEach(x=>{if(x.dataset&&x.dataset.delai) x.className='su-puce'+(x.dataset.delai===avisDelai?' on':'');});",
+ "vers": ""
+ },
+ {
+ "nom": "le résumé ne dit plus de choisir un délai",
+ "fichier": "js/admin-avis.js",
+ "de": "' · choisis un délai'",
+ "vers": "''"
+ },
+ {
+ "nom": "le résumé ne dit plus la limite de 300",
+ "fichier": "js/admin-avis.js",
+ "de": "(n>AVIS_MAX_LIGNES?' · '+AVIS_MAX_LIGNES+' au plus à la fois':'')",
+ "vers": "''"
+ },
+ {
+ "nom": "« coché » reste au singulier",
+ "fichier": "js/admin-avis.js",
+ "de": "' coché'+(n>1?'s':'')",
+ "vers": "' coché'"
+ },
+ {
+ "nom": "« Voir ce qui partira » n’est jamais grisé faute de délai ou de client",
+ "fichier": "js/admin-avis.js",
+ "de": "bApercu.disabled=_avisOccupe||!avisPret();",
+ "vers": "bApercu.disabled=_avisOccupe;"
+ },
+ {
+ "nom": "« Voir ce qui partira » n’est pas grisé pendant un appel",
+ "fichier": "js/admin-avis.js",
+ "de": "bApercu.disabled=_avisOccupe||!avisPret();",
+ "vers": "bApercu.disabled=!avisPret();"
+ },
+ {
+ "nom": "« courriel d’essai » n’est pas grisé pendant un appel",
+ "fichier": "js/admin-avis.js",
+ "de": "bEssai.disabled=_avisOccupe;",
+ "vers": "bEssai.disabled=false;"
+ },
+ {
+ "nom": "l’écran défile à chaque dessin",
+ "fichier": "js/admin-avis.js",
+ "de": "if(boite&&avisDefiler){",
+ "vers": "if(boite){"
+ },
+ {
+ "nom": "l’écran ne défile pas jusqu’à l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "avisResultat=null;\n    avisDefiler=true;",
+ "vers": "avisResultat=null;"
+ },
+ {
+ "nom": "l’écran ne défile pas jusqu’au résultat",
+ "fichier": "js/admin-avis.js",
+ "de": "avertissement:r.avertissement||null};\n    avisDefiler=true;",
+ "vers": "avertissement:r.avertissement||null};"
+ },
+ {
+ "nom": "deux appels peuvent partir en même temps",
+ "fichier": "js/admin-avis.js",
+ "de": "if(_avisOccupe) return;\n  _avisOccupe=true;",
+ "vers": "_avisOccupe=true;"
+ },
+ {
+ "nom": "l’écran reste bloqué après un appel",
+ "fichier": "js/admin-avis.js",
+ "de": "finally{_avisOccupe=false;showSync(false);renderAvisBas();}",
+ "vers": "finally{showSync(false);renderAvisBas();}"
+ },
+ {
+ "nom": "les boutons ne sont pas grisés pendant l’appel",
+ "fichier": "js/admin-avis.js",
+ "de": "_avisOccupe=true;\n  renderAvisBas();\n  try{",
+ "vers": "_avisOccupe=true;\n  try{"
+ },
+ {
+ "nom": "les boutons ne sont pas redessinés après l’appel",
+ "fichier": "js/admin-avis.js",
+ "de": "finally{_avisOccupe=false;showSync(false);renderAvisBas();}",
+ "vers": "finally{_avisOccupe=false;showSync(false);}"
+ },
+ {
+ "nom": "l’aperçu part même s’il manque un délai ou un client",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!avisPret()) return;",
+ "vers": ""
+ },
+ {
+ "nom": "un aperçu arrivé après un changement est affiché",
+ "fichier": "js/admin-avis.js",
+ "de": "if(signature!==avisSignature(avisDelai,avisLignesCochees())) return;",
+ "vers": ""
+ },
+ {
+ "nom": "l’aperçu ne note pas l’heure où il est arrivé",
+ "fichier": "js/admin-avis.js",
+ "de": "quand:Date.now(),",
+ "vers": "quand:0,"
+ },
+ {
+ "nom": "l’heure permise des textos est ignorée",
+ "fichier": "js/admin-avis.js",
+ "de": "heure_permise_texto:r.heure_permise_texto};",
+ "vers": "heure_permise_texto:true};"
+ },
+ {
+ "nom": "l’aperçu montre aussi les refus « normaux »",
+ "fichier": "js/admin-avis.js",
+ "de": "const visibles=avisVisibles(a.lignes);",
+ "vers": "const visibles=a.lignes;"
+ },
+ {
+ "nom": "« Rien ne partirait » n’est jamais dit",
+ "fichier": "js/admin-avis.js",
+ "de": "nb?'✔ '+avisTexteMessages(r)+' — passage '+avisLibelleDelai(avisDelai):'Rien ne partirait.'",
+ "vers": "'✔ '+avisTexteMessages(r)+' — passage '+avisLibelleDelai(avisDelai)"
+ },
+ {
+ "nom": "les refus ne sont plus expliqués dans l’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "if(r.refuses) boite.appendChild(",
+ "vers": "if(false) boite.appendChild("
+ },
+ {
+ "nom": "la note « textos non activés » apparaît sans courriel",
+ "fichier": "js/admin-avis.js",
+ "de": "a.lignes.some(l=>l.canal==='courriel')&&!a.lignes.some(l=>l.canal==='texto')",
+ "vers": "!a.lignes.some(l=>l.canal==='texto')"
+ },
+ {
+ "nom": "la note de nuit apparaît même sans texto",
+ "fichier": "js/admin-avis.js",
+ "de": "if(a.heure_permise_texto===false&&a.lignes.some(l=>l.canal==='texto'))",
+ "vers": "if(a.heure_permise_texto===false)"
+ },
+ {
+ "nom": "la note de nuit disparaît",
+ "fichier": "js/admin-avis.js",
+ "de": "if(a.heure_permise_texto===false&&a.lignes.some(l=>l.canal==='texto'))",
+ "vers": "if(a.lignes.some(l=>l.canal==='texto'))"
+ },
+ {
+ "nom": "le nom d’un refus ouvre le message",
+ "fichier": "js/admin-avis.js",
+ "de": "if(l.statut==='a_envoyer'&&l.message) nom.onclick=()=>avisMontrerMessage(l);",
+ "vers": "if(l.message) nom.onclick=()=>avisMontrerMessage(l);"
+ },
+ {
+ "nom": "les pastilles « Partira » et « Refusé » sont inversées",
+ "fichier": "js/admin-avis.js",
+ "de": "l.statut==='a_envoyer'?'Partira':'Refusé'",
+ "vers": "l.statut==='a_envoyer'?'Refusé':'Partira'"
+ },
+ {
+ "nom": "toutes les pastilles de l’aperçu sont vertes",
+ "fichier": "js/admin-avis.js",
+ "de": "'su-badge '+(l.statut==='a_envoyer'?'ok':'retard')",
+ "vers": "'su-badge ok'"
+ },
+ {
+ "nom": "« Envoyer maintenant » n’est jamais grisé faute de message",
+ "fichier": "js/admin-avis.js",
+ "de": "bEnv.disabled=_avisOccupe||!nb;",
+ "vers": "bEnv.disabled=_avisOccupe;"
+ },
+ {
+ "nom": "« Envoyer maintenant » n’est pas grisé pendant un appel",
+ "fichier": "js/admin-avis.js",
+ "de": "bEnv.disabled=_avisOccupe||!nb;",
+ "vers": "bEnv.disabled=!nb;"
+ },
+ {
+ "nom": "« message » reste au singulier dans le bouton",
+ "fichier": "js/admin-avis.js",
+ "de": "'✉ Envoyer maintenant ('+nb+' message'+(nb>1?'s':'')+')'",
+ "vers": "'✉ Envoyer maintenant ('+nb+' message)'"
+ },
+ {
+ "nom": "« Courriel à » et « Texto à » sont inversés",
+ "fichier": "js/admin-avis.js",
+ "de": "(l.canal==='courriel'?'Courriel à ':'Texto à ')",
+ "vers": "(l.canal==='courriel'?'Texto à ':'Courriel à ')"
+ },
+ {
+ "nom": "l’objet du courriel n’est plus montré",
+ "fichier": "js/admin-avis.js",
+ "de": "if(l.objet) corps.appendChild(clientsEl('div','su-cible av-objet','Objet : '+l.objet));",
+ "vers": ""
+ },
+ {
+ "nom": "le message n’est plus montré",
+ "fichier": "js/admin-avis.js",
+ "de": "corps.appendChild(clientsEl('div','av-message',l.message));",
+ "vers": "corps.appendChild(clientsEl('div','av-message',''));"
+ },
+ {
+ "nom": "l’explication du lien est donnée pour un texto",
+ "fichier": "js/admin-avis.js",
+ "de": "if(l.canal==='courriel') corps.appendChild(clientsEl('div','su-adresse','Au moment",
+ "vers": "if(l.canal==='texto') corps.appendChild(clientsEl('div','su-adresse','Au moment"
+ },
+ {
+ "nom": "« Fermer » ne ferme plus la feuille",
+ "fichier": "js/admin-avis.js",
+ "de": "bF.onclick=()=>clientsFermerFeuille();",
+ "vers": ""
+ },
+ {
+ "nom": "la feuille du message ne s’ouvre pas",
+ "fichier": "js/admin-avis.js",
+ "de": "classList.add('open')",
+ "vers": "classList.add('ouvert')"
+ },
+ {
+ "nom": "« Envoyer » sans aperçu plante",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!avisApercu) return;",
+ "vers": ""
+ },
+ {
+ "nom": "l’âge de l’aperçu n’est plus vérifié",
+ "fichier": "js/admin-avis.js",
+ "de": "if(Date.now()-avisApercu.quand>AVIS_APERCU_MAX_MS){",
+ "vers": "if(false){"
+ },
+ {
+ "nom": "l’aperçu reste valable une heure",
+ "fichier": "js/admin-avis.js",
+ "de": "const AVIS_APERCU_MAX_MS=10*60*1000;",
+ "vers": "const AVIS_APERCU_MAX_MS=60*60*1000;"
+ },
+ {
+ "nom": "la signature de l’aperçu n’est plus vérifiée",
+ "fichier": "js/admin-avis.js",
+ "de": "if(avisApercu.signature!==avisSignature(delai,lignes)){avisApercu=null;toast('⚠ La sélection a changé : refais l’aperçu.');return;}",
+ "vers": ""
+ },
+ {
+ "nom": "on envoie même quand rien ne partirait",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!(r0.courriels+r0.textos)) return;",
+ "vers": ""
+ },
+ {
+ "nom": "la confirmation compte les lignes au lieu des clients",
+ "fichier": "js/admin-avis.js",
+ "de": "const clientsRecevant=new Set(avisApercu.lignes.filter(l=>l.statut==='a_envoyer').map(l=>l.client_id)).size;",
+ "vers": "const clientsRecevant=avisApercu.lignes.length;"
+ },
+ {
+ "nom": "la confirmation ne dit plus que l’avis ne se reprend pas",
+ "fichier": "js/admin-avis.js",
+ "de": "' ». Un avis envoyé ne se reprend pas.'",
+ "vers": "' ».'"
+ },
+ {
+ "nom": "la confirmation ne distingue plus « demain »",
+ "fichier": "js/admin-avis.js",
+ "de": "(delai==='demain'?'demain':'dans '+avisLibelleDelai(delai))",
+ "vers": "('dans '+avisLibelleDelai(delai))"
+ },
+ {
+ "nom": "« Annuler » envoie quand même",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!oui) return;",
+ "vers": ""
+ },
+ {
+ "nom": "les boutons de la confirmation sont inversés",
+ "fichier": "js/admin-avis.js",
+ "de": "'Envoyer','Annuler');\n    if(!oui)",
+ "vers": "'Annuler','Envoyer');\n    if(!oui)"
+ },
+ {
+ "nom": "la demande d’envoi oublie les clients",
+ "fichier": "js/admin-avis.js",
+ "de": "{action:'envoyer',delai,lignes}",
+ "vers": "{action:'envoyer',delai}"
+ },
+ {
+ "nom": "la demande d’aperçu impose les deux canaux",
+ "fichier": "js/admin-avis.js",
+ "de": "{action:'apercu',delai,lignes}",
+ "vers": "{action:'apercu',delai,lignes,canaux:['courriel','texto']}"
+ },
+ {
+ "nom": "après un échec d’envoi, l’aperçu reste affiché",
+ "fichier": "js/admin-avis.js",
+ "de": "if(r.erreur){avisApercu=null;toast(avisMessageErreur(r.erreur,'envoyer'));return;}",
+ "vers": "if(r.erreur){toast(avisMessageErreur(r.erreur,'envoyer'));return;}"
+ },
+ {
+ "nom": "un échec d’envoi est présenté comme un échec d’aperçu",
+ "fichier": "js/admin-avis.js",
+ "de": "toast(avisMessageErreur(r.erreur,'envoyer'))",
+ "vers": "toast(avisMessageErreur(r.erreur,'apercu'))"
+ },
+ {
+ "nom": "l’avertissement du journal est perdu",
+ "fichier": "js/admin-avis.js",
+ "de": "avertissement:r.avertissement||null",
+ "vers": "avertissement:null"
+ },
+ {
+ "nom": "après l’envoi, l’aperçu reste affiché",
+ "fichier": "js/admin-avis.js",
+ "de": "avisApercu=null;\n    avisResultat={",
+ "vers": "avisResultat={"
+ },
+ {
+ "nom": "« Aucun avis n’est parti » n’est jamais dit",
+ "fichier": "js/admin-avis.js",
+ "de": "!res.envoyes&&!res.echecs?'Aucun avis n’est parti (tous refusés).':res.echecs?",
+ "vers": "res.echecs?"
+ },
+ {
+ "nom": "un échec n’est pas signalé dans le message",
+ "fichier": "js/admin-avis.js",
+ "de": "res.echecs?'⚠ '+res.envoyes",
+ "vers": "false?'⚠ '+res.envoyes"
+ },
+ {
+ "nom": "le résumé du résultat oublie « Aucun envoyé »",
+ "fichier": "js/admin-avis.js",
+ "de": "res.envoyes?'✔ '+res.envoyes+' envoyé'+(res.envoyes>1?'s':''):'✖ Aucun envoyé'",
+ "vers": "'✔ '+res.envoyes+' envoyé'+(res.envoyes>1?'s':'')"
+ },
+ {
+ "nom": "le résumé du résultat oublie les échecs",
+ "fichier": "js/admin-avis.js",
+ "de": "res.echecs?'✖ '+res.echecs+' en échec':''",
+ "vers": "''"
+ },
+ {
+ "nom": "le résumé du résultat oublie les refus",
+ "fichier": "js/admin-avis.js",
+ "de": "res.refuses?res.refuses+' refusé'+(res.refuses>1?'s':''):''",
+ "vers": "''"
+ },
+ {
+ "nom": "l’avertissement n’est pas affiché",
+ "fichier": "js/admin-avis.js",
+ "de": "if(avisResultat.avertissement) boite.appendChild(",
+ "vers": "if(false) boite.appendChild("
+ },
+ {
+ "nom": "les refus du résultat ne sont plus expliqués",
+ "fichier": "js/admin-avis.js",
+ "de": "if(res.refuses) boite.appendChild(clientsEl('div','su-adresse av-note','Refusés : '",
+ "vers": "if(false) boite.appendChild(clientsEl('div','su-adresse av-note','Refusés : '"
+ },
+ {
+ "nom": "toutes les pastilles du résultat sont vertes",
+ "fichier": "js/admin-avis.js",
+ "de": "'su-badge '+(l.statut==='envoye'?'ok':'retard')",
+ "vers": "'su-badge ok'"
+ },
+ {
+ "nom": "un échec s’affiche comme un refus",
+ "fichier": "js/admin-avis.js",
+ "de": "l.statut==='envoye'?'Envoyé':l.statut==='echec'?'Échec':'Refusé'",
+ "vers": "l.statut==='envoye'?'Envoyé':'Refusé'"
+ },
+ {
+ "nom": "les raisons ne sont plus données dans le résultat",
+ "fichier": "js/admin-avis.js",
+ "de": "if(l.statut!=='envoye') div.appendChild(",
+ "vers": "if(false) div.appendChild("
+ },
+ {
+ "nom": "le résultat montre aussi les refus « normaux »",
+ "fichier": "js/admin-avis.js",
+ "de": "const visibles=avisVisibles(avisResultat.lignes);",
+ "vers": "const visibles=avisResultat.lignes;"
+ },
+ {
+ "nom": "le courriel d’essai part sans confirmation",
+ "fichier": "js/admin-avis.js",
+ "de": "if(!(await confirmer('Courriel d’essai ?','Un courriel « [ESSAI] » partira à l’adresse de TON compte administrateur, jamais à un client. Rien n’est noté au journal.','Envoyer','Annuler'))) return;",
+ "vers": ""
+ },
+ {
+ "nom": "le courriel d’essai envoie des clients",
+ "fichier": "js/admin-avis.js",
+ "de": "{action:'essai_courriel'}",
+ "vers": "{action:'essai_courriel',delai:'3h',lignes:avisLignesCochees()}"
+ },
+ {
+ "nom": "le courriel d’essai ne dit plus de regarder la boîte",
+ "fichier": "js/admin-avis.js",
+ "de": "toast('✔ Courriel d’essai envoyé : regarde ta boîte de réception (et les pourriels).');",
+ "vers": "toast('✔ Envoyé.');"
+ },
+ {
+ "nom": "un échec du courriel d’essai n’est plus expliqué",
+ "fichier": "js/admin-avis.js",
+ "de": "toast(avisMessageErreur(r.erreur,'essai_courriel'));",
+ "vers": "toast('❌ Échec.');"
+ },
+ {
+ "nom": "la puce « Avis aux clients » disparaît",
+ "fichier": "js/admin-clients.js",
+ "de": ",['avis','📣 Avis aux clients']",
+ "vers": ""
+ },
+ {
+ "nom": "la puce « Avis aux clients » n’ouvre rien",
+ "fichier": "js/admin-clients.js",
+ "de": "if(clientsFiltre==='avis'){",
+ "vers": "if(clientsFiltre==='avis'&&false){"
+ },
+ {
+ "nom": "relire le répertoire n’efface plus l’aperçu (branchement)",
+ "fichier": "js/admin-clients.js",
+ "de": "if(typeof avisReinitialiser==='function') avisReinitialiser();",
+ "vers": ""
+ },
+ {
+ "nom": "index.html ne charge plus admin-avis.js",
+ "fichier": "index.html",
+ "de": "<script src=\"js/admin-avis.js\"></script>",
+ "vers": ""
+ },
+ {
+ "nom": "index.html charge admin-avis.js AVANT admin-clients.js",
+ "fichier": "index.html",
+ "de": "<script src=\"js/admin-clients.js\"></script>\n<script src=\"js/admin-avis.js\"></script>",
+ "vers": "<script src=\"js/admin-avis.js\"></script>\n<script src=\"js/admin-clients.js\"></script>"
+ },
+ {
+ "nom": "le style de la boîte de l’aperçu disparaît",
+ "fichier": "css/style.css",
+ "de": ".av-boite{margin:10px 16px;",
+ "vers": ".av-boitx{margin:10px 16px;"
+ },
+ {
+ "nom": "le message de l’aperçu perd ses sauts de ligne",
+ "fichier": "css/style.css",
+ "de": ".av-message{white-space:pre-wrap;",
+ "vers": ".av-message{white-space:normal;"
+ },
+ {
+ "nom": "les boutons « Tout cocher » sont blancs",
+ "fichier": "css/style.css",
+ "de": ".av-outils .lf-btn{background:#161c24;",
+ "vers": ".av-outils .lf-btn{background:#ffffff;"
+ }
+]

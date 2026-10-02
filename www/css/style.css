@@ -711,3 +711,23 @@
 .cl-arret{align-items:center;}
 #clients-feuille .lf-btn:not(.fermer):not(.nouveau){background:#161c24;border:1px solid var(--border);color:var(--text);}
 #clients-feuille #cl-insc-ignorer{color:#ef4444;border-color:rgba(239,68,68,.4);}
+
+/* Demande 5, chantier D, étape 4 : la puce « Avis aux clients » de l'onglet Clients (admin-avis.js) — route, délai, aperçu, envoi */
+.av-note{padding:0 16px;margin:6px 0;line-height:1.4;}
+.av-bloc{padding:0 16px;}
+.av-bloc select,.av-bloc input[type="number"]{width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:'Barlow',sans-serif;outline:none;}
+.av-bloc input[type="number"]{margin-top:2px;}
+.av-bloc .su-puces{flex-wrap:wrap;overflow-x:visible;}
+.av-outils{display:flex;gap:8px;padding:6px 16px 8px;}
+.av-outils .lf-btn{background:#161c24;border:1px solid var(--border);color:var(--text);padding:8px;font-size:14px;}
+.av-client{padding:10px 16px;}
+.av-client>div{flex:1;min-width:0;}
+.av-resume{color:#f0f4f8;font-size:13px;}
+.av-boite{margin:10px 16px;border:1px solid var(--border);border-radius:12px;background:#12171e;overflow:hidden;}
+.av-boite .su-section{margin-top:0;}
+.av-avertissement{display:block;white-space:normal;margin:6px 16px;padding:8px 10px;line-height:1.35;}
+.av-message{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.45;color:#f0f4f8;background:#0f1318;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;}
+.av-objet{font-weight:700;}
+/* Demande 5, chantier D, étape 5 : la puce « Journal des avis » (admin-avis-journal.js) */
+#jr-puces{flex-wrap:wrap;overflow-x:visible;}
+.jr-detail{font-size:13px;margin:3px 0;color:#c3ccd8;overflow-wrap:anywhere;}

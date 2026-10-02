@@ -1,0 +1,692 @@
+[
+ {
+  "nom": "une page de 100 lignes au lieu de 200",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "const JOURNAL_PAGE=200;",
+  "vers": "const JOURNAL_PAGE=100;"
+ },
+ {
+  "nom": "le garde-fou passe à 3 pages",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "const JOURNAL_PAGES_MAX=10;",
+  "vers": "const JOURNAL_PAGES_MAX=3;"
+ },
+ {
+  "nom": "la lecture demande aussi « envoye_par »",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "fournisseur_id,envoye_le,erreur';",
+  "vers": "fournisseur_id,envoye_le,erreur,envoye_par';"
+ },
+ {
+  "nom": "la puce « En attente » disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": ",['en_attente','En attente']];",
+  "vers": "];"
+ },
+ {
+  "nom": "les puces « Échecs » et « Refusés » sont inversées",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "['echec','Échecs'],['refuse','Refusés']",
+  "vers": "['echec','Refusés'],['refuse','Échecs']"
+ },
+ {
+  "nom": "un échec s’appelle « Erreur »",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "echec:'Échec',refuse:'Refusé'",
+  "vers": "echec:'Erreur',refuse:'Refusé'"
+ },
+ {
+  "nom": "le filtre de statut ne filtre plus",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(filtre&&filtre!=='tous'&&l.statut!==filtre) return false;",
+  "vers": ""
+ },
+ {
+  "nom": "la recherche accepte UN des mots",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "return mots.every(m=>cle.includes(m));",
+  "vers": "return mots.some(m=>cle.includes(m));"
+ },
+ {
+  "nom": "la recherche ne regarde plus le nom du client",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[nomDe(l.client_id),l.destinataire,l.service,l.adresse]",
+  "vers": "[l.destinataire,l.service,l.adresse]"
+ },
+ {
+  "nom": "la recherche ne regarde plus le destinataire",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[nomDe(l.client_id),l.destinataire,l.service,l.adresse]",
+  "vers": "[nomDe(l.client_id),l.service,l.adresse]"
+ },
+ {
+  "nom": "la recherche ne regarde plus le service",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[nomDe(l.client_id),l.destinataire,l.service,l.adresse]",
+  "vers": "[nomDe(l.client_id),l.destinataire,l.adresse]"
+ },
+ {
+  "nom": "la recherche ne regarde plus l’adresse",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[nomDe(l.client_id),l.destinataire,l.service,l.adresse]",
+  "vers": "[nomDe(l.client_id),l.destinataire,l.service]"
+ },
+ {
+  "nom": "« tous » n’est plus compté",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(lignes||[]).forEach(l=>{r.tous++;if(l.statut in r) r[l.statut]++;});",
+  "vers": "(lignes||[]).forEach(l=>{if(l.statut in r) r[l.statut]++;});"
+ },
+ {
+  "nom": "un statut inconnu est compté n’importe où",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.statut in r) r[l.statut]++;",
+  "vers": "r[l.statut]++;"
+ },
+ {
+  "nom": "tous les avis tombent dans le même jour",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(dernier&&dernier.jour===l.jour) dernier.lignes.push(l);",
+  "vers": "if(dernier) dernier.lignes.push(l);"
+ },
+ {
+  "nom": "une date illisible disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(isNaN(d.getTime())) return String(jour||'');",
+  "vers": "if(isNaN(d.getTime())) return '';"
+ },
+ {
+  "nom": "le mois s’écrit en abrégé",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "{year:'numeric',month:'long',day:'numeric'}",
+  "vers": "{year:'numeric',month:'short',day:'numeric'}"
+ },
+ {
+  "nom": "« envoyé » reste au singulier",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(c.envoye>1?'s':'')",
+  "vers": "''"
+ },
+ {
+  "nom": "« échec » reste au singulier",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(c.echec>1?'s':'')",
+  "vers": "''"
+ },
+ {
+  "nom": "« refusé » reste au singulier",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(c.refuse>1?'s':'')",
+  "vers": "''"
+ },
+ {
+  "nom": "les comptes d’un jour ne mentionnent plus « en attente »",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(c.en_attente) p.push(c.en_attente+' en attente');",
+  "vers": ""
+ },
+ {
+  "nom": "les comptes d’un jour sont séparés par des virgules",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "return p.join(' · ');\n}\n// A-t-on tout lu",
+  "vers": "return p.join(', ');\n}\n// A-t-on tout lu"
+ },
+ {
+  "nom": "une page non pleine ne finit plus la lecture",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "return luDansLaPage<JOURNAL_PAGE||luAuTotal>=JOURNAL_PAGE*JOURNAL_PAGES_MAX;",
+  "vers": "return luAuTotal>=JOURNAL_PAGE*JOURNAL_PAGES_MAX;"
+ },
+ {
+  "nom": "le garde-fou est dépassé d’une ligne",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "luAuTotal>=JOURNAL_PAGE*JOURNAL_PAGES_MAX",
+  "vers": "luAuTotal>JOURNAL_PAGE*JOURNAL_PAGES_MAX"
+ },
+ {
+  "nom": "le garde-fou n’existe plus",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "return luDansLaPage<JOURNAL_PAGE||luAuTotal>=JOURNAL_PAGE*JOURNAL_PAGES_MAX;",
+  "vers": "return luDansLaPage<JOURNAL_PAGE;"
+ },
+ {
+  "nom": "la raison d’un refus ignore le canal",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.statut==='refuse') return avisLibelleMotif(l.motif,l.canal);",
+  "vers": "if(l.statut==='refuse') return avisLibelleMotif(l.motif);"
+ },
+ {
+  "nom": "la raison d’un échec ignore le canal",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "return avisLibelleMotif('echec_fournisseur',l.canal);",
+  "vers": "return avisLibelleMotif('echec_fournisseur');"
+ },
+ {
+  "nom": "la raison d’un avis en attente change",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "'le résultat n’a pas été noté : le client l’a peut-être reçu';\n  return '';",
+  "vers": "'en attente';\n  return '';"
+ },
+ {
+  "nom": "la raison d’un avis en attente disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.statut==='en_attente') return 'le résultat n’a pas été noté : le client l’a peut-être reçu';",
+  "vers": ""
+ },
+ {
+  "nom": "la lecture va vers une autre table",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "db.from('avis_envois').select(JOURNAL_COLONNES)",
+  "vers": "db.from('avis_envois_2').select(JOURNAL_COLONNES)"
+ },
+ {
+  "nom": "les plus anciennes d’abord",
+  "fichier": "js/admin-avis-journal.js",
+  "de": ".order('cree_le',{ascending:false})",
+  "vers": ".order('cree_le',{ascending:true})"
+ },
+ {
+  "nom": "l’ordre des lignes de même date n’est plus fixé",
+  "fichier": "js/admin-avis-journal.js",
+  "de": ".order('id',{ascending:true})",
+  "vers": ""
+ },
+ {
+  "nom": "la page lue a une ligne de trop",
+  "fichier": "js/admin-avis-journal.js",
+  "de": ".range(debut,debut+JOURNAL_PAGE-1)",
+  "vers": ".range(debut,debut+JOURNAL_PAGE)"
+ },
+ {
+  "nom": "une erreur de lecture est prise pour un journal vide",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(r.error) throw r.error;",
+  "vers": ""
+ },
+ {
+  "nom": "un journal à relire garde ses vieilles lignes",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalLignes=null;journalFin=false;journalErreur='';\n  _journalLecture++;",
+  "vers": "journalFin=false;journalErreur='';\n  _journalLecture++;"
+ },
+ {
+  "nom": "un journal à relire garde sa vieille erreur",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalLignes=null;journalFin=false;journalErreur='';\n  _journalLecture++;",
+  "vers": "journalLignes=null;journalFin=false;\n  _journalLecture++;"
+ },
+ {
+  "nom": "une lecture en cours n’est plus ignorée après une invalidation",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalLignes=null;journalFin=false;journalErreur='';\n  _journalLecture++;",
+  "vers": "journalLignes=null;journalFin=false;journalErreur='';"
+ },
+ {
+  "nom": "deux lectures peuvent se chevaucher",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(_journalOccupe) return;\n  _journalOccupe=true;",
+  "vers": "_journalOccupe=true;"
+ },
+ {
+  "nom": "le journal reste « occupé » après une lecture",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "_journalOccupe=false;\n    if(typeof clientsFiltre",
+  "vers": "if(typeof clientsFiltre"
+ },
+ {
+  "nom": "le bouton « Voir les suivants » ne se grise pas pendant la lecture",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(plus&&journalLignes) renderClientsListe();",
+  "vers": ""
+ },
+ {
+  "nom": "« Voir les suivants » relit depuis le début",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "const debut=plus&&journalLignes?journalLignes.length:0;",
+  "vers": "const debut=0;"
+ },
+ {
+  "nom": "une vieille réponse est acceptée",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "    if(numero!==_journalLecture) return;   // une lecture plus récente (ou un envoi) a pris la relève",
+  "vers": ""
+ },
+ {
+  "nom": "une ligne reprise est affichée deux fois",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "const nouvelles=lot.filter(l=>!vues.has(l.id));",
+  "vers": "const nouvelles=lot;"
+ },
+ {
+  "nom": "« Voir les suivants » remplace les lignes au lieu de les ajouter",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalLignes=plus&&journalLignes?journalLignes.concat(nouvelles):nouvelles;",
+  "vers": "journalLignes=nouvelles;"
+ },
+ {
+  "nom": "la lecture ne sait plus qu’elle est finie",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalFin=journalEstFini(lot.length,journalLignes.length);",
+  "vers": "journalFin=false;"
+ },
+ {
+  "nom": "la lecture croit toujours être finie",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalFin=journalEstFini(lot.length,journalLignes.length);",
+  "vers": "journalFin=true;"
+ },
+ {
+  "nom": "une lecture réussie garde l’ancienne erreur",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalFin=journalEstFini(lot.length,journalLignes.length);\n    journalErreur='';",
+  "vers": "journalFin=journalEstFini(lot.length,journalLignes.length);"
+ },
+ {
+  "nom": "une vieille erreur est affichée",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "  }catch(e){\n    if(numero!==_journalLecture) return;",
+  "vers": "  }catch(e){"
+ },
+ {
+  "nom": "la table absente n’est plus reconnue par son code PGRST205",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "code==='PGRST205'||",
+  "vers": ""
+ },
+ {
+  "nom": "la table absente n’est plus reconnue par son code 42P01",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "code==='42P01'||",
+  "vers": ""
+ },
+ {
+  "nom": "la table absente n’est plus reconnue par son message",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "||(/avis_envois/.test(msg)&&/schema cache|does not exist/.test(msg))",
+  "vers": ""
+ },
+ {
+  "nom": "n’importe quelle table absente passe pour celle du journal",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(/avis_envois/.test(msg)&&/schema cache|does not exist/.test(msg))",
+  "vers": "(/schema cache|does not exist/.test(msg))"
+ },
+ {
+  "nom": "une panne de réseau n’est plus reconnue",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalErreur=clientsErreurReseau(e)?'📴 Pas de réseau : le journal n’a pas pu être lu.':absente?",
+  "vers": "journalErreur=absente?"
+ },
+ {
+  "nom": "le message « journal pas activé » change",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "'Le journal des avis n’est pas encore activé dans ta base (fichier SQL 31).'",
+  "vers": "'Le journal est absent.'"
+ },
+ {
+  "nom": "une erreur en lisant la suite efface les lignes déjà lues",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(!plus||!journalLignes) journalLignes=null;",
+  "vers": "journalLignes=null;"
+ },
+ {
+  "nom": "le journal ne se redessine plus à la fin de la lecture",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(typeof clientsFiltre!=='undefined'&&clientsFiltre==='journal') renderClientsListe();",
+  "vers": ""
+ },
+ {
+  "nom": "le message d’erreur n’est plus montré",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "clientsMessage(journalErreur||'Chargement du journal…')",
+  "vers": "clientsMessage('Chargement du journal…')"
+ },
+ {
+  "nom": "le bouton « Réessayer » disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "    if(journalErreur){\n      const a=",
+  "vers": "    if(false){\n      const a="
+ },
+ {
+  "nom": "« Réessayer » ne relit pas",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "b.onclick=()=>{journalErreur='';renderClientsListe();};",
+  "vers": "b.onclick=()=>{renderClientsListe();};"
+ },
+ {
+  "nom": "« Réessayer » ne fait rien",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "b.onclick=()=>{journalErreur='';renderClientsListe();};",
+  "vers": "b.onclick=()=>{};"
+ },
+ {
+  "nom": "l’explication du haut disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "zone.appendChild(clientsEl('div','su-adresse av-note','Chaque avis envoyé (ou refusé, ou raté) est noté ici, avec le message exact. Le journal ne peut être ni modifié ni effacé : même pas par toi.'));",
+  "vers": ""
+ },
+ {
+  "nom": "les puces ne montrent plus les nombres",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "texte+' ('+compte[id]+')'",
+  "vers": "texte"
+ },
+ {
+  "nom": "la puce choisie n’est pas marquée",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "'su-puce'+(journalFiltre===id?' on':'')",
+  "vers": "'su-puce'"
+ },
+ {
+  "nom": "toucher une puce ne filtre pas",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "b.onclick=()=>{journalFiltre=id;renderClientsListe();};",
+  "vers": "b.onclick=()=>{renderClientsListe();};"
+ },
+ {
+  "nom": "l’avertissement « en attente » disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(compte.en_attente) zone.appendChild(",
+  "vers": "if(false) zone.appendChild("
+ },
+ {
+  "nom": "l’avertissement « en attente » reste au singulier",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(compte.en_attente>1?'Les clients l’ont':'Le client l’a')",
+  "vers": "'Le client l’a'"
+ },
+ {
+  "nom": "l’avertissement « en attente » reste au pluriel",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(compte.en_attente>1?'Les clients l’ont':'Le client l’a')",
+  "vers": "'Les clients l’ont'"
+ },
+ {
+  "nom": "le filtre de statut n’est pas appliqué à la liste",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalFiltrer(journalLignes,journalFiltre,clientsRecherche,nomDe)",
+  "vers": "journalFiltrer(journalLignes,'tous',clientsRecherche,nomDe)"
+ },
+ {
+  "nom": "la recherche n’est pas appliquée à la liste",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalFiltrer(journalLignes,journalFiltre,clientsRecherche,nomDe)",
+  "vers": "journalFiltrer(journalLignes,journalFiltre,'',nomDe)"
+ },
+ {
+  "nom": "le résumé dit toujours « les plus récents »",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(journalFin?'Le journal contient '+journalLignes.length+' avis':'Les '+journalLignes.length+' avis les plus récents')",
+  "vers": "('Les '+journalLignes.length+' avis les plus récents')"
+ },
+ {
+  "nom": "le résumé ne dit plus combien sont affichés",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(vues.length!==journalLignes.length?' · '+vues.length+' affiché'+(vues.length>1?'s':''):'')",
+  "vers": "''"
+ },
+ {
+  "nom": "« affiché » reste au singulier",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "' affiché'+(vues.length>1?'s':'')",
+  "vers": "' affiché'"
+ },
+ {
+  "nom": "les messages « aucun avis » sont inversés",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "journalLignes.length?'Aucun avis ne correspond.':'Le journal est vide : aucun avis n’a encore été envoyé.'",
+  "vers": "journalLignes.length?'Le journal est vide : aucun avis n’a encore été envoyé.':'Aucun avis ne correspond.'"
+ },
+ {
+  "nom": "le jour d’une section s’écrit en chiffres",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "section.appendChild(clientsEl('span','',journalJour(g.jour)));",
+  "vers": "section.appendChild(clientsEl('span','',g.jour));"
+ },
+ {
+  "nom": "une section ne donne plus ses comptes",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "section.appendChild(clientsEl('span','su-section-n',journalTexteCompte(g.lignes)));",
+  "vers": "section.appendChild(clientsEl('span','su-section-n',''));"
+ },
+ {
+  "nom": "le bouton « Voir les suivants » est toujours là",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "  if(!journalFin){\n    const bPlus",
+  "vers": "  if(true){\n    const bPlus"
+ },
+ {
+  "nom": "le bouton « Voir les suivants » n’est jamais grisé",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "bPlus.disabled=_journalOccupe;",
+  "vers": "bPlus.disabled=false;"
+ },
+ {
+  "nom": "« Voir les suivants » relit la 1ʳᵉ page",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "bPlus.onclick=()=>journalCharger(true);",
+  "vers": "bPlus.onclick=()=>journalCharger(false);"
+ },
+ {
+  "nom": "le bouton annonce 100 lignes",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "'Voir les '+JOURNAL_PAGE+' suivants'",
+  "vers": "'Voir les 100 suivants'"
+ },
+ {
+  "nom": "« Actualiser » ne relit rien",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "bMaj.onclick=()=>{journalInvalider();renderClientsListe();};",
+  "vers": "bMaj.onclick=()=>{renderClientsListe();};"
+ },
+ {
+  "nom": "l’erreur en lisant la suite n’est pas montrée",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(journalErreur) zone.appendChild(clientsMessage(journalErreur));",
+  "vers": ""
+ },
+ {
+  "nom": "toutes les lignes ont l’icône du courriel",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(l.canal==='courriel'?'✉':'📱')",
+  "vers": "'✉'"
+ },
+ {
+  "nom": "toutes les pastilles sont rouges",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "'su-badge '+(l.statut==='envoye'?'ok':l.statut==='en_attente'?'afaire':'retard')",
+  "vers": "'su-badge retard'"
+ },
+ {
+  "nom": "un avis en attente a la pastille d’un échec",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "l.statut==='envoye'?'ok':l.statut==='en_attente'?'afaire':'retard'",
+  "vers": "l.statut==='envoye'?'ok':'retard'"
+ },
+ {
+  "nom": "une ligne montre toujours la date de préparation",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "clientsDate(l.statut==='envoye'&&l.envoye_le?l.envoye_le:l.cree_le)",
+  "vers": "clientsDate(l.cree_le)"
+ },
+ {
+  "nom": "une ligne sans destinataire n’en parle pas",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[l.destinataire||'(aucun destinataire)',avisLibelleDelai(l.delai),l.service]",
+  "vers": "[l.destinataire||'',avisLibelleDelai(l.delai),l.service]"
+ },
+ {
+  "nom": "une ligne ne dit plus le service",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[l.destinataire||'(aucun destinataire)',avisLibelleDelai(l.delai),l.service].join(' · ')",
+  "vers": "[l.destinataire||'(aucun destinataire)',avisLibelleDelai(l.delai)].join(' · ')"
+ },
+ {
+  "nom": "une ligne ne dit plus le délai",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "[l.destinataire||'(aucun destinataire)',avisLibelleDelai(l.delai),l.service].join(' · ')",
+  "vers": "[l.destinataire||'(aucun destinataire)',l.service].join(' · ')"
+ },
+ {
+  "nom": "la raison n’est plus sous la ligne",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(raison) div.appendChild(clientsEl('div','su-temps',raison));",
+  "vers": ""
+ },
+ {
+  "nom": "le nom ne s’ouvre plus",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "nom.onclick=()=>journalMontrer(l,nomDe);",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne donne plus la date de l’envoi",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(l.statut==='envoye'&&l.envoye_le?' le '+clientsDate(l.envoye_le):' · noté le '+clientsDate(l.cree_le))",
+  "vers": "(' · noté le '+clientsDate(l.cree_le))"
+ },
+ {
+  "nom": "la feuille ne dit plus la raison",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(raison) ligne('Raison : '+raison);",
+  "vers": ""
+ },
+ {
+  "nom": "« Courriel à » et « Texto à » sont inversés",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(l.canal==='courriel'?'Courriel à ':'Texto à ')",
+  "vers": "(l.canal==='courriel'?'Texto à ':'Courriel à ')"
+ },
+ {
+  "nom": "la feuille ne dit plus le délai",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "ligne('Délai annoncé : '+avisLibelleDelai(l.delai));",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne dit plus le service",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "ligne('Service : '+l.service);",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne dit plus l’adresse",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "ligne('Adresse : '+l.adresse);",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne dit plus la version du modèle",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "ligne('Modèle de message : '+l.version_modele);",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne montre plus l’objet",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.objet) corps.appendChild(clientsEl('div','su-cible av-objet','Objet : '+l.objet));",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne montre plus le message exact",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "corps.appendChild(clientsEl('div','av-message',l.message));",
+  "vers": "corps.appendChild(clientsEl('div','av-message',''));"
+ },
+ {
+  "nom": "l’explication du lien est donnée aussi pour un texto",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.canal==='courriel') ligne('Au moment de l’envoi",
+  "vers": "if(true) ligne('Au moment de l’envoi"
+ },
+ {
+  "nom": "l’explication du lien disparaît",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.canal==='courriel') ligne('Au moment de l’envoi, « [lien de désabonnement] » était remplacé par le lien personnel du client.');",
+  "vers": ""
+ },
+ {
+  "nom": "un texto est attribué à Resend",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "(l.canal==='courriel'?'Resend':'Twilio')",
+  "vers": "'Resend'"
+ },
+ {
+  "nom": "le numéro chez le fournisseur n’est plus montré",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.fournisseur_id) ligne(",
+  "vers": "if(false) ligne("
+ },
+ {
+  "nom": "l’erreur notée n’est plus montrée",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "if(l.erreur) ligne('Erreur notée : '+l.erreur);",
+  "vers": ""
+ },
+ {
+  "nom": "l’envoi groupé montre tout l’identifiant",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "String(l.lot_id||'').slice(0,8)",
+  "vers": "String(l.lot_id||'')"
+ },
+ {
+  "nom": "« Fermer » ne ferme pas la feuille",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "bF.onclick=()=>clientsFermerFeuille();",
+  "vers": ""
+ },
+ {
+  "nom": "la feuille ne s’ouvre pas",
+  "fichier": "js/admin-avis-journal.js",
+  "de": "classList.add('open')",
+  "vers": "classList.add('ouvert')"
+ },
+ {
+  "nom": "la puce « Journal des avis » disparaît",
+  "fichier": "js/admin-clients.js",
+  "de": ",['journal','📒 Journal des avis']",
+  "vers": ""
+ },
+ {
+  "nom": "la puce « Journal des avis » n’ouvre rien",
+  "fichier": "js/admin-clients.js",
+  "de": "if(clientsFiltre==='journal'){",
+  "vers": "if(clientsFiltre==='journal'&&false){"
+ },
+ {
+  "nom": "rouvrir l’onglet ne relit plus le journal",
+  "fichier": "js/admin-clients.js",
+  "de": "if(typeof journalInvalider==='function') journalInvalider();   // (admin-avis-journal.js) le journal est relu à la prochaine visite",
+  "vers": ""
+ },
+ {
+  "nom": "un envoi n’invalide plus le journal",
+  "fichier": "js/admin-avis.js",
+  "de": "if(typeof journalInvalider==='function') journalInvalider();   // (admin-avis-journal.js) l'envoi, même raté, a pu ajouter des lignes au journal : il sera relu à la prochaine visite",
+  "vers": ""
+ },
+ {
+  "nom": "index.html ne charge plus admin-avis-journal.js",
+  "fichier": "index.html",
+  "de": "<script src=\"js/admin-avis-journal.js\"></script>",
+  "vers": ""
+ },
+ {
+  "nom": "index.html charge admin-avis-journal.js AVANT admin-avis.js",
+  "fichier": "index.html",
+  "de": "<script src=\"js/admin-avis.js\"></script>\n<script src=\"js/admin-avis-journal.js\"></script>",
+  "vers": "<script src=\"js/admin-avis-journal.js\"></script>\n<script src=\"js/admin-avis.js\"></script>"
+ },
+ {
+  "nom": "les puces de statut ne passent plus à la ligne",
+  "fichier": "css/style.css",
+  "de": "#jr-puces{flex-wrap:wrap;",
+  "vers": "#jr-puces{flex-wrap:nowrap;"
+ },
+ {
+  "nom": "le détail d’un avis ne passe plus à la ligne",
+  "fichier": "css/style.css",
+  "de": ".jr-detail{font-size:13px;margin:3px 0;color:#c3ccd8;overflow-wrap:anywhere;}",
+  "vers": ".jr-detail{font-size:13px;margin:3px 0;color:#c3ccd8;}"
+ }
+]

@@ -2,7 +2,8 @@
 //
 // Le répertoire (table « clients », fichier SQL 30) a été rempli depuis QuickBooks (278 fiches, aucun avis activé). Cet onglet sert à le tenir à jour : chercher une fiche, la corriger
 // (nom, adresse, courriel, téléphone, CELLULAIRE), choisir « avertir par courriel », créer une fiche, ARCHIVER une fiche (jamais effacée : actif = false).
-// À venir (étapes 2 et 3 du chantier D) : relier les arrêts qui n'ont pas encore de fiche, et les inscriptions reçues de la page publique.
+// Les autres puces de la barre : « Arrêts sans fiche » (relier un arrêt à une fiche), « Inscriptions » (celles de la page publique), « Avis aux clients » (admin-avis.js : avertir les clients d'une route) et
+// « Journal des avis » (admin-avis-journal.js : tout ce qui a été envoyé, en lecture seule).
 //
 // Réservé à l'ADMINISTRATEUR (les règles d'accès de la table le garantissent). Lecture et écriture DIRECTES sur la table (règle clients_admin) : aucune fonction serveur. Les colonnes du
 // CONSENTEMENT (avis_texto, désabonnements, consentement exprès aux promotions) ne s'écrivent JAMAIS d'ici (le serveur refuse l'écriture directe) : l'écran les montre en lecture seule.
@@ -14,7 +15,7 @@ const CLIENTS_COLONNES='id,nom,nom_entreprise,type_client,adresse,ville,code_pos
 const CLIENTS_TYPES=[['particulier','Particulier'],['investisseur','Investisseur'],['municipalite','Municipalité'],['commerce','Commerce'],['syndicat','Syndicat de copropriété'],['autre','Autre']];
 
 let clientsDonnees=null;      // les fiches lues (tableau) ; null tant qu'elles ne sont pas lues
-let clientsFiltre='tous';     // 'tous' | 'sansarret' | 'sanscontact' | 'archives'
+let clientsFiltre='tous';     // 'tous' | 'sansarret' | 'sanscontact' | 'archives' | 'arrets' | 'inscriptions' | 'avis' | 'journal'
 let clientsRecherche='';
 let _clientsOccupe=false;     // une écriture est en cours (pas de double envoi)
 let _clientsLecture=0;        // le numéro de la dernière lecture demandée (une réponse plus vieille est ignorée)
@@ -139,6 +140,8 @@ async function clientsOuvrir(){
   clientsDonnees=fiches;
   clientsInscriptions=await clientsLireInscriptions();   // (null si la table est absente ou en panne : l'écran « Inscriptions » le dit)
   if(numero!==_clientsLecture) return;
+  if(typeof avisReinitialiser==='function') avisReinitialiser();   // (admin-avis.js) un aperçu ou un résultat d'avant la relecture ne vaut plus
+  if(typeof journalInvalider==='function') journalInvalider();   // (admin-avis-journal.js) le journal est relu à la prochaine visite
   renderClientsAdmin();
 }
 
@@ -149,7 +152,7 @@ function renderClientsAdmin(){
   const barre=clientsEl('div','su-barre');
   const filtres=clientsEl('div','su-filtres');
   const nbSansFiche=clientsGrouperArrets(typeof stops!=='undefined'?stops.filter(s=>!s.client_id):[]).length;
-  [['tous','Tous'],['sansarret','Sans arrêt'],['sanscontact','Sans contact'],['archives','Archivés'],['arrets','Arrêts sans fiche ('+nbSansFiche+')'],['inscriptions','Inscriptions'+(clientsInscriptions?' ('+clientsInscNouvelles(clientsInscriptions).length+')':'')]].forEach(([id,texte])=>{
+  [['tous','Tous'],['sansarret','Sans arrêt'],['sanscontact','Sans contact'],['archives','Archivés'],['arrets','Arrêts sans fiche ('+nbSansFiche+')'],['inscriptions','Inscriptions'+(clientsInscriptions?' ('+clientsInscNouvelles(clientsInscriptions).length+')':'')],['avis','📣 Avis aux clients'],['journal','📒 Journal des avis']].forEach(([id,texte])=>{
     const b=clientsEl('button','su-puce'+(clientsFiltre===id?' on':''),texte);
     b.type='button';
     b.dataset.filtre=id;
@@ -174,6 +177,14 @@ function renderClientsListe(){
   zone.innerHTML='';
   if(clientsFiltre==='arrets'){clientsListeArrets(zone);return;}
   if(clientsFiltre==='inscriptions'){clientsListeInscriptions(zone);return;}
+  if(clientsFiltre==='avis'){   // (admin-avis.js : avertir les clients « nous passons dans environ X heures » ; son absence ne doit jamais empêcher de tenir le répertoire à jour)
+    if(typeof avisEcran==='function') avisEcran(zone); else zone.appendChild(clientsMessage('L’écran des avis n’est pas disponible (fichier admin-avis.js).'));
+    return;
+  }
+  if(clientsFiltre==='journal'){   // (admin-avis-journal.js : le journal des avis envoyés, en lecture seule)
+    if(typeof journalEcran==='function') journalEcran(zone); else zone.appendChild(clientsMessage('Le journal des avis n’est pas disponible (fichier admin-avis-journal.js).'));
+    return;
+  }
   const fiches=clientsDonnees||[];
   const parArret=clientsCompterArrets(typeof stops!=='undefined'?stops:[]);
   const r=clientsResume(fiches,parArret);

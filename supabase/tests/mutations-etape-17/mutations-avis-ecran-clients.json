@@ -1,0 +1,50 @@
+[
+ {
+  "nom": "la puce « Avis aux clients » change de texte",
+  "fichier": "js/admin-clients.js",
+  "de": "['avis','📣 Avis aux clients']",
+  "vers": "['avis','Avis']"
+ },
+ {
+  "nom": "sans admin-avis.js, la puce plante au lieu de le dire",
+  "fichier": "js/admin-clients.js",
+  "de": "if(typeof avisEcran==='function') avisEcran(zone); else zone.appendChild(clientsMessage('L’écran des avis n’est pas disponible (fichier admin-avis.js).'));",
+  "vers": "avisEcran(zone);"
+ },
+ {
+  "nom": "sans admin-avis.js, le message n’est plus donné",
+  "fichier": "js/admin-clients.js",
+  "de": "else zone.appendChild(clientsMessage('L’écran des avis n’est pas disponible (fichier admin-avis.js).'));",
+  "vers": ""
+ },
+ {
+  "nom": "sans admin-avis.js, le répertoire ne s’ouvre plus",
+  "fichier": "js/admin-clients.js",
+  "de": "if(typeof avisReinitialiser==='function') avisReinitialiser();",
+  "vers": "avisReinitialiser();"
+ },
+ {
+  "nom": "la puce « Journal des avis » change de texte",
+  "fichier": "js/admin-clients.js",
+  "de": "['journal','📒 Journal des avis']",
+  "vers": "['journal','Journal']"
+ },
+ {
+  "nom": "sans admin-avis-journal.js, la puce plante au lieu de le dire",
+  "fichier": "js/admin-clients.js",
+  "de": "if(typeof journalEcran==='function') journalEcran(zone); else zone.appendChild(clientsMessage('Le journal des avis n’est pas disponible (fichier admin-avis-journal.js).'));",
+  "vers": "journalEcran(zone);"
+ },
+ {
+  "nom": "sans admin-avis-journal.js, le message n’est plus donné",
+  "fichier": "js/admin-clients.js",
+  "de": "else zone.appendChild(clientsMessage('Le journal des avis n’est pas disponible (fichier admin-avis-journal.js).'));",
+  "vers": ""
+ },
+ {
+  "nom": "sans admin-avis-journal.js, le répertoire ne s’ouvre plus",
+  "fichier": "js/admin-clients.js",
+  "de": "if(typeof journalInvalider==='function') journalInvalider();   // (admin-avis-journal.js) le journal est relu à la prochaine visite",
+  "vers": "journalInvalider();"
+ }
+]

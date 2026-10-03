@@ -1,0 +1,49 @@
+/* css/grand-ecran.css — la mise en page « GRAND ÉCRAN » (PC, tablette en paysage), chargée APRÈS style.css.
+   TOUT est dans le @media ci-dessous : sous 1 000 px de large (ou 560 px de haut) rien ne change, le téléphone est servi exactement comme avant.
+   Idée : sur un grand écran, les « feuilles qui montent du bas » du téléphone deviennent des fenêtres centrées, et le panneau Admin devient un poste de commande
+   plein écran (les onglets en colonne à gauche, le contenu à droite, les longues listes sur plusieurs colonnes). */
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+
+@media (min-width:1000px) and (min-height:560px){
+
+  /* ── 1. Le panneau Admin : un poste de commande plein écran ────────────────────────────────────────────── */
+  #admin-overlay{align-items:center;justify-content:center;padding:24px;}
+  #admin-panel{width:min(1680px,100%);height:100%;max-height:none;border-radius:18px;display:grid;grid-template-columns:230px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);overflow:hidden;animation:fondu .2s ease;}
+  #admin-header{grid-column:2;grid-row:1;padding:20px 28px 14px;}
+  #admin-title{font-size:26px;}
+  #admin-sub{font-size:13px;margin-top:3px;}
+  #admin-x{width:38px;height:38px;border-radius:8px;}
+  #admin-x:hover{background:#2f3a4a;}
+  #admin-tabs{grid-column:1;grid-row:1 / 3;flex-direction:column;gap:4px;padding:18px 12px;overflow-x:hidden;overflow-y:auto;background:#090d12;border-right:1px solid #252d3a;}
+  .admin-tab{width:100%;text-align:left;border-radius:10px;padding:11px 14px;font-size:17px;}
+  .admin-tab:not(.active):hover{background:#1c2430;color:#f0f4f8;}
+  #admin-body{grid-column:2;grid-row:2;padding:12px 0 24px;}
+  #admin-footer{display:none;}   /* « FERMER » en bas ne sert plus : la croix du haut et un clic à côté du panneau ferment */
+
+  /* ── 2. Les longues listes se rangent sur plusieurs colonnes (autant que la largeur en permet) ────────────── */
+  #su-liste:has(>.su-ligne),#cl-liste:has(>.su-ligne),#admin-body:has(>.emp-item),#admin-body:has(>.regl-item){display:grid;grid-template-columns:repeat(auto-fill,minmax(500px,1fr));align-content:start;}
+  #cl-liste:has(>.su-ligne){grid-template-columns:repeat(auto-fill,minmax(440px,1fr));}   /* les fiches sont plus étroites que les lignes du Suivi : 3 colonnes sur un grand écran */
+  #su-liste:has(>.su-ligne)>:not(.su-ligne),#cl-liste:has(>.su-ligne)>:not(.su-ligne),#admin-body:has(>.emp-item)>:not(.emp-item),#admin-body:has(>.regl-item)>:not(.regl-item){grid-column:1 / -1;}
+  /* Plus d'air sur les côtés (28 px au lieu de 16) */
+  .su-barre{padding:12px 28px 6px;}
+  .su-resume{padding:8px 28px;}
+  .su-section{padding:10px 28px 6px;}
+  .su-ligne{padding:11px 28px;}
+  .su-actions{padding:16px 28px 24px;flex-direction:row;flex-wrap:wrap;}
+  .su-actions .lf-btn{width:auto;flex:0 1 auto;padding-left:22px;padding-right:22px;}
+  .emp-item{padding:13px 28px;}
+  .regl-item{padding:13px 28px;}
+  /* Les champs, les listes déroulantes, les gros boutons et la recherche ne s'étirent pas sur 1 400 px */
+  .su-champ{flex:0 1 280px;}
+  .su-recherche{flex:1 1 220px;max-width:480px;}
+  #admin-body input[type="text"],#admin-body input[type="search"],#admin-body input[type="date"],#admin-body input[type="number"],#admin-body select{max-width:480px;}
+  #admin-body .lf-btn.nouveau{width:auto;min-width:260px;max-width:420px;padding-left:28px;padding-right:28px;}
+  .su-ligne:hover,.emp-item:hover{background:rgba(255,255,255,.025);}
+
+  /* ── 3. Les feuilles et fenêtres du téléphone (qui montent du bas) deviennent des fenêtres centrées ───────── */
+  #overlay,#nouvelle-route-overlay,#nouvel-employe-overlay,#nouveau-vehicule-overlay,#nouveau-type-service-overlay,#icone-tache-overlay,#correction-quart-overlay,#suivi-feuille-overlay,#clients-feuille-overlay,#prob-overlay{align-items:center;justify-content:center;padding:24px;}
+  #modal,#nouvelle-route-modal,#nouvel-employe-modal,#nouveau-vehicule-modal,#nouveau-type-service-modal,#icone-tache-modal,#correction-quart-modal,#suivi-feuille,#clients-feuille,#prob-modal{width:min(640px,100%);max-height:calc(100vh - 48px);border-radius:16px;animation:fondu .2s ease;}
+  #modal,#nouvelle-route-modal,#nouvel-employe-modal,#nouveau-vehicule-modal,#nouveau-type-service-modal,#prob-modal{overflow-y:auto;}
+  #liste-overlay,#routes-overlay,#debut-overlay,#choix-overlay,#equipage-overlay{align-items:center;justify-content:center;padding:24px;}
+  #liste-panel,#routes-panel,#debut-panel,#choix-panel,#equipage-panel{width:min(720px,100%);max-height:calc(100vh - 48px);border-radius:18px;animation:fondu .2s ease;}
+}

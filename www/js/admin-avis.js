@@ -3,13 +3,16 @@
 // Joé choisit une ROUTE (ou des clients à la main) et un DÉLAI (1, 2, 3, 4, 6 h, « demain » ou un nombre d'heures), regarde l'APERÇU (qui recevra quoi, avec le message EXACT, et qui ne recevra rien et
 // pourquoi), puis ENVOIE. Un « courriel d'essai » part à sa propre adresse, jamais à un client.
 // Tout passe par la fonction serveur « envoyer-avis » (fichiers SQL 31 et 32) : l'application ne fabrique JAMAIS un message ni ne décide à qui l'envoyer, et n'écrit RIEN elle-même (ni journal, ni
-// consentement). Les règles (courriel seulement si « avertir par courriel » est coché dans la fiche, texto seulement si le client s'est inscrit, jamais de texto de 21 h à 6 h, UN SEUL avis par client, par
+// consentement) SAUF une chose, voulue par Joé : le bouton « ✉ Activer l'avis par courriel pour N clients cochés » coche « Avertir par courriel » dans la fiche des clients cochés (ses clients ont tous un contrat
+// de service avec lui ; les avis ne sont que de l'information sur ce service). Cette activation ne touche JAMAIS un client désabonné (la requête elle-même l'exclut : même si la liste à l'écran est périmée), ni une
+// fiche archivée, ni un client sans courriel valide ; elle n'écrit que « avis_courriel » (jamais une colonne du consentement) et se défait fiche par fiche. Les règles (courriel seulement si « avertir par courriel » est coché dans la fiche, texto seulement si le client s'est inscrit, jamais de texto de 21 h à 6 h, UN SEUL avis par client, par
 // canal et par jour) sont celles de la base : l'aperçu les montre avant l'envoi, la base les applique de nouveau à l'envoi. Rien n'est JAMAIS mis en file d'attente hors réseau : un avis ne part pas « plus tard ».
 // Les clients viennent des ARRÊTS déjà chargés par l'application (stops, avec leur fiche : stops.client_id) et du répertoire lu par admin-clients.js (qui doit être chargé avant ce fichier : il en emprunte
 // la barre, la recherche et la feuille). Un arrêt sans fiche ne peut rien recevoir.
 const AVIS_DELAIS=[['1h','1 h'],['2h','2 h'],['3h','3 h'],['4h','4 h'],['6h','6 h'],['demain','Demain']];
 const AVIS_APERCU_MAX_MS=10*60*1000;   // un aperçu de plus de 10 minutes n'autorise plus l'envoi (l'heure, ou un autre avis, a pu tout changer)
 const AVIS_MAX_LIGNES=300;             // la fonction n'en accepte pas plus d'un coup
+const AVIS_ACTIVER_PAQUET=50;          // fiches changées par requête (l'adresse de la requête reste courte)
 const AVIS_MOTIFS={                    // le motif d'un refus, selon le canal (« courriel » ou « texto »)
   pas_active:{courriel:'avis par courriel non activés (case « Avertir par courriel » de la fiche)',texto:'pas inscrit aux textos',defaut:'avis non activés'},
   pas_de_coordonnee:{courriel:'aucun courriel dans la fiche',texto:'aucun cellulaire dans la fiche',defaut:'aucune coordonnée'},
@@ -128,6 +131,42 @@ function avisTexteMessages(r){
   if(r.courriels) p.push(r.courriels+' courriel'+(r.courriels>1?'s':''));
   if(r.textos) p.push(r.textos+' texto'+(r.textos>1?'s':''));
   return p.join(' + ');
+}
+// Parmi les clients cochés (leurs identifiants), ceux dont on peut cocher « Avertir par courriel » : une fiche ACTIVE, avec un courriel valide, PAS désabonnée, pas déjà activée.
+// Le reste est compté par raison. Un client désabonné n'est JAMAIS réactivé, même si sa case est décochée.
+function avisActivables(ids,fiches){
+  const parId=new Map((fiches||[]).map(f=>[f.id,f]));
+  const r={ids:[],deja:0,desabonnes:0,sansCourriel:0,courrielIllisible:0};
+  (ids||[]).forEach(id=>{
+    const f=parId.get(id);
+    if(!f||f.actif===false) return;
+    if(f.desabonne_courriel_le){r.desabonnes++;return;}
+    if(!String(f.courriel||'').trim()){r.sansCourriel++;return;}
+    if(!clientsCourrielValide(f.courriel)){r.courrielIllisible++;return;}
+    if(f.avis_courriel){r.deja++;return;}
+    r.ids.push(id);
+  });
+  return r;
+}
+// « 2 désabonnés (jamais réactivés) · 1 sans courriel · 3 déjà activés »
+function avisTexteIgnores(a){
+  const p=[];
+  if(a.desabonnes) p.push(a.desabonnes+' désabonné'+(a.desabonnes>1?'s (jamais réactivés)':' (jamais réactivé)'));
+  if(a.sansCourriel) p.push(a.sansCourriel+' sans courriel');
+  if(a.courrielIllisible) p.push(a.courrielIllisible+' avec un courriel illisible');
+  if(a.deja) p.push(a.deja+' déjà activé'+(a.deja>1?'s':''));
+  return p.join(' · ');
+}
+// Ce que l'écran dit après l'activation : « res » = {faites:Set des fiches changées, erreur, refus}, « total » = combien étaient demandées
+function avisMessageActivation(res,total){
+  const n=res.faites.size;
+  if(res.erreur){
+    if(clientsErreurReseau(res.erreur)) return n?'📴 Pas de réseau : '+n+' sur '+total+' activés ; la liste est relue, puis réessaie.':'📴 Pas de réseau : rien n’a été changé.';
+    const m=String((res.erreur&&res.erreur.message)||'');
+    return '❌ L’activation a échoué'+(n?' après '+n+' sur '+total:'')+(m?' : '+m:'')+'.';
+  }
+  if(res.refus) return '⚠ Seulement '+n+' sur '+total+' ont changé : certaines fiches ont été modifiées entre-temps (la liste est relue).';
+  return '✔ Avis par courriel activé pour '+n+' client'+(n>1?'s':'')+'.';
 }
 // Un client qui reçoit déjà un avis par un canal n'a pas à se faire dire qu'il n'est pas inscrit à l'autre : ce refus-là est NORMAL (un client au courriel seulement n'est pas inscrit aux textos), il est caché.
 // Tous les autres refus (désabonné, hors des heures, déjà averti, aucune coordonnée…) restent affichés ; un client qui ne reçoit rien voit TOUS ses refus.
@@ -318,6 +357,13 @@ function renderAvisBas(){
     bApercu.type='button';bApercu.id='av-apercu';bApercu.disabled=_avisOccupe||!avisPret();
     bApercu.onclick=()=>avisFaireApercu();
     actions.appendChild(bApercu);
+    const act=avisActivables(avisLignesCochees().map(l=>l.client_id),avisFiches());
+    if(act.ids.length){
+      const bAct=clientsEl('button','lf-btn','✉ Activer l’avis par courriel pour '+act.ids.length+' client'+(act.ids.length>1?'s':'')+' coché'+(act.ids.length>1?'s':''));
+      bAct.type='button';bAct.id='av-activer';bAct.disabled=_avisOccupe;
+      bAct.onclick=()=>avisActiverEnBloc();
+      actions.appendChild(bAct);
+    }
   }
   const bEssai=clientsEl('button','lf-btn','✉ M’envoyer un courriel d’essai');
   bEssai.type='button';bEssai.id='av-essai';bEssai.disabled=_avisOccupe;
@@ -453,6 +499,43 @@ function avisRendreResultat(zone){
   });
   zone.appendChild(boite);
   return boite;
+}
+
+// ── L'activation en bloc de « Avertir par courriel » (la SEULE écriture de cet écran) ──
+// Écrit « avis_courriel » dans les fiches, PAR PAQUETS de 50. Chaque requête ne touche que les fiches ACTIVES et NON désabonnées DE LA BASE (même si l'écran est périmé) ; si moins de fiches que prévu
+// changent (les règles d'accès refusent sans erreur, ou une fiche a changé entre-temps), on s'arrête et on le dit. Rend {faites:Set des fiches changées, erreur, refus}
+async function avisEcrireActivation(ids){
+  const faites=new Set();
+  for(let i=0;i<ids.length;i+=AVIS_ACTIVER_PAQUET){
+    const paquet=ids.slice(i,i+AVIS_ACTIVER_PAQUET);
+    let r;
+    try{r=await db.from('clients').update({avis_courriel:true}).in('id',paquet).eq('actif',true).is('desabonne_courriel_le',null).select('id');}catch(e){r={data:null,error:e};}
+    if(r.error) return {faites,erreur:r.error};
+    const lues=Array.isArray(r.data)?r.data:[];
+    lues.forEach(x=>faites.add(x.id));
+    if(lues.length!==paquet.length) return {faites,refus:true};
+  }
+  return {faites};
+}
+function avisActiverEnBloc(){
+  return avisSeul(async()=>{
+    const a=avisActivables(avisLignesCochees().map(l=>l.client_id),avisFiches());
+    const n=a.ids.length;
+    if(!n) return;
+    const ignores=avisTexteIgnores(a);
+    const oui=await confirmer('Activer l’avis par courriel ?',
+      (n>1?'La case « Avertir par courriel » sera cochée dans les fiches de '+n+' clients : ils recevront':'La case « Avertir par courriel » sera cochée dans la fiche de 1 client : il recevra')+' les avis de passage par courriel (le texte approuvé, avec le lien « Se désabonner »). Tu pourras la décocher '+(n>1?'fiche par fiche':'dans sa fiche')+'.'+(ignores?' Ignorés : '+ignores+'.':''),
+      'Activer','Annuler');
+    if(!oui) return;
+    showSync(true);
+    const res=await avisEcrireActivation(a.ids);
+    showSync(false);
+    res.faites.forEach(id=>{const f=avisFiches().find(x=>x.id===id);if(f) f.avis_courriel=true;});
+    avisInvalider();
+    if(res.erreur||res.refus){try{await clientsRecharger();}catch(e){}}   // (ce que la base dit vraiment)
+    toast(avisMessageActivation(res,n));
+    renderClientsListe();
+  });
 }
 
 // ── Le courriel d'essai (à l'administrateur seulement : l'adresse de SON compte, jamais un client) ──

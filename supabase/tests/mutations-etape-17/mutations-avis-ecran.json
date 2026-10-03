@@ -920,8 +920,8 @@
  {
  "nom": "« Annuler » envoie quand même",
  "fichier": "js/admin-avis.js",
- "de": "if(!oui) return;",
- "vers": ""
+ "de": "if(!oui) return;\n    showSync(true);\n    const r=await avisAppeler({action:'envoyer',delai,lignes});",
+ "vers": "showSync(true);\n    const r=await avisAppeler({action:'envoyer',delai,lignes});"
  },
  {
  "nom": "les boutons de la confirmation sont inversés",

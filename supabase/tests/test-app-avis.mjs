@@ -140,7 +140,29 @@ async function monde(o = {}) {
 
   // Les lignes lues dans la VRAIE base, mises en forme comme le fait le service de données de Supabase : les dates en texte (« jour » : AAAA-MM-JJ)
   const commePostgrest = (r) => { const o2 = {}; for (const [k, v] of Object.entries(r)) o2[k] = v instanceof Date ? (k === 'jour' ? v.toISOString().slice(0, 10) : v.toISOString()) : v; return o2; };
+  // La SEULE écriture permise à l'écran : « avis_courriel » dans « clients » (l'activation en bloc), avec de vrais filtres, dans la VRAIE base
+  const executerMaj = async (qy) => {
+    m.requetes.push({ table: qy.table, op: 'update', valeur: qy.valeur, filtres: qy.filtres, cols: qy.cols });
+    if (qy.table !== 'clients' || Object.keys(qy.valeur).join() !== 'avis_courriel') throw new Error('écriture interdite par ce test : ' + qy.table + ' ' + JSON.stringify(qy.valeur));
+    const numero = m.requetes.filter((r) => r.op === 'update').length;
+    if (o.majRetard) await o.majRetard(numero);
+    if (o.majPanne?.(numero)) throw new TypeError('Failed to fetch');
+    const erreur = o.majErreur?.(numero);
+    if (erreur) return { data: null, error: erreur };
+    if (o.majRefus) return { data: [], error: null };   // les règles d'accès refusent SANS erreur : aucune ligne changée
+    const ou = [], params = [qy.valeur.avis_courriel];
+    for (const [t, c, v] of qy.filtres) {
+      if (t === 'in' && c === 'id') { params.push('{' + v.join(',') + '}'); ou.push(`id = any($${params.length}::uuid[])`); }
+      else if (t === 'eq' && c === 'actif') { params.push(v); ou.push(`actif = $${params.length}`); }
+      else if (t === 'is' && c === 'desabonne_courriel_le' && v === null) ou.push('desabonne_courriel_le is null');
+      else throw new Error('filtre inconnu dans ce test : ' + JSON.stringify([t, c, v]));
+    }
+    if (!ou.length) throw new Error('mise à jour SANS filtre : interdit');
+    try { return { data: await q(`update public.clients set avis_courriel = $1 where ${ou.join(' and ')} returning ${qy.cols === '*' ? 'id' : qy.cols}`, params), error: null }; }
+    catch (e) { return { data: null, error: { message: e.message } }; }
+  };
   const executer = async (qy) => {
+    if (qy.op === 'update') return executerMaj(qy);
     m.requetes.push({ table: qy.table, op: 'select', cols: qy.cols, ordres: qy.ordres, plage: qy.plage });
     if (o.lectureRetard) await o.lectureRetard(qy.table);
     if (o.lecturePanne?.(qy.table, qy.plage)) throw new TypeError('Failed to fetch');
@@ -166,11 +188,15 @@ async function monde(o = {}) {
     rpc: async (nom, args) => { m.rpcApp.push({ nom, args }); return { data: null, error: null }; },
     functions: { invoke },
     from: (table) => {
-      const qy = { table, cols: '*', ordres: [], plage: null };
-      qy.select = (c) => { qy.cols = c; return qy; };
+      const qy = { table, op: 'select', cols: '*', ordres: [], plage: null, filtres: [], valeur: null };
+      qy.select = (c) => { qy.cols = c; return qy; };   // (après un update : les colonnes à rendre)
       qy.order = (c, opt) => { qy.ordres.push([c, opt && opt.ascending === false ? 'desc' : 'asc']); return qy; };
       qy.range = (a, b) => { qy.plage = [a, b]; return qy; };
-      for (const op of ['insert', 'update', 'delete', 'upsert']) qy[op] = () => { m.requetes.push({ table, op }); throw new Error('écriture : ' + op + ' sur ' + table); };
+      qy.in = (c, l) => { qy.filtres.push(['in', c, l]); return qy; };
+      qy.eq = (c, v) => { qy.filtres.push(['eq', c, v]); return qy; };
+      qy.is = (c, v) => { qy.filtres.push(['is', c, v]); return qy; };
+      qy.update = (v) => { qy.op = 'update'; qy.valeur = v; return qy; };
+      for (const op of ['insert', 'delete', 'upsert']) qy[op] = () => { m.requetes.push({ table, op }); throw new Error('écriture : ' + op + ' sur ' + table); };
       qy.then = (ok_, ko_) => Promise.resolve().then(() => executer(qy)).then(ok_, ko_);
       return qy;
     },
@@ -1172,10 +1198,199 @@ log('=== LE JOURNAL : LECTURE SEULE ===');
 // (les colonnes de JOURNAL_COLONNES, lues dans le texte du fichier)
 function z0colonnes(src) { const m = /JOURNAL_COLONNES='([^']+)'/.exec(src); return m ? m[1].split(',') : []; }
 
-log('=== L’ÉCRAN N’ÉCRIT RIEN LUI-MÊME ===');
+// =====================================================================
+// L'ACTIVATION EN BLOC de « Avertir par courriel » (admin-avis.js) : la SEULE écriture de l'écran. Décision de Joé (2 oct. 2026) : ses clients ont tous un contrat de service avec lui et les avis ne sont que de
+// l'information sur ce service. Garde-fous : jamais un client désabonné (même si l'écran est périmé : la requête elle-même l'exclut), jamais une fiche archivée, jamais un client sans courriel valide ; par paquets de 50.
+// (Ces essais créent des fiches de plus dans la copie de la base : ils sont donc LES DERNIERS du fichier.)
+log('=== L’ACTIVATION EN BLOC : LES FONCTIONS PURES ===');
+{
+  const z = await monde();
+  const f = (c) => z.run(c);
+  const F = (id, o2 = {}) => ({ id, actif: true, courriel: id + '@exemple.ca', avis_courriel: false, desabonne_courriel_le: null, ...o2 });
+  const fiches = [F('a'), F('b', { avis_courriel: true }), F('c', { desabonne_courriel_le: HIER }), F('d', { desabonne_courriel_le: HIER, avis_courriel: true }), F('e', { courriel: null }), F('e2', { courriel: '   ' }), F('g', { courriel: 'pas-un-courriel' }),
+    F('h', { actif: false }), F('i'), F('j', { courriel: 'x'.repeat(150) + '@e.ca' })];
+  const r = f(`avisActivables(${JSON.stringify(['a', 'b', 'c', 'd', 'e', 'e2', 'g', 'h', 'i', 'j', 'inconnu'])}, ${JSON.stringify(fiches)})`);
+  eq('qui peut être activé : une fiche active, avec un courriel valide, pas désabonnée, pas déjà activée (a, i)', r.ids, ['a', 'i']);
+  eq('… le reste est compté par raison : 1 déjà activé, 2 désabonnés (même la case décochée, même la case cochée), 2 sans courriel (absent, blancs), 2 au courriel illisible (sans @, trop long)', [r.deja, r.desabonnes, r.sansCourriel, r.courrielIllisible], [1, 2, 2, 2]);
+  eq('… une fiche archivée ou inconnue n’est comptée nulle part', r.deja + r.desabonnes + r.sansCourriel + r.courrielIllisible + r.ids.length, 9);
+  eq('… la liste est vide ou absente : rien', [f(`avisActivables([], ${JSON.stringify(fiches)}).ids`), f(`avisActivables(null, null).ids`)], [[], []]);
+  eq('un désabonné n’est JAMAIS activable : même avec un courriel valide et la case décochée', f(`avisActivables(['c'], ${JSON.stringify(fiches)}).ids`), []);
+  const t = (a) => f(`avisTexteIgnores(${JSON.stringify(a)})`);
+  eq('le texte des ignorés : « 2 désabonnés (jamais réactivés) · 1 sans courriel · 1 avec un courriel illisible · 3 déjà activés » ; les singuliers ; rien', [t({ desabonnes: 2, sansCourriel: 1, courrielIllisible: 1, deja: 3 }), t({ desabonnes: 1, deja: 1 }), t({})],
+    ['2 désabonnés (jamais réactivés) · 1 sans courriel · 1 avec un courriel illisible · 3 déjà activés', '1 désabonné (jamais réactivé) · 1 déjà activé', '']);
+  const mm = (c) => f(c);
+  eq('le message après l’activation : « Avis par courriel activé pour 2 clients » (ou 1 client)', [mm(`avisMessageActivation({faites:new Set(['a','b'])}, 2)`), mm(`avisMessageActivation({faites:new Set(['a'])}, 1)`)], ['✔ Avis par courriel activé pour 2 clients.', '✔ Avis par courriel activé pour 1 client.']);
+  eq('… moins de fiches que prévu (refus sans erreur, ou fiche changée entre-temps) : le dit', mm(`avisMessageActivation({faites:new Set(['a']), refus:true}, 3)`), '⚠ Seulement 1 sur 3 ont changé : certaines fiches ont été modifiées entre-temps (la liste est relue).');
+  eq('… pas de réseau : « rien n’a été changé » si rien n’est passé, sinon combien l’ont été', [mm(`avisMessageActivation({faites:new Set(), erreur:new TypeError('Failed to fetch')}, 2)`), mm(`avisMessageActivation({faites:new Set(['a','b']), erreur:new TypeError('Failed to fetch')}, 5)`)],
+    ['📴 Pas de réseau : rien n’a été changé.', '📴 Pas de réseau : 2 sur 5 activés ; la liste est relue, puis réessaie.']);
+  eq('… une autre erreur : le message du serveur, et combien étaient passés', [mm(`avisMessageActivation({faites:new Set(), erreur:{message:'boum'}}, 4)`), mm(`avisMessageActivation({faites:new Set(['a']), erreur:{message:'boum'}}, 4)`), mm(`avisMessageActivation({faites:new Set(), erreur:{}}, 4)`)],
+    ['❌ L’activation a échoué : boum.', '❌ L’activation a échoué après 1 sur 4 : boum.', '❌ L’activation a échoué.']);
+  eq('l’activation se fait par paquets de 50', f('AVIS_ACTIVER_PAQUET'), 50);
+}
+
+log('=== L’ACTIVATION EN BLOC : LE BOUTON, LA CONFIRMATION, L’ÉCRITURE (VRAIE BASE), PUIS L’APERÇU ===');
+const remettre = async () => {   // remet les fiches de ces essais dans leur état de départ
+  await q(`update public.clients set avis_courriel = false where id in ($1, $2) or nom like 'Bulk %'`, [ID.B, ID.D]);
+  await q(`update public.clients set desabonne_courriel_le = null where id = $1`, [ID.D]);
+};
+const etatFiches = async () => Object.fromEntries((await q(`select nom, avis_courriel, desabonne_courriel_le is not null as desabonne from public.clients where nom not like 'Bulk %' order by nom`)).map((x) => [x.nom, x.avis_courriel + (x.desabonne ? ':désabonné' : '')]));
+{
+  // deux fiches de plus : un client DÉSABONNÉ dont la case est décochée (il ne doit JAMAIS être réactivé) et un client sans courriel
+  ID.J = await fiche('Jules Désabonné', { courriel: 'jules@exemple.ca', avis_courriel: false, desabonne_courriel_le: HIER });
+  ID.K = await fiche('Karine SansCourriel');
+  const arrets = () => [...STOPS(), arret('s20', 'r1', ID.J, '40 rue Verte, Charette', 'Coupe de gazon'), arret('s21', 'r1', ID.K, '41 rue Verte, Charette', 'Coupe de gazon')];
+  const depart = { 'Alice Courriel': 'true', 'Bob Texto': 'false', 'Carl Les Deux': 'true', 'Diane Rien': 'false', 'Eric Parti': 'true:désabonné', 'Gaby SansCourriel': 'true', 'Hélène Archivée': 'true', 'Jules Désabonné': 'false:désabonné', 'Karine SansCourriel': 'false' };
+  eq('(l’état de départ des fiches)', await etatFiches(), depart);
+  const z = await pret({ arrets: arrets() });
+  eq('route Nord : 8 clients ; cochés d’office : Alice, Bob, Carl (leur fiche permet un avis) ; le bouton d’activation compte Bob (courriel valide, case décochée) : « pour 1 client coché »', [z.clients().length, z.clients().filter((c) => c.coche).map((c) => c.nom), z.id('av-activer').textContent], [8, ['Alice Courriel', 'Bob Texto', 'Carl Les Deux'], '✉ Activer l’avis par courriel pour 1 client coché']);
+  await cliquer(z.id('av-tout'));
+  eq('« Tout cocher » : 8 clients ; le bouton compte Bob et Diane (les seuls dont la case est décochée, avec un courriel valide, sans désabonnement)', [z.clients().filter((c) => c.coche).length, z.id('av-activer').textContent, z.id('av-activer').disabled], [8, '✉ Activer l’avis par courriel pour 2 clients cochés', false]);
+  eq('le bouton est entre « Voir ce qui partira » et le courriel d’essai', parClasse(z.id('av-bas'), 'su-actions')[0].children.map((b) => b.id), ['av-apercu', 'av-activer', 'av-essai']);
+  z.repondre(false);
+  await cliquer(z.id('av-activer'));
+  eq('la confirmation dit combien de fiches, ce que ça change, et ce qui est IGNORÉ (désabonnés jamais réactivés, sans courriel, déjà activés)', z.m.confirmations[0], [
+    'Activer l’avis par courriel ?',
+    'La case « Avertir par courriel » sera cochée dans les fiches de 2 clients : ils recevront les avis de passage par courriel (le texte approuvé, avec le lien « Se désabonner »). Tu pourras la décocher fiche par fiche. Ignorés : 2 désabonnés (jamais réactivés) · 2 sans courriel · 2 déjà activés.',
+    'Activer', 'Annuler']);
+  eq('« Annuler » : AUCUNE écriture, la base n’a pas changé, le bouton est toujours là', [z.m.requetes.filter((r) => r.op === 'update').length, await etatFiches(), !!z.id('av-activer')], [0, depart, true]);
+  z.repondre(true);
+  await cliquer(z.id('av-activer'));
+  const maj = z.m.requetes.filter((r) => r.op === 'update');
+  eq('« Activer » : UNE requête, sur « clients », qui n’écrit que « avis_courriel » ; elle ne vise que Bob et Diane, les fiches ACTIVES et NON désabonnées DE LA BASE', [maj.length, maj[0].table, maj[0].valeur, maj[0].filtres, maj[0].cols],
+    [1, 'clients', { avis_courriel: true }, [['in', 'id', [ID.B, ID.D]], ['eq', 'actif', true], ['is', 'desabonne_courriel_le', null]], 'id']);
+  eq('la VRAIE base : Bob et Diane sont activés ; personne d’autre n’a changé (le désabonné Jules reste décoché et désabonné)', await etatFiches(), { ...depart, 'Bob Texto': 'true', 'Diane Rien': 'true' });
+  eq('l’écran : « Avis par courriel activé pour 2 clients », l’indicateur est éteint, le bouton a disparu (plus rien à activer), l’écran est libre', [z.m.toasts.at(-1), z.m.sync.at(-1), z.id('av-activer'), z.id('av-apercu').disabled, z.id('av-essai').disabled], ['✔ Avis par courriel activé pour 2 clients.', false, undefined, false, false]);
+  eq('… la liste montre maintenant ce que les fiches permettent (Bob : courriel et texto ; Diane : courriel)', [z.clients().find((c) => c.nom === 'Bob Texto').canaux, z.clients().find((c) => c.nom === 'Diane Rien').canaux], ['✉ courriel · 📱 texto', '✉ courriel']);
+  eq('… les cases cochées restent cochées ; l’application n’a rien écrit d’autre (aucun appel à la fonction d’envoi, rien au journal)', [z.clients().filter((c) => c.coche).length, z.m.appels.length, await nbJournal(), z.m.rpcApp.length], [8, 0, 0, 0]);
+  await z.apercu();
+  const b = z.boite('av-apercu-boite');
+  eq('l’aperçu RÉEL ensuite : 4 courriels partiraient (Alice, Bob, Carl et Diane, maintenant activés) ; les 4 autres sont refusés avec leur raison (les désabonnés restent désabonnés)', [parClasse(b, 'av-resume')[0].textContent, z.lignes(b).map((l) => [l.nom, l.badge, l.details.at(-1)])], [
+    '✔ 4 courriels — passage environ 3 h', [
+      ['Alice Courriel · ✉', 'Partira', '→ alice@exemple.ca · toucher le nom pour lire le message'], ['Bob Texto · ✉', 'Partira', '→ bob@exemple.ca · toucher le nom pour lire le message'],
+      ['Carl Les Deux · ✉', 'Partira', '→ carl@exemple.ca · toucher le nom pour lire le message'], ['Diane Rien · ✉', 'Partira', '→ diane@exemple.ca · toucher le nom pour lire le message'],
+      ['Eric Parti · ✉', 'Refusé', 'désabonné des courriels'], ['Gaby SansCourriel · ✉', 'Refusé', 'aucun courriel dans la fiche'], ['Jules Désabonné · ✉', 'Refusé', 'désabonné des courriels'],
+      ['Karine SansCourriel · ✉', 'Refusé', 'avis par courriel non activés (case « Avertir par courriel » de la fiche)']]]);
+  eq('… l’aperçu n’a rien écrit au journal', await nbJournal(), 0);
+  await remettre();
+}
+{
+  // un aperçu déjà affiché ne vaut plus après l'activation ; le bouton n'est offert que s'il y a quelque chose à activer
+  const z = await pret();
+  z.coche('Diane Rien');
+  await z.apercu();
+  eq('(un aperçu est affiché ; Diane est cochée et activable)', [!!z.boite('av-apercu-boite'), z.id('av-activer').textContent], [true, '✉ Activer l’avis par courriel pour 2 clients cochés']);
+  await cliquer(z.id('av-activer'));
+  eq('après l’activation, l’aperçu d’avant disparaît (il ne dit plus la vérité)', [z.boite('av-apercu-boite'), z.id('av-envoyer'), z.m.toasts.at(-1)], [undefined, undefined, '✔ Avis par courriel activé pour 2 clients.']);
+  await remettre();
+}
+{
+  const z = await monde();
+  await z.ouvrirAvis();
+  eq('sans route choisie : pas de bouton d’activation', z.id('av-activer'), undefined);
+  z.choisirRoute('r1');
+  z.run('avisCoches = new Set(); renderClientsListe();');
+  eq('aucun client coché : pas de bouton', z.id('av-activer'), undefined);
+  z.coche('Alice Courriel');
+  z.coche('Carl Les Deux');
+  eq('seulement des clients déjà activés : pas de bouton', z.id('av-activer'), undefined);
+  z.coche('Eric Parti');
+  z.coche('Gaby SansCourriel');
+  eq('… ni pour un désabonné, ni pour une fiche sans courriel', z.id('av-activer'), undefined);
+  z.coche('Diane Rien');
+  eq('… un client activable coché : le bouton revient, au singulier', z.id('av-activer').textContent, '✉ Activer l’avis par courriel pour 1 client coché');
+  const vieux = z.id('av-activer');
+  z.coche('Diane Rien', false);
+  const avant = z.m.confirmations.length;
+  await cliquer(vieux);
+  eq('un « Activer » resté à l’écran alors que plus rien n’est activable : un toucher ne fait RIEN (ni confirmation, ni écriture)', [z.id('av-activer'), z.m.confirmations.length - avant, z.m.requetes.filter((r) => r.op === 'update').length], [undefined, 0, 0]);
+  z.coche('Diane Rien');
+  z.run(`avisSource = '__main__'; renderClientsListe();`);
+  eq('« à la main » : le même bouton (Diane est toujours cochée)', z.id('av-activer')?.textContent, '✉ Activer l’avis par courriel pour 1 client coché');
+  await z.repondre(true);
+  await cliquer(z.id('av-activer'));
+  eq('une activation d’un seul client : la confirmation est au singulier (« la fiche de 1 client : il recevra »), avec les ignorés', z.m.confirmations[0][1], 'La case « Avertir par courriel » sera cochée dans la fiche de 1 client : il recevra les avis de passage par courriel (le texte approuvé, avec le lien « Se désabonner »). Tu pourras la décocher dans sa fiche. Ignorés : 1 désabonné (jamais réactivé) · 1 sans courriel · 2 déjà activés.');
+  eq('… et le message de réussite aussi', z.m.toasts.at(-1), '✔ Avis par courriel activé pour 1 client.');
+  await remettre();
+}
+
+log('=== L’ACTIVATION EN BLOC : PROTECTION, PANNES, REFUS, DEUX TOUCHERS ===');
+{
+  // LA LISTE À L'ÉCRAN EST PÉRIMÉE : Diane s'est désabonnée (par le lien d'un courriel) après la lecture du répertoire ; la requête ne la touche PAS
+  const z = await pret();
+  z.coche('Diane Rien');
+  await q(`update public.clients set desabonne_courriel_le = now() where id = $1`, [ID.D]);
+  await cliquer(z.id('av-activer'));
+  eq('une fiche désabonnée ENTRE-TEMPS (l’écran ne le sait pas) n’est PAS réactivée : la base refuse de la toucher, l’écran le dit', [await etatFiches().then((e) => [e['Bob Texto'], e['Diane Rien']]), z.m.toasts.at(-1)],
+    [['true', 'false:désabonné'], '⚠ Seulement 1 sur 2 ont changé : certaines fiches ont été modifiées entre-temps (la liste est relue).']);
+  eq('… la liste est relue (la fiche de Diane est maintenant « désabonnée » à l’écran) : plus rien à activer', [z.m.requetes.filter((r) => r.table === 'clients' && r.op === 'select').length, z.id('av-activer')], [2, undefined]);
+  await remettre();
+}
+{
+  const z = await pret({ majRefus: true });
+  z.coche('Diane Rien');
+  await cliquer(z.id('av-activer'));
+  eq('les règles d’accès refusent SANS erreur (aucune ligne changée) : « Seulement 0 sur 2 ont changé », la liste est relue, rien n’a changé, le bouton reste', [z.m.toasts.at(-1), z.m.requetes.filter((r) => r.table === 'clients' && r.op === 'select').length, (await etatFiches())['Diane Rien'], z.id('av-activer').textContent],
+    ['⚠ Seulement 0 sur 2 ont changé : certaines fiches ont été modifiées entre-temps (la liste est relue).', 2, 'false', '✉ Activer l’avis par courriel pour 2 clients cochés']);
+}
+{
+  const z = await pret({ majPanne: () => true });
+  z.coche('Diane Rien');
+  await cliquer(z.id('av-activer'));
+  eq('pas de réseau : « rien n’a été changé », la base n’a pas changé, la liste est relue, l’écran est libre', [z.m.toasts.at(-1), (await etatFiches())['Diane Rien'], z.m.requetes.filter((r) => r.table === 'clients' && r.op === 'select').length, z.id('av-activer').disabled, z.m.sync.at(-1)],
+    ['📴 Pas de réseau : rien n’a été changé.', 'false', 2, false, false]);
+}
+{
+  const z = await pret({ majErreur: () => ({ message: 'boum' }) });
+  z.coche('Diane Rien');
+  await cliquer(z.id('av-activer'));
+  eq('une erreur du serveur : son message est montré ; rien n’a changé', [z.m.toasts.at(-1), (await etatFiches())['Diane Rien']], ['❌ L’activation a échoué : boum.', 'false']);
+}
+{
+  // DEUX TOUCHERS : une seule confirmation, une seule écriture ; boutons grisés pendant l'écriture
+  let liberer; const attente = new Promise((r) => { liberer = r; });
+  const z = await pret({ majRetard: () => attente });
+  z.coche('Diane Rien');
+  const bouton = z.id('av-activer');
+  const p1 = bouton.onclick();
+  const p2 = bouton.onclick();
+  await dormir(20);
+  eq('« Activer » touché deux fois : UNE confirmation, UNE écriture ; pendant l’écriture, les boutons sont grisés et l’indicateur allumé', [z.m.confirmations.length, z.m.requetes.filter((r) => r.op === 'update').length, z.id('av-activer').disabled, z.id('av-apercu').disabled, z.id('av-essai').disabled, z.m.sync.at(-1)],
+    [1, 1, true, true, true, true]);
+  liberer();
+  await p1; await p2;
+  eq('… après : une seule écriture, la base est à jour, tout est libre', [z.m.requetes.filter((r) => r.op === 'update').length, (await etatFiches())['Diane Rien'], z.id('av-apercu').disabled, z.m.sync.at(-1)], [1, 'true', false, false]);
+  await remettre();
+}
+
+log('=== L’ACTIVATION EN BLOC : BEAUCOUP DE CLIENTS (PAR PAQUETS DE 50) ===');
+{
+  await q(`insert into public.clients (nom, adresse, courriel) select 'Bulk ' || lpad(g::text, 3, '0'), g || ' rue Bulk', 'bulk' || g || '@exemple.ca' from generate_series(1, 120) g`);
+  const bulk = await q(`select id, nom, adresse from public.clients where nom like 'Bulk %' order by nom`);
+  const arrets = bulk.map((c, i) => arret('b' + i, 'r1', c.id, c.adresse + ', Charette', 'Coupe de gazon'));
+  const nbActifs = async () => (await q(`select count(*)::int n from public.clients where nom like 'Bulk %' and avis_courriel`))[0].n;
+  const z = await pret({ arrets });
+  await cliquer(z.id('av-tout'));
+  eq('120 clients à courriel valide, cases décochées : cochés tous, le bouton en compte 120 (aucune limite de 300 pour l’activation)', [z.clients().filter((c) => c.coche).length, z.id('av-activer').textContent], [120, '✉ Activer l’avis par courriel pour 120 clients cochés']);
+  await cliquer(z.id('av-activer'));
+  const maj = z.m.requetes.filter((r) => r.op === 'update');
+  eq('l’activation se fait en TROIS requêtes (50, 50 et 20 fiches)', maj.map((r) => r.filtres[0][2].length), [50, 50, 20]);
+  eq('… tout est activé dans la base (120), sans oubli ni doublon dans les paquets', [await nbActifs(), new Set(maj.flatMap((r) => r.filtres[0][2])).size, z.m.toasts.at(-1)], [120, 120, '✔ Avis par courriel activé pour 120 clients.']);
+  await remettre();
+  const z2 = await pret({ arrets, majPanne: (n) => n === 2 });
+  await cliquer(z2.id('av-tout'));
+  await cliquer(z2.id('av-activer'));
+  eq('une panne de réseau à la 2ᵉ requête : le 1ᵉʳ paquet (50) est passé, le reste non ; l’écran dit combien et relit la liste', [await nbActifs(), z2.m.requetes.filter((r) => r.op === 'update').length, z2.m.toasts.at(-1), z2.m.requetes.filter((r) => r.table === 'clients' && r.op === 'select').length],
+    [50, 2, '📴 Pas de réseau : 50 sur 120 activés ; la liste est relue, puis réessaie.', 2]);
+  eq('… après la relecture, le bouton propose les 70 restants (réessayer ne refait pas les 50)', z2.id('av-activer').textContent, '✉ Activer l’avis par courriel pour 70 clients cochés');
+  await remettre();
+}
+
+log('=== L’ÉCRAN N’ÉCRIT QUE L’ACTIVATION EN BLOC ===');
 {
   const src = lire('js/admin-avis.js').replace(/\/\/.*$/gm, '');
-  eq('le fichier n’écrit dans aucune table (insert, update, upsert ; un « delete » passerait par db.from), ne lit aucune table (db.from) et n’appelle aucune fonction SQL (rpc)', [/\.insert\(|\.update\(|\.upsert\(|\.rpc\(|\bdb\.from\(/.test(src)], [false]);
+  const acces = [...src.matchAll(/db\.from\('([a-z_]+)'\)\.(\w+)\(([^)]*)\)/g)].map((x) => x.slice(1, 4).join(':'));
+  eq('le fichier n’écrit QUE « avis_courriel » dans « clients » (l’activation en bloc) : aucun autre accès aux tables, aucun insert, upsert ni delete, aucune fonction SQL (rpc)', [acces, /\.insert\(|\.upsert\(|\.rpc\(|\.delete\(\)/.test(src)], [['clients:update:{avis_courriel:true}'], false]);
+  eq('… cette écriture exclut les fiches archivées et les clients désabonnés (filtres de la requête), et se fait par paquets', [/\.in\('id',paquet\)\.eq\('actif',true\)\.is\('desabonne_courriel_le',null\)/.test(src), /ids\.slice\(i,i\+AVIS_ACTIVER_PAQUET\)/.test(src)], [true, true]);
   eq('… son seul accès au serveur est la fonction « envoyer-avis »', [(src.match(/functions\.invoke\(/g) || []).length, /functions\.invoke\('envoyer-avis'/.test(src)], [1, true]);
   const corps = [...src.matchAll(/avisAppeler\((\{[^)]*\})\)/g)].map((x) => x[1]);
   eq('… ses trois demandes (aperçu, envoi, essai) ne mentionnent jamais de « canaux » : c’est la fonction qui décide', [corps.length, corps.some((c) => /canaux/.test(c))], [3, false]);

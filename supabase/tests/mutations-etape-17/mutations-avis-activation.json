@@ -1,0 +1,326 @@
+[
+ {
+  "nom": "une fiche archivée peut être activée",
+  "fichier": "js/admin-avis.js",
+  "de": "if(!f||f.actif===false) return;",
+  "vers": "if(!f) return;"
+ },
+ {
+  "nom": "un client désabonné peut être activé",
+  "fichier": "js/admin-avis.js",
+  "de": "if(f.desabonne_courriel_le){r.desabonnes++;return;}",
+  "vers": ""
+ },
+ {
+  "nom": "un client désabonné est compté mais quand même activé",
+  "fichier": "js/admin-avis.js",
+  "de": "if(f.desabonne_courriel_le){r.desabonnes++;return;}",
+  "vers": "if(f.desabonne_courriel_le){r.desabonnes++;}"
+ },
+ {
+  "nom": "un client sans courriel n’est plus compté à part",
+  "fichier": "js/admin-avis.js",
+  "de": "if(!String(f.courriel||'').trim()){r.sansCourriel++;return;}",
+  "vers": ""
+ },
+ {
+  "nom": "un courriel illisible peut être activé",
+  "fichier": "js/admin-avis.js",
+  "de": "if(!clientsCourrielValide(f.courriel)){r.courrielIllisible++;return;}",
+  "vers": ""
+ },
+ {
+  "nom": "un client déjà activé est offert de nouveau",
+  "fichier": "js/admin-avis.js",
+  "de": "if(f.avis_courriel){r.deja++;return;}",
+  "vers": ""
+ },
+ {
+  "nom": "personne n’est jamais activable",
+  "fichier": "js/admin-avis.js",
+  "de": "r.ids.push(id);",
+  "vers": ""
+ },
+ {
+  "nom": "les désabonnés ne sont plus mentionnés",
+  "fichier": "js/admin-avis.js",
+  "de": "if(a.desabonnes) p.push(",
+  "vers": "if(false) p.push("
+ },
+ {
+  "nom": "« désabonnés » perd « (jamais réactivés) »",
+  "fichier": "js/admin-avis.js",
+  "de": "a.desabonnes>1?'s (jamais réactivés)':' (jamais réactivé)'",
+  "vers": "a.desabonnes>1?'s':''"
+ },
+ {
+  "nom": "« désabonné » reste au pluriel",
+  "fichier": "js/admin-avis.js",
+  "de": "a.desabonnes>1?'s (jamais réactivés)':' (jamais réactivé)'",
+  "vers": "'s (jamais réactivés)'"
+ },
+ {
+  "nom": "les clients sans courriel ne sont plus mentionnés",
+  "fichier": "js/admin-avis.js",
+  "de": "if(a.sansCourriel) p.push(",
+  "vers": "if(false) p.push("
+ },
+ {
+  "nom": "les courriels illisibles ne sont plus mentionnés",
+  "fichier": "js/admin-avis.js",
+  "de": "if(a.courrielIllisible) p.push(",
+  "vers": "if(false) p.push("
+ },
+ {
+  "nom": "les clients déjà activés ne sont plus mentionnés",
+  "fichier": "js/admin-avis.js",
+  "de": "if(a.deja) p.push(",
+  "vers": "if(false) p.push("
+ },
+ {
+  "nom": "« déjà activé » reste au singulier",
+  "fichier": "js/admin-avis.js",
+  "de": "(a.deja>1?'s':'')",
+  "vers": "''"
+ },
+ {
+  "nom": "les ignorés sont séparés par des virgules",
+  "fichier": "js/admin-avis.js",
+  "de": "return p.join(' · ');\n}\n// Ce que l'écran dit après l'activation",
+  "vers": "return p.join(', ');\n}\n// Ce que l'écran dit après l'activation"
+ },
+ {
+  "nom": "une panne de réseau est présentée comme une autre erreur",
+  "fichier": "js/admin-avis.js",
+  "de": "if(clientsErreurReseau(res.erreur)) return n?",
+  "vers": "if(false) return n?"
+ },
+ {
+  "nom": "une panne de réseau ne dit plus combien sont passés",
+  "fichier": "js/admin-avis.js",
+  "de": "n?'📴 Pas de réseau : '+n+' sur '+total+' activés ; la liste est relue, puis réessaie.':'📴 Pas de réseau : rien n’a été changé.'",
+  "vers": "'📴 Pas de réseau : rien n’a été changé.'"
+ },
+ {
+  "nom": "une erreur ne dit plus combien étaient passés",
+  "fichier": "js/admin-avis.js",
+  "de": "(n?' après '+n+' sur '+total:'')",
+  "vers": "''"
+ },
+ {
+  "nom": "une erreur ne montre plus le message du serveur",
+  "fichier": "js/admin-avis.js",
+  "de": "(m?' : '+m:'')",
+  "vers": "''"
+ },
+ {
+  "nom": "moins de fiches que prévu n’est plus signalé",
+  "fichier": "js/admin-avis.js",
+  "de": "if(res.refus) return '⚠ Seulement '+n+' sur '+total+' ont changé : certaines fiches ont été modifiées entre-temps (la liste est relue).';",
+  "vers": ""
+ },
+ {
+  "nom": "« client » reste au singulier dans la réussite",
+  "fichier": "js/admin-avis.js",
+  "de": "' client'+(n>1?'s':'')+'.';\n}\n// Un client qui reçoit",
+  "vers": "' client.';\n}\n// Un client qui reçoit"
+ },
+ {
+  "nom": "le bouton est toujours affiché",
+  "fichier": "js/admin-avis.js",
+  "de": "if(act.ids.length){",
+  "vers": "if(true){"
+ },
+ {
+  "nom": "le bouton compte tous les clients de la liste, pas seulement les cochés",
+  "fichier": "js/admin-avis.js",
+  "de": "const act=avisActivables(avisLignesCochees().map(l=>l.client_id),avisFiches());",
+  "vers": "const act=avisActivables(avisCandidatsActuels().clients.map(c=>c.client_id),avisFiches());"
+ },
+ {
+  "nom": "« client » reste au singulier dans le bouton",
+  "fichier": "js/admin-avis.js",
+  "de": "' client'+(act.ids.length>1?'s':'')+' coché'",
+  "vers": "' client coché'"
+ },
+ {
+  "nom": "« coché » reste au singulier dans le bouton",
+  "fichier": "js/admin-avis.js",
+  "de": "' coché'+(act.ids.length>1?'s':''))",
+  "vers": "' coché')"
+ },
+ {
+  "nom": "le bouton n’est pas grisé pendant un appel",
+  "fichier": "js/admin-avis.js",
+  "de": "bAct.disabled=_avisOccupe;",
+  "vers": "bAct.disabled=false;"
+ },
+ {
+  "nom": "le bouton ne fait rien",
+  "fichier": "js/admin-avis.js",
+  "de": "bAct.onclick=()=>avisActiverEnBloc();",
+  "vers": ""
+ },
+ {
+  "nom": "les paquets passent à 100 fiches",
+  "fichier": "js/admin-avis.js",
+  "de": "const AVIS_ACTIVER_PAQUET=50;",
+  "vers": "const AVIS_ACTIVER_PAQUET=100;"
+ },
+ {
+  "nom": "les paquets passent à 25 fiches",
+  "fichier": "js/admin-avis.js",
+  "de": "const AVIS_ACTIVER_PAQUET=50;",
+  "vers": "const AVIS_ACTIVER_PAQUET=25;"
+ },
+ {
+  "nom": "tout est écrit d’un coup (sans paquets)",
+  "fichier": "js/admin-avis.js",
+  "de": ".in('id',paquet)",
+  "vers": ".in('id',ids)"
+ },
+ {
+  "nom": "les paquets se chevauchent",
+  "fichier": "js/admin-avis.js",
+  "de": "ids.slice(i,i+AVIS_ACTIVER_PAQUET)",
+  "vers": "ids.slice(i,i+AVIS_ACTIVER_PAQUET+1)"
+ },
+ {
+  "nom": "l’écriture touche aussi une colonne du consentement (avis_texto)",
+  "fichier": "js/admin-avis.js",
+  "de": ".update({avis_courriel:true})",
+  "vers": ".update({avis_courriel:true,avis_texto:true})"
+ },
+ {
+  "nom": "l’écriture touche aussi les fiches archivées",
+  "fichier": "js/admin-avis.js",
+  "de": ".eq('actif',true)",
+  "vers": ""
+ },
+ {
+  "nom": "l’écriture peut réactiver un client désabonné entre-temps",
+  "fichier": "js/admin-avis.js",
+  "de": ".is('desabonne_courriel_le',null)",
+  "vers": ""
+ },
+ {
+  "nom": "l’écriture demande plus de colonnes qu’il n’en faut",
+  "fichier": "js/admin-avis.js",
+  "de": ".select('id');}catch(e){r={data:null,error:e};}\n    if(r.error)",
+  "vers": ".select('id,nom');}catch(e){r={data:null,error:e};}\n    if(r.error)"
+ },
+ {
+  "nom": "une erreur de la base est prise pour un succès partiel",
+  "fichier": "js/admin-avis.js",
+  "de": "if(r.error) return {faites,erreur:r.error};",
+  "vers": ""
+ },
+ {
+  "nom": "les fiches changées ne sont plus notées",
+  "fichier": "js/admin-avis.js",
+  "de": "lues.forEach(x=>faites.add(x.id));",
+  "vers": ""
+ },
+ {
+  "nom": "moins de fiches changées que demandé passe pour un succès",
+  "fichier": "js/admin-avis.js",
+  "de": "if(lues.length!==paquet.length) return {faites,refus:true};",
+  "vers": ""
+ },
+ {
+  "nom": "le refus partiel n’est plus marqué",
+  "fichier": "js/admin-avis.js",
+  "de": "return {faites,refus:true};",
+  "vers": "return {faites};"
+ },
+ {
+  "nom": "« Activer » sans rien d’activable demande quand même confirmation",
+  "fichier": "js/admin-avis.js",
+  "de": "    const n=a.ids.length;\n    if(!n) return;",
+  "vers": "    const n=a.ids.length;"
+ },
+ {
+  "nom": "l’activation concerne tous les clients de la liste, pas seulement les cochés",
+  "fichier": "js/admin-avis.js",
+  "de": "const a=avisActivables(avisLignesCochees().map(l=>l.client_id),avisFiches());\n    const n=a.ids.length;",
+  "vers": "const a=avisActivables(avisCandidatsActuels().clients.map(c=>c.client_id),avisFiches());\n    const n=a.ids.length;"
+ },
+ {
+  "nom": "la confirmation ne mentionne plus les ignorés",
+  "fichier": "js/admin-avis.js",
+  "de": "(ignores?' Ignorés : '+ignores+'.':'')",
+  "vers": "''"
+ },
+ {
+  "nom": "la confirmation est toujours au pluriel",
+  "fichier": "js/admin-avis.js",
+  "de": "(n>1?'La case « Avertir par courriel » sera cochée dans les fiches de '+n+' clients : ils recevront':'La case « Avertir par courriel » sera cochée dans la fiche de 1 client : il recevra')",
+  "vers": "'La case « Avertir par courriel » sera cochée dans les fiches de '+n+' clients : ils recevront'"
+ },
+ {
+  "nom": "la confirmation ne rappelle plus le lien « Se désabonner »",
+  "fichier": "js/admin-avis.js",
+  "de": " (le texte approuvé, avec le lien « Se désabonner »)",
+  "vers": ""
+ },
+ {
+  "nom": "la confirmation dit toujours « fiche par fiche »",
+  "fichier": "js/admin-avis.js",
+  "de": "(n>1?'fiche par fiche':'dans sa fiche')",
+  "vers": "'fiche par fiche'"
+ },
+ {
+  "nom": "les boutons de la confirmation sont inversés",
+  "fichier": "js/admin-avis.js",
+  "de": "'Activer','Annuler');\n    if(!oui) return;",
+  "vers": "'Annuler','Activer');\n    if(!oui) return;"
+ },
+ {
+  "nom": "« Annuler » active quand même",
+  "fichier": "js/admin-avis.js",
+  "de": "if(!oui) return;\n    showSync(true);\n    const res=await avisEcrireActivation(a.ids);",
+  "vers": "showSync(true);\n    const res=await avisEcrireActivation(a.ids);"
+ },
+ {
+  "nom": "l’indicateur de synchronisation n’est pas allumé pendant l’écriture",
+  "fichier": "js/admin-avis.js",
+  "de": "showSync(true);\n    const res=await avisEcrireActivation(a.ids);",
+  "vers": "const res=await avisEcrireActivation(a.ids);"
+ },
+ {
+  "nom": "la liste à l’écran n’est pas mise à jour après l’activation",
+  "fichier": "js/admin-avis.js",
+  "de": "res.faites.forEach(id=>{const f=avisFiches().find(x=>x.id===id);if(f) f.avis_courriel=true;});",
+  "vers": ""
+ },
+ {
+  "nom": "l’aperçu d’avant reste affiché après l’activation",
+  "fichier": "js/admin-avis.js",
+  "de": "    avisInvalider();\n    if(res.erreur||res.refus){",
+  "vers": "    if(res.erreur||res.refus){"
+ },
+ {
+  "nom": "la liste n’est pas relue après un échec ou un refus",
+  "fichier": "js/admin-avis.js",
+  "de": "if(res.erreur||res.refus){try{await clientsRecharger();}catch(e){}}",
+  "vers": ""
+ },
+ {
+  "nom": "la liste n’est pas relue après un refus partiel",
+  "fichier": "js/admin-avis.js",
+  "de": "if(res.erreur||res.refus){try{await clientsRecharger();}catch(e){}}",
+  "vers": "if(res.erreur){try{await clientsRecharger();}catch(e){}}"
+ },
+ {
+  "nom": "aucun message après l’activation",
+  "fichier": "js/admin-avis.js",
+  "de": "toast(avisMessageActivation(res,n));\n    renderClientsListe();",
+  "vers": "renderClientsListe();"
+ },
+ {
+  "nom": "la liste n’est pas redessinée après l’activation",
+  "fichier": "js/admin-avis.js",
+  "de": "toast(avisMessageActivation(res,n));\n    renderClientsListe();",
+  "vers": "toast(avisMessageActivation(res,n));"
+ }
+]
